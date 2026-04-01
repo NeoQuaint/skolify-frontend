@@ -1,0 +1,88 @@
+/* Background.css */
+.background-paths {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.floating-paths {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.paths-svg {
+  width: 100%;
+  height: 100%;
+  color: rgba(0, 0, 0, 0.2); /* Darker black with transparency */
+}
+
+.animated-path {
+  animation: floatPath 25s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  stroke: currentColor;
+  stroke-opacity: 0.25; /* Increased opacity */
+}
+
+.animated-path.reverse {
+  animation-direction: reverse;
+  animation-duration: 30s;
+  stroke-opacity: 0.3; /* Slightly more opaque for reverse paths */
+}
+
+@keyframes floatPath {
+  0% {
+    opacity: 0.4; /* Increased from 0.3 */
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    opacity: 0.7; /* Increased from 0.6 */
+    transform: translateY(-10px) scale(1.02);
+  }
+  50% {
+    opacity: 0.9; /* Increased from 0.8 */
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    opacity: 0.7; /* Increased from 0.6 */
+    transform: translateY(10px) scale(0.98);
+  }
+  100% {
+    opacity: 0.4; /* Increased from 0.3 */
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Delayed animation */
+.delayed-animation {
+  animation-delay: 10s !important;
+  opacity: 0;
+  animation: fadeInPaths 5s ease-out 10s forwards;
+}
+
+@keyframes fadeInPaths {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Media queries for better mobile performance */
+@media (max-width: 768px) {
+  .paths-svg {
+    transform: scale(1.5); /* Larger on mobile for better coverage */
+  }
+  
+  .animated-path {
+    animation-duration: 35s;
+    stroke-opacity: 0.3; /* Slightly more visible on mobile */
+  }
+}
