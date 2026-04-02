@@ -8,27 +8,17 @@
     z-index: 1000 !important;
     background: white !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
-    height: 70px !important;
-    min-height: 70px !important;
-    max-height: 70px !important;
+    height: 75px !important;  /* was 70px — increased by 5px */
+    min-height: 75px !important;
+    max-height: 75px !important;
     display: flex !important;
     align-items: center !important;
-}
-
-.header-content {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    max-width: 1400px !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-    height: 100% !important;
 }
 
 .logo {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 8px !important;  /* was 12px — decreased by 4px */
 }
 
 .logo-image {
@@ -62,6 +52,7 @@
     align-items: center !important;
     justify-content: center !important;
 }
+
 .profile-icon:hover {
     background: #f0f0f0;
 }
