@@ -962,7 +962,15 @@ const Dashboard = () => {
 <header className="app-header">
   <div className="header-content">
     <div className="logo">
-      <div className="logo-image">🎓</div>
+      <img 
+        src="/SKOLIFY LOGO.jpeg" 
+        alt="Skolify Logo" 
+        className="logo-image"
+        onError={(e) => {
+          e.target.style.display = 'none';
+          e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="logo-image" style="display: flex;">🎓</div>');
+        }}
+      />
       <span className="logo-text">Skolify</span>
     </div>
     
@@ -971,7 +979,6 @@ const Dashboard = () => {
         ref={profileIconRef}
         className="profile-icon"
         onClick={() => setShowProfileMenu(!showProfileMenu)}
-        title="Your profile"
       >
         <FaUserCircle />
       </button>
@@ -986,37 +993,16 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="profile-menu-items">
-            <button 
-              className="profile-menu-item"
-              onClick={() => {
-                setShowProfileMenu(false);
-                navigate('/profile');
-              }}
-            >
+            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
               My Profile
             </button>
-            <button 
-              className="profile-menu-item"
-              onClick={() => {
-                setShowProfileMenu(false);
-                alert('Applications page coming soon!');
-              }}
-            >
+            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Applications page coming soon!'); }}>
               My Applications
             </button>
-            <button 
-              className="profile-menu-item"
-              onClick={() => {
-                setShowProfileMenu(false);
-                alert('Settings page coming soon!');
-              }}
-            >
+            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Settings page coming soon!'); }}>
               Settings
             </button>
-            <button 
-              className="profile-menu-item logout-btn"
-              onClick={goToLandingPage}
-            >
+            <button className="profile-menu-item logout-btn" onClick={goToLandingPage}>
               Logout
             </button>
           </div>
@@ -1025,7 +1011,7 @@ const Dashboard = () => {
     </div>
   </div>
 </header>
-     
+
             {/* Search Modal */}
       {showSearchModal && (
         <div className="search-modal">
