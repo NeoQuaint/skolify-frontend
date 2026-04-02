@@ -959,19 +959,10 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-{/* Header with Logo - DEMO STYLE */}
 <header className="app-header">
   <div className="header-content">
     <div className="logo">
-      <img 
-        src="/SKOLIFY LOGO.jpeg" 
-        alt="Skolify Logo" 
-        className="logo-image"
-        onError={(e) => {
-          e.target.style.display = 'none';
-          e.target.nextElementSibling.style.display = 'block';
-        }}
-      />
+      <div className="logo-image">🎓</div>
       <span className="logo-text">Skolify</span>
     </div>
     
