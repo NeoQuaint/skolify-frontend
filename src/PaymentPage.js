@@ -1398,15 +1398,19 @@ const PaymentPage = () => {
           console.log('✅ Application saved with tracking:', appResult.trackingNumber);
         }
 
-        const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...userData,
-            trackingNumber: paymentResult.transactionId
-          })
-        });
+       const token = localStorage.getItem('authToken');
 
+const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : ''
+  },
+  body: JSON.stringify({
+    ...userData,
+    trackingNumber: paymentResult.transactionId
+  })
+});
         const orderResult = await orderResponse.json();
         
         if (orderResult.success) {
