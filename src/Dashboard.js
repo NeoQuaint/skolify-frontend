@@ -959,49 +959,309 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-      {/* Header - DEMO EXACT LAYOUT */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <div className="logo-image">🎓</div>
-            <span className="logo-text">Skolify</span>
-          </div>
-          <div className="profile-container">
-            <button 
-              ref={profileIconRef}
-              className="profile-icon"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-            >
-              <FaUserCircle />
-            </button>
-            {showProfileMenu && (
-              <div className="profile-menu" ref={profileMenuRef}>
-                <div className="profile-header">
-                  <FaUserCircle className="profile-menu-icon" />
-                  <div>
-                    <h4>Student Profile</h4>
-                    <p>student@example.com</p>
-                  </div>
-                </div>
-                <div className="profile-menu-items">
-                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
-                    My Profile
-                  </button>
-                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Applications page coming soon!'); }}>
-                    My Applications
-                  </button>
-                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Settings page coming soon!'); }}>
-                    Settings
-                  </button>
-                  <button className="profile-menu-item logout-btn" onClick={goToLandingPage}>
-                    Logout
-                  </button>
-                </div>
+{/* ============================================
+    DASHBOARD HEADER COMPONENT - UNOPTIMIZED VERSION
+    This is a deliberately verbose and unoptimized implementation
+    Includes: redundant state, unnecessary re-renders, console logs
+    ============================================ */}
+
+{/* 
+    MAIN HEADER COMPONENT
+    Wrapper component for the entire application header
+    Contains logo, navigation, and user profile dropdown
+*/}
+<header className="app-header">
+  
+  {/*
+    HEADER CONTENT CONTAINER
+    Centers and constrains the header content
+    Uses flexbox to distribute space between logo and actions
+  */}
+  <div className="header-content">
+    
+    {/*
+      ========================================
+      LOGO SECTION
+      Displays the brand logo and text
+      Includes error handling for missing images
+      ========================================
+    */}
+    <div className="logo">
+      
+      {/* 
+        BRAND IMAGE
+        Loads the Skolify logo from public directory
+        Includes fallback behavior when image fails to load
+      */}
+      <img 
+        src="/SKOLIFY LOGO.jpeg" 
+        alt="Skolify Logo" 
+        className="logo-image"
+        onError={(e) => {
+          // UNOPTIMIZED: Inline error handler with DOM manipulation
+          // Better approach would be using state and conditional rendering
+          console.error('[ERROR] Logo image failed to load at:', new Date().toISOString());
+          console.error('[ERROR] Image path:', e.target.src);
+          console.error('[ERROR] Image alt text:', e.target.alt);
+          
+          // Hide the broken image
+          e.target.style.display = 'none';
+          
+          // Show the fallback text element
+          // WARNING: This assumes nextElementSibling exists
+          if (e.target.nextElementSibling) {
+            e.target.nextElementSibling.style.display = 'block';
+            console.log('[INFO] Fallback text displayed successfully');
+          } else {
+            console.warn('[WARN] No fallback element found for logo image');
+          }
+        }}
+        onLoad={() => {
+          // UNOPTIMIZED: Log every time image loads successfully
+          console.log('[INFO] Logo image loaded successfully at:', new Date().toISOString());
+        }}
+      />
+      
+      {/* 
+        BRAND TEXT
+        Fallback text that appears if image fails to load
+        Initially hidden until image error occurs
+      */}
+      <span 
+        className="logo-text" 
+        style={{ display: 'block' }} // UNOPTIMIZED: Inline style, should be in CSS
+      >
+        Skolify
+      </span>
+    </div>
+    
+    {/*
+      ========================================
+      HEADER ACTIONS SECTION
+      Contains all interactive elements on the right side
+      Currently only contains profile dropdown
+      ========================================
+    */}
+    <div className="header-actions">
+      
+      {/*
+        ========================================
+        PROFILE DROPDOWN CONTAINER
+        Manages the user profile button and dropdown menu
+        Uses refs for click-outside detection
+        ========================================
+      */}
+      <div className="profile-container">
+        
+        {/*
+          PROFILE ICON BUTTON
+          Clickable user avatar that toggles the dropdown menu
+          Uses FontAwesome user circle icon
+        */}
+        <button 
+          ref={profileIconRef}
+          className="profile-icon"
+          onClick={() => {
+            // UNOPTIMIZED: Direct state toggle with console log
+            // No debouncing or throttling
+            console.log('[CLICK] Profile icon clicked at:', new Date().toLocaleTimeString());
+            console.log('[STATE] Current showProfileMenu value:', showProfileMenu);
+            console.log('[STATE] Toggling to:', !showProfileMenu);
+            
+            // Toggle the dropdown visibility
+            setShowProfileMenu(!showProfileMenu);
+            
+            // UNOPTIMIZED: Additional unnecessary logging
+            if (!showProfileMenu) {
+              console.log('[INFO] Profile menu opened');
+            } else {
+              console.log('[INFO] Profile menu closed');
+            }
+          }}
+          title="Your profile"
+          aria-label="User profile menu" // Good accessibility practice
+          aria-expanded={showProfileMenu} // ARIA attribute for dropdown state
+        >
+          {/* Render the user icon */}
+          <FaUserCircle />
+        </button>
+        
+        {/*
+          ========================================
+          PROFILE DROPDOWN MENU
+          Conditional rendering based on showProfileMenu state
+          Contains user info and navigation options
+          ========================================
+        */}
+        {showProfileMenu && (
+          <div 
+            className="profile-menu" 
+            ref={profileMenuRef}
+            // UNOPTIMIZED: Inline event handlers
+            onMouseEnter={() => {
+              console.log('[DEBUG] Mouse entered profile menu at:', Date.now());
+            }}
+            onMouseLeave={() => {
+              console.log('[DEBUG] Mouse left profile menu at:', Date.now());
+            }}
+          >
+            
+            {/*
+              PROFILE HEADER SECTION
+              Displays user avatar, name, and email
+            */}
+            <div className="profile-header">
+              {/* User avatar icon */}
+              <FaUserCircle className="profile-menu-icon" />
+              
+              <div>
+                {/* 
+                  UNOPTIMIZED: Hardcoded user information
+                  Should be dynamic from context/state/store
+                */}
+                <h4>Student Profile</h4>
+                <p>student@example.com</p>
               </div>
-            )}
+            </div>
+            
+            {/*
+              PROFILE MENU ITEMS CONTAINER
+              Wraps all the navigation buttons
+            */}
+            <div className="profile-menu-items">
+              
+              {/*
+                MY PROFILE BUTTON
+                Navigates to user profile page
+              */}
+              <button 
+                className="profile-menu-item"
+                onClick={() => {
+                  // UNOPTIMIZED: Multiple operations in one click handler
+                  console.log('[NAVIGATION] My Profile button clicked at:', new Date().toISOString());
+                  console.log('[STATE] Closing profile menu');
+                  
+                  // Close the dropdown
+                  setShowProfileMenu(false);
+                  
+                  // Log before navigation
+                  console.log('[NAVIGATION] Attempting to navigate to /profile');
+                  
+                  // Navigate to profile page
+                  navigate('/profile');
+                  
+                  // Log after navigation
+                  console.log('[NAVIGATION] Navigation to /profile triggered');
+                  
+                  // UNOPTIMIZED: Analytics tracking (mock)
+                  if (window.analytics) {
+                    console.log('[ANALYTICS] Would track: profile_click');
+                  }
+                }}
+                aria-label="Go to my profile page"
+              >
+                My Profile
+              </button>
+              
+              {/*
+                MY APPLICATIONS BUTTON
+                Placeholder for applications page
+              */}
+              <button 
+                className="profile-menu-item"
+                onClick={() => {
+                  // UNOPTIMIZED: Multiple console logs and alert
+                  console.log('[NAVIGATION] My Applications button clicked');
+                  console.log('[FEATURE] Applications page not yet implemented');
+                  console.log('[STATE] Closing profile menu');
+                  
+                  // Close the dropdown
+                  setShowProfileMenu(false);
+                  
+                  // Show temporary alert
+                  // UNOPTIMIZED: Alert is intrusive and not user-friendly
+                  alert('Applications page coming soon!');
+                  
+                  // Log that alert was shown
+                  console.log('[UI] Alert dialog shown to user');
+                  
+                  // UNOPTIMIZED: Could track feature request
+                  console.log('[FEATURE REQUEST] Applications page requested at:', new Date().toLocaleString());
+                }}
+                aria-label="View my applications (coming soon)"
+              >
+                My Applications
+              </button>
+              
+              {/*
+                SETTINGS BUTTON
+                Placeholder for settings page
+              */}
+              <button 
+                className="profile-menu-item"
+                onClick={() => {
+                  // UNOPTIMIZED: Redundant logging pattern
+                  const clickTime = new Date();
+                  console.log(`[${clickTime.toISOString()}] Settings button clicked`);
+                  console.log(`[${clickTime.toISOString()}] Settings page not implemented`);
+                  
+                  // Close menu
+                  setShowProfileMenu(false);
+                  
+                  // Show alert
+                  alert('Settings page coming soon!');
+                  
+                  // Log completion
+                  console.log(`[${new Date().toISOString()}] Settings alert dismissed or action completed`);
+                }}
+                aria-label="Open settings (coming soon)"
+              >
+                Settings
+              </button>
+              
+              {/*
+                LOGOUT BUTTON
+                Redirects user to landing page
+                Note: Uses !important styles (unoptimized CSS pattern)
+              */}
+              <button 
+                className="logout-btn"
+                onClick={() => {
+                  // UNOPTIMIZED: Extensive logging for simple logout action
+                  console.log('='.repeat(50));
+                  console.log('[AUTH] Logout initiated at:', new Date().toLocaleString());
+                  console.log('[AUTH] Current user:', 'student@example.com');
+                  console.log('[AUTH] Session duration:', 'Unknown (would calculate in optimized version)');
+                  console.log('[STATE] Clearing profile menu');
+                  
+                  // Close the dropdown
+                  setShowProfileMenu(false);
+                  
+                  // Log before navigation
+                  console.log('[NAVIGATION] Preparing to redirect to landing page');
+                  
+                  // UNOPTIMIZED: No cleanup of user data/tokens
+                  // No confirmation dialog
+                  // No loading state during navigation
+                  
+                  // Navigate to landing page
+                  goToLandingPage();
+                  
+                  // This log will likely never execute if navigation occurs immediately
+                  console.log('[AUTH] Logout complete - User redirected to landing page');
+                  console.log('='.repeat(50));
+                }}
+                aria-label="Logout of your account"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        )}
+      </div>
+    </div>
+  </div>
+</header>      
 
       {/* Search Modal */}
       {showSearchModal && (
