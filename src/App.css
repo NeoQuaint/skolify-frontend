@@ -36,8 +36,6 @@ body {
   width: 100%;
   max-width: 1200px;
   margin: 0;
-  display: flex;
-  justify-content: flex-start;
 }
 
 .logo {
@@ -577,16 +575,6 @@ body {
   .terms-section li {
     font-size: 15px;
   }
-
-  /* Mobile logo fix - pushes logo to left */
-  .header-content {
-    justify-content: flex-start;
-  }
-  
-  .logo {
-    justify-content: flex-start;
-    width: auto;
-  }
 }
 
 @media (max-width: 480px) {
@@ -754,7 +742,6 @@ h1.main-heading,
   justify-content: center !important;
   width: 100% !important;
 }
-
 /* Divider Line - Lighter and Closer */
 .divider-line {
   height: 1.5px !important;
@@ -773,7 +760,6 @@ h1.main-heading,
   visibility: visible !important;
   animation: fadeIn 0.8s ease-out 0.2s both;
 }
-
 /* Terms and Conditions Page - Justified Text */
 .terms-section p,
 .terms-section li,
@@ -804,6 +790,7 @@ h1.main-heading,
   -webkit-hyphens: auto !important;
   -moz-hyphens: auto !important;
 }
+
 
 /* Sign In Styles */
 .signin-wrapper {
