@@ -960,7 +960,7 @@ const Dashboard = () => {
       <div className="background-pattern"></div>
 
       {/* Header with Logo and Navigation */}
-      <header className="app-header fixed">
+         <header className="app-header">
         <div className="header-content">
           <div className="logo">
             <img 
