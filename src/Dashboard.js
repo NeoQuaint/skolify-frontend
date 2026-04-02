@@ -959,60 +959,51 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-<header className="app-header">
-  <div className="header-content">
-    <div className="logo">
-      <img 
-        src="/SKOLIFY LOGO.jpeg" 
-        alt="Skolify Logo" 
-        className="logo-image"
-        onError={(e) => {
-          e.target.style.display = 'none';
-          e.target.parentElement.insertAdjacentHTML('afterbegin', '<div class="logo-image" style="display: flex;">🎓</div>');
-        }}
-      />
-      <span className="logo-text">Skolify</span>
-    </div>
-    
-    <div className="profile-container">
-      <button 
-        ref={profileIconRef}
-        className="profile-icon"
-        onClick={() => setShowProfileMenu(!showProfileMenu)}
-      >
-        <FaUserCircle />
-      </button>
-      
-      {showProfileMenu && (
-        <div className="profile-menu" ref={profileMenuRef}>
-          <div className="profile-header">
-            <FaUserCircle className="profile-menu-icon" />
-            <div>
-              <h4>Student Profile</h4>
-              <p>student@example.com</p>
-            </div>
+      {/* Header - DEMO EXACT LAYOUT */}
+      <header className="app-header">
+        <div className="header-content">
+          <div className="logo">
+            <div className="logo-image">🎓</div>
+            <span className="logo-text">Skolify</span>
           </div>
-          <div className="profile-menu-items">
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
-              My Profile
+          <div className="profile-container">
+            <button 
+              ref={profileIconRef}
+              className="profile-icon"
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+            >
+              <FaUserCircle />
             </button>
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Applications page coming soon!'); }}>
-              My Applications
-            </button>
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Settings page coming soon!'); }}>
-              Settings
-            </button>
-            <button className="profile-menu-item logout-btn" onClick={goToLandingPage}>
-              Logout
-            </button>
+            {showProfileMenu && (
+              <div className="profile-menu" ref={profileMenuRef}>
+                <div className="profile-header">
+                  <FaUserCircle className="profile-menu-icon" />
+                  <div>
+                    <h4>Student Profile</h4>
+                    <p>student@example.com</p>
+                  </div>
+                </div>
+                <div className="profile-menu-items">
+                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
+                    My Profile
+                  </button>
+                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Applications page coming soon!'); }}>
+                    My Applications
+                  </button>
+                  <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Settings page coming soon!'); }}>
+                    Settings
+                  </button>
+                  <button className="profile-menu-item logout-btn" onClick={goToLandingPage}>
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </div>
-  </div>
-</header>
+      </header>
 
-            {/* Search Modal */}
+      {/* Search Modal */}
       {showSearchModal && (
         <div className="search-modal">
           <div className="search-modal-content">

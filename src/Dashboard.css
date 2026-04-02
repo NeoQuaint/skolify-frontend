@@ -1,3 +1,4 @@
+/* ===== DEMO HEADER - EXACT COPY ===== */
 .app-header {
     padding: 0px 40px;
     position: fixed;
@@ -65,12 +66,6 @@
 .profile-icon:hover {
     background: #f0f0f0;
 }
-
-/* Hide old search button */
-.search-btn {
-  display: none;
-}
-
 
 /* Profile Menu */
 .profile-menu {
@@ -1332,17 +1327,6 @@
   50% { opacity: 0.5; }
 }
 
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* Page Exit Animation */
 .dashboard-app.page-exit {
   animation: fadeOut 0.5s ease forwards;
@@ -1629,6 +1613,34 @@
   }
 }
 
+@media (max-width: 400px) {
+  .faculties-grid {
+    max-width: 250px;
+  }
+  
+  .app-header {
+    padding: 0 12px;
+  }
+  
+  .main-heading {
+    font-size: 24px;
+  }
+  
+  .logo-text {
+    font-size: 16px;
+  }
+  
+  .logo-image {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .profile-icon {
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+  }
+}
 
 /* Backend Status Styles */
 .backend-status {
