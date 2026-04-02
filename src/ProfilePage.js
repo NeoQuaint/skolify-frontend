@@ -9,6 +9,7 @@ import {
   FaHistory, FaBoxOpen, FaHashtag, FaChevronDown, FaChevronUp,
   FaCreditCard, FaArrowLeft, FaSpinner, FaLock  // Added FaLock here
 } from 'react-icons/fa';
+import API_URL from './config';
 
 // Import the PasswordChange component
 import PasswordChange from './PasswordChange';
@@ -55,7 +56,7 @@ const ProfilePage = () => {
           // Fetch user profile from database
           try {
             console.log('📡 Fetching user profile...');
-            const response = await fetch('http://localhost:5000/api/user/profile', {
+            const response = await fetch(`${API_URL}/api/user/profile`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -90,7 +91,7 @@ const ProfilePage = () => {
           // Fetch ALL payment selections
           try {
             console.log('📡 Fetching ALL payment selections...');
-            const selectionResponse = await fetch('http://localhost:5000/api/payment/get-all-selections', {
+            const selectionResponse = await fetch(`${API_URL}/api/payment/get-all-selections`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -112,7 +113,7 @@ const ProfilePage = () => {
           // Fetch ALL applications (for tracking numbers)
           try {
             console.log('📡 Fetching ALL applications...');
-            const appsResponse = await fetch('http://localhost:5000/api/applications/all', {
+            const appsResponse = await fetch(`${API_URL}/api/applications/all`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -181,7 +182,7 @@ const ProfilePage = () => {
     if (isLoggedIn) {
       const token = localStorage.getItem('authToken');
       try {
-        await fetch('http://localhost:5000/api/applications/update-profile', {
+        await fetch(`${API_URL}/api/applications/update-profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -217,7 +218,7 @@ const ProfilePage = () => {
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch('http://localhost:5000/api/upload-documents', {
+      const response = await fetch(`${API_URL}/api/upload-documents`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData
@@ -248,7 +249,7 @@ const ProfilePage = () => {
         
         // If logged in, update in database
         if (isLoggedIn && token) {
-          await fetch('http://localhost:5000/api/applications/update-profile', {
+          await fetch(`${API_URL}/api/applications/update-profile`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -282,7 +283,7 @@ const ProfilePage = () => {
       alert(`File location: ${doc.path}`);
       
       // In production, you would serve the file:
-      // window.open(`http://localhost:5000/${doc.path}`, '_blank');
+      // window.open(`${API_URL}/${doc.path}`, '_blank');
     } catch (error) {
       console.error('Download error:', error);
     }

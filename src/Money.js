@@ -7,6 +7,7 @@ import {
   FaChevronDown, FaChevronUp, FaInfoCircle, FaUniversity, FaSpinner, FaLock, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import PayFastPayment from './PayFastPayment';
+import API_URL from './config';
 
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         
         try {
           console.log('🔍 Fetching user profile...');
-          const response = await fetch('http://localhost:5000/api/user/profile', {
+          const response = await fetch(`${API_URL}/api/user/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -197,7 +198,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
     formData.append(type, file);
     
     try {
-      const response = await fetch('http://localhost:5000/api/upload-documents', {
+      const response = await fetch(`${API_URL}/api/upload-documents`, {
         method: 'POST',
         body: formData
       });
@@ -478,7 +479,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
     console.log('📤 SENDING TO DATABASE WITH TRACKING:', trackingNumber, applicationData);
 
     try {
-      const response = await fetch('http://localhost:5000/api/applications/create', {
+      const response = await fetch(`${API_URL}/api/applications/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -550,7 +551,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
     formDataToSend.append('paymentMethod', paymentMethod);
 
     try {
-      const uploadResponse = await fetch('http://localhost:5000/api/upload-documents', {
+      const uploadResponse = await fetch(`${API_URL}/api/upload-documents`, {
         method: 'POST',
         body: formDataToSend
       });
@@ -569,7 +570,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         try {
           console.log('📝 Creating account with custom password...');
 
-          const response = await fetch('http://localhost:5000/api/auth/create-account', {
+          const response = await fetch(`${API_URL}/api/auth/create-account`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -601,7 +602,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                 const selectionData = JSON.parse(savedSelection);
                 console.log('📤 Transferring payment selection to database:', selectionData);
                 
-                const paymentResponse = await fetch('http://localhost:5000/api/payment/save-selection', {
+                const paymentResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -657,7 +658,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
           } else if (result.success && result.existingUser) {
             console.log('👤 User already exists, logging in...');
             
-            const signInResponse = await fetch('http://localhost:5000/api/auth/signin', {
+            const signInResponse = await fetch(`${API_URL}/api/auth/signin`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

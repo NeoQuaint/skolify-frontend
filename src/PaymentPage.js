@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
 import { FaUniversity, FaSpinner, FaBook, FaTimes, FaExchangeAlt, FaArrowLeft, FaCheck, FaUser, FaLock, FaHistory, FaMagic, FaLightbulb, FaSearch, FaCopy, FaUserCircle } from 'react-icons/fa';
+import API_URL from './config';
 
 console.log('✅ PaymentPage.js loaded -', new Date().toISOString());
 
@@ -420,7 +421,7 @@ const PaymentPage = () => {
       let allUniversities = [];
       
       try {
-        const response = await fetch('http://localhost:5000/api/institutions-with-courses');
+        const response = await fetch(`${API_URL}/api/institutions-with-courses`);
         if (response.ok) {
           const institutions = await response.json();
           allUniversities = institutions.map(inst => {
@@ -476,7 +477,7 @@ const PaymentPage = () => {
         checkedCount++;
         
         try {
-          const response = await fetch('http://localhost:5000/api/eligible-courses-at-university', {
+          const response = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -666,7 +667,7 @@ const PaymentPage = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/eligible-courses-at-university', {
+      const response = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -749,7 +750,7 @@ const PaymentPage = () => {
       if (!token) return;
       
       try {
-        const response = await fetch('http://localhost:5000/api/payment/get-all-selections', {
+        const response = await fetch(`${API_URL}/api/payment/get-all-selections`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -890,7 +891,7 @@ const PaymentPage = () => {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       if (courseNames.length === 0) {
-        const response = await fetch('http://localhost:5000/api/institutions-with-courses', {
+        const response = await fetch(`${API_URL}/api/institutions-with-courses`, {
           signal: controller.signal
         });
         
@@ -930,7 +931,7 @@ const PaymentPage = () => {
         
         setUniversities(universityList);
       } else {
-        const response = await fetch('http://localhost:5000/api/institutions-by-courses', {
+        const response = await fetch(`${API_URL}/api/institutions-by-courses`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -1277,7 +1278,7 @@ const PaymentPage = () => {
           courseDetails: selectedCourseDetails
         };
         
-        const response = await fetch('http://localhost:5000/api/payment/save-selection', {
+        const response = await fetch(`${API_URL}/api/payment/save-selection`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1365,7 +1366,7 @@ const PaymentPage = () => {
       try {
         const token = localStorage.getItem('authToken');
         
-        const appResponse = await fetch('http://localhost:5000/api/applications/create', {
+        const appResponse = await fetch(`${API_URL}/api/applications/create`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1397,7 +1398,7 @@ const PaymentPage = () => {
           console.log('✅ Application saved with tracking:', appResult.trackingNumber);
         }
 
-        const orderResponse = await fetch('http://localhost:5000/api/submit-order', {
+        const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

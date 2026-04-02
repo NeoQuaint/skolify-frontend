@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaTimes, FaCheck, FaSpinner, FaLock, FaExclamationTriangle } from 'react-icons/fa';
 import './PasswordChange.css';
+import API_URL from './config';
 
 const PasswordChange = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -81,7 +82,7 @@ const PasswordChange = ({ onClose, onSuccess }) => {
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch('http://localhost:5000/api/auth/change-password', {
+      const response = await fetch(`${API_URL}/api/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

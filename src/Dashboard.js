@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
+import API_URL from './config';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -235,7 +236,7 @@ const Dashboard = () => {
   const fetchCourseDetails = async (course) => {
     setIsLoadingDetails(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/courses/${course.id}/additional-info`);
+      const response = await fetch(`${API_URL}/api/courses/${course.id}/additional-info`);
       let additionalInfo = [];
       
       if (response.ok) {
@@ -278,7 +279,7 @@ const Dashboard = () => {
     try {
       const marks = getStudentMarks();
       
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -341,7 +342,7 @@ const Dashboard = () => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        const testResponse = await fetch('http://localhost:5000/api/test', {
+        const testResponse = await fetch(`${API_URL}/api/test`, {
           signal: controller.signal
         });
         
@@ -354,7 +355,7 @@ const Dashboard = () => {
         const testData = await testResponse.json();
         console.log("Backend test response:", testData);
         
-        const coursesResponse = await fetch('http://localhost:5000/api/courses', {
+        const coursesResponse = await fetch(`${API_URL}/api/courses`, {
           signal: controller.signal
         });
         
@@ -537,7 +538,7 @@ const Dashboard = () => {
         throw new Error('Backend server is not connected. Please check if server is running.');
       }
 
-      const response = await fetch('http://localhost:5000/api/eligible-courses', {
+      const response = await fetch(`${API_URL}/api/eligible-courses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1593,7 +1594,7 @@ const Dashboard = () => {
               <h3>No Eligible Faculties Found</h3>
               <p>Based on your current marks, you don't meet the minimum requirements for any faculties.</p>
               <div className="suggestions">
-                <p><strong>Suggestions:</strong></p>
+                <p><strong>Suggesstions:</strong></p>
                 <ul>
                   <li>Improve your marks in key subjects</li>
                   <li>Add more relevant subjects</li>
