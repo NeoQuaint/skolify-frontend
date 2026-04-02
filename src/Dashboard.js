@@ -958,7 +958,6 @@ const Dashboard = () => {
       
       {/* Background Pattern */}
       <div className="background-pattern"></div>
-
 <header className="app-header">
   <div className="header-content">
     <div className="logo">
@@ -1000,7 +999,7 @@ const Dashboard = () => {
       )}
     </div>
   </div>
-</header>    
+</header>   
 
       {/* Search Modal */}
       {showSearchModal && (
