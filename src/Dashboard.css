@@ -1,70 +1,70 @@
-/* Dashboard.css - Complete Updated Version */
-
-.dashboard-app {
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
-  background: #fefefe;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
 /* ============================================
-   FIXED HEADER - LOGO LEFT, PROFILE RIGHT
+   FIXED HEADER - CLEAN & BALANCED
    ============================================ */
 
-/* Header Styles - FIXED POSITION */
 .app-header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
+
   background: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+
   width: 100%;
-  padding: 0 40px;
   height: 70px;
+  padding: 0 20px; /* reduced from 40px for mobile */
+
   display: flex;
   align-items: center;
 }
 
+/* Inner container */
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1400px;
+
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   height: 100%;
 }
 
-/* Logo - LEFT ALIGNED */
+/* ============================================
+   LOGO (LEFT)
+   ============================================ */
+
 .logo {
   display: flex;
-  align-items: Left;
-  gap: 12px;
+  align-items: center; /* FIXED */
+  gap: 8px;
 }
 
 .logo-image {
-  width: 35px;
-  height: 35px;
+  width: 28px;   /* reduced */
+  height: 28px;  /* reduced */
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .logo-text {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  font-size: 24px;
+  font-size: 20px;  /* reduced */
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
   color: #1a1a1a;
+  line-height: 1; /* prevents vertical overflow */
 }
 
-/* Profile Icon - RIGHT ALIGNED */
+/* ============================================
+   PROFILE ICON (RIGHT)
+   ============================================ */
+
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0;
 }
 
 .profile-container {
@@ -74,21 +74,25 @@
 .profile-icon {
   background: none;
   border: none;
-  font-size: 36px;
+
+  width: 44px;
+  height: 44px;
+
+  font-size: 26px;
   color: #1a1a1a;
+
   cursor: pointer;
-  transition: all 0.3s ease;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+
   border-radius: 50%;
+  transition: all 0.2s ease;
 }
 
 .profile-icon:hover {
-  color: #000;
-  background: #f0f0f0;
+  background: #f2f2f2;
   transform: scale(1.05);
 }
 
@@ -96,6 +100,7 @@
 .search-btn {
   display: none;
 }
+
 
 /* Profile Menu */
 .profile-menu {
