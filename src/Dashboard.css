@@ -1629,34 +1629,6 @@
   }
 }
 
-@media (max-width: 400px) {
-  .faculties-grid {
-    max-width: 250px;
-  }
-  
-  .app-header {
-    padding: 0 12px;
-  }
-  
-  .main-heading {
-    font-size: 24px;
-  }
-  
-  .logo-text {
-    font-size: 16px;
-  }
-  
-  .logo-image {
-    width: 24px;
-    height: 24px;
-  }
-  
-  .profile-icon {
-    font-size: 24px;
-    width: 32px;
-    height: 32px;
-  }
-}
 
 /* Backend Status Styles */
 .backend-status {
