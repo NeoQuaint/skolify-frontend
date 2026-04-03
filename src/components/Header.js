@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
-import './Header.css';
+import './Header.css?v=2';
+
 
 const Header = ({ showProfile = true, logoutOnly = false }) => {
   const navigate = useNavigate();
