@@ -13,6 +13,45 @@ import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
 
 
+function Header({ showProfile = true }) {
+  return (
+    <header style={{
+      padding: '0px 40px',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000,
+      background: 'white',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+      height: '70px',
+      display: 'flex',
+      alignItems: 'center'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        maxWidth: '900px',
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
+          <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
+        </div>
+
+        {showProfile && (
+          <div>
+            {/* future profile button */}
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+
 function WelcomeScreen() {
   const navigate = useNavigate();
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -103,34 +142,9 @@ function WelcomeScreen() {
 
   return (
     <div className="app">
-     <header style={{
-  padding: '0px 40px',
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  zIndex: 1000,
-  background: 'white',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  height: '70px',
-  display: 'flex',
-  alignItems: 'center'
-}}>
-  <div style={{
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    maxWidth: '900px',
-    margin: '0 auto',
-    width: '100%'
-  }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-      <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
-      <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
-    </div>
-  </div>
-</header>
+         <Header />
 
+  
       <main className="app-main">
         <div className="app-container">
           <div className="welcome-content">
@@ -315,7 +329,8 @@ function TermsAndConditions() {
 
   return (
     <div className="app">
-      <Header showProfile={false} />
+  <Header />
+   
       <main className="app-main">
         <div className="app-container terms-page">
           <button className="back-btn" onClick={() => navigate('/')}>
@@ -498,9 +513,9 @@ function PrivacyPolicy() {
   };
 
   return (
-    <div className="app">
-      <Header showProfile={false} />
-
+   <div className="app">
+       <Header />
+      
       <main className="app-main">
         <div className="app-container terms-page">
           <button className="back-btn" onClick={() => navigate('/')}>
