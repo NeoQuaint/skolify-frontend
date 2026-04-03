@@ -14,6 +14,166 @@ import API_URL from './config';
 // Import the PasswordChange component
 import PasswordChange from './PasswordChange';
 
+// ==================== HEADER COMPONENT WITH DROPDOWN ====================
+function ProfileHeader({ showProfile = true }) {
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const handleLogout = () => {
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    // Navigate to login page
+    navigate('/');
+  };
+
+  const goToProfile = () => {
+    setDropdownOpen(false);
+    navigate('/profile');
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <header style={{
+      padding: '0 40px',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1000,
+      background: 'white',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+      height: '70px',
+      display: 'flex',
+      alignItems: 'center'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+          <img
+            src="/Skolify-Logo.jpeg"
+            alt="Skolify Logo"
+            style={{ width: '63px', height: '63px', objectFit: 'contain', borderRadius: '8px' }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'block';
+            }}
+          />
+          <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
+        </div>
+
+        {/* Profile icon */}
+        {showProfile && (
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <FaUserCircle 
+              size={30}
+              style={{ 
+                cursor: 'pointer',
+                color: '#4a5568',
+                transition: 'color 0.2s ease'
+              }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#2b6cb0'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#4a5568'}
+            />
+            {dropdownOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '50px',
+                right: 0,
+                background: 'white',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                zIndex: 2000,
+                minWidth: '180px'
+              }}>
+                <button 
+                  onClick={goToProfile} 
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 20px', 
+                    width: '100%', 
+                    border: 'none', 
+                    background: 'none', 
+                    textAlign: 'left', 
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background 0.2s ease',
+                    color: '#2d3748'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f7fafc';
+                    e.currentTarget.querySelector('span').style.color = '#2b6cb0';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.querySelector('span').style.color = '#2d3748';
+                  }}
+                >
+                  <FaUserCircle size={18} />
+                  <span>Profile</span>
+                </button>
+                <button 
+                  onClick={handleLogout} 
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 20px', 
+                    width: '100%', 
+                    border: 'none', 
+                    background: 'none', 
+                    textAlign: 'left', 
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    borderTop: '1px solid #e2e8f0',
+                    transition: 'background 0.2s ease',
+                    color: '#e53e3e'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#fff5f5';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}></span>
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
@@ -386,18 +546,8 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="profile-page">
-      <header className="profile-header fixed">
-        <div className="header-content">
-          <div className="logo">
-            <img src="/SKOLIFY LOGO.jpeg" alt="Skolify Logo" className="logo-image" />
-            <span className="logo-text">Skolify</span>
-          </div>
-          <button className="back-to-dashboard" onClick={() => navigate('/dashboard')}>
-            Back to Dashboard
-          </button>
-        </div>
-      </header>
+   <div className="profile-page">
+  <ProfileHeader showProfile={true} />
 
       <div className="profile-container">
         {/* Welcome banner */}
