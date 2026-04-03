@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { FaUniversity, FaSpinner, FaBook, FaTimes, FaExchangeAlt, FaArrowLeft, FaCheck, FaUser, FaLock, FaHistory, FaMagic, FaLightbulb, FaSearch, FaCopy, FaUserCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './ProfilePage.css';
 import { 
