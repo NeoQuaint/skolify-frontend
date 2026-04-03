@@ -6,7 +6,7 @@ import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
-function DashboardHeader({ showProfile = true, logoSize = "100px" }) {
+function DashboardHeader({ showProfile = true}) {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -63,7 +63,7 @@ function DashboardHeader({ showProfile = true, logoSize = "100px" }) {
           <img
             src="/Skolify-Logo.jpeg"
             alt="Skolify Logo"
-            style={{ width: logoSize, height: logoSize, objectFit: 'contain', borderRadius: '8px' }}
+            style={{ width: '63px' , height: '63px', objectFit: 'contain', borderRadius: '8px' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'block';
