@@ -1398,7 +1398,7 @@ const PaymentPage = () => {
           console.log('✅ Application saved with tracking:', appResult.trackingNumber);
         }
 
-       const token = localStorage.getItem('authToken');
+      
 
 const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
   method: 'POST',
