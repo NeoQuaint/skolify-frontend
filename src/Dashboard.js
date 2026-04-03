@@ -958,48 +958,69 @@ const Dashboard = () => {
       
       {/* Background Pattern */}
       <div className="background-pattern"></div>
-<header className="app-header">
-  <div className="header-content">
-    <div className="logo">
-      <div className="logo-image">🎓</div>
-      <span className="logo-text">Skolify</span>
+
+<header style={{
+  padding: '0px 40px',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 1000,
+  background: 'white',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  height: '70px',
+  display: 'flex',
+  alignItems: 'center'
+}}>
+  <div style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: '900px',
+    margin: '0 auto',
+    width: '100%'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
+      <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
     </div>
-    <div className="profile-container">
+    <div style={{ position: 'relative' }}>
       <button 
-        ref={profileIconRef}
-        className="profile-icon"
         onClick={() => setShowProfileMenu(!showProfileMenu)}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '36px',
+          color: '#1a1a1a',
+          cursor: 'pointer',
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
       >
         <FaUserCircle />
       </button>
       {showProfileMenu && (
-        <div className="profile-menu" ref={profileMenuRef}>
-          <div className="profile-header">
-            <FaUserCircle className="profile-menu-icon" />
-            <div>
-              <h4>Student Profile</h4>
-              <p>student@example.com</p>
-            </div>
-          </div>
-          <div className="profile-menu-items">
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
-              My Profile
-            </button>
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Applications page coming soon!'); }}>
-              My Applications
-            </button>
-            <button className="profile-menu-item" onClick={() => { setShowProfileMenu(false); alert('Settings page coming soon!'); }}>
-              Settings
-            </button>
-            <button className="profile-menu-item logout-btn" onClick={goToLandingPage}>
-              Logout
-            </button>
-          </div>
+        <div style={{
+          position: 'absolute',
+          top: '55px',
+          right: 0,
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+          width: '220px',
+          zIndex: 1000
+        }}>
+          {/* menu content */}
         </div>
       )}
     </div>
   </div>
-</header>   
+</header>
+
 
       {/* Search Modal */}
       {showSearchModal && (

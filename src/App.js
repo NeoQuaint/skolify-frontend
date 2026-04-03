@@ -2,6 +2,7 @@ import API_URL from './config';
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
+import Header from './components/Header';
 import Background from './Background';
 import Dashboard from './Dashboard';
 import PaymentPage from './PaymentPage';
@@ -11,6 +12,7 @@ import Bursary from './Bursary';
 import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
+
 
 function WelcomeScreen() {
   const navigate = useNavigate();
@@ -102,22 +104,33 @@ function WelcomeScreen() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <img 
-              src="/SKOLIFY LOGO.jpeg" 
-              alt="Skolify Logo" 
-              className="logo-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'block';
-              }}
-            />
-            <span className="logo-text">Skolify</span>
-          </div>
-        </div>
-      </header>
+     <header style={{
+  padding: '0px 40px',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 1000,
+  background: 'white',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  height: '70px',
+  display: 'flex',
+  alignItems: 'center'
+}}>
+  <div style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: '900px',
+    margin: '0 auto',
+    width: '100%'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
+      <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
+    </div>
+  </div>
+</header>
 
       <main className="app-main">
         <div className="app-container">
@@ -303,23 +316,7 @@ function TermsAndConditions() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <img 
-              src="/SKOLIFY LOGO.jpeg" 
-              alt="Skolify Logo" 
-              className="logo-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'block';
-              }}
-            />
-            <span className="logo-text">Skolify</span>
-          </div>
-        </div>
-      </header>
-
+      <Header showProfile={false} />
       <main className="app-main">
         <div className="app-container terms-page">
           <button className="back-btn" onClick={() => navigate('/')}>
@@ -503,22 +500,7 @@ function PrivacyPolicy() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <img 
-              src="/SKOLIFY LOGO.jpeg" 
-              alt="Skolify Logo" 
-              className="logo-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'block';
-              }}
-            />
-            <span className="logo-text">Skolify</span>
-          </div>
-        </div>
-      </header>
+      <Header showProfile={false} />
 
       <main className="app-main">
         <div className="app-container terms-page">

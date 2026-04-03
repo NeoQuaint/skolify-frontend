@@ -1476,63 +1476,68 @@ const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
 
   return (
     <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
-      <header className="payment-header fixed">
-        <div className="header-content">
-          <div className="logo">
-            <img 
-              src="/SKOLIFY LOGO.jpeg" 
-              alt="Skolify Logo" 
-              className="logo-image"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'block';
-              }}
-            />
-            <span className="logo-text">Skolify</span>
-          </div>
-          <div className="header-right">
-            <div className="profile-container">
-              <button 
-                ref={profileIconRef}
-                className="profile-icon-btn"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                title="Your profile"
-              >
-                <FaUserCircle />
-              </button>
-              
-              {showProfileMenu && (
-                <div className="profile-menu" ref={profileMenuRef}>
-                  <div className="profile-header">
-                    <FaUserCircle className="profile-menu-icon" />
-                    <div>
-                      <h4>Student Profile</h4>
-                      <p>student@example.com</p>
-                    </div>
-                  </div>
-                  <div className="profile-menu-items">
-                    <button 
-                      className="profile-menu-item"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        navigate('/profile');
-                      }}
-                    >
-                      My Profile
-                    </button>
-                    <button 
-                      className="profile-menu-item logout-btn"
-                      onClick={handleLogout}
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+
+    <header style={{
+  padding: '0px 40px',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 1000,
+  background: 'white',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  height: '70px',
+  display: 'flex',
+  alignItems: 'center'
+}}>
+  <div style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: '900px',
+    margin: '0 auto',
+    width: '100%'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+      <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
+      <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
+    </div>
+    <div style={{ position: 'relative' }}>
+      <button 
+        onClick={() => setShowProfileMenu(!showProfileMenu)}
+        style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '36px',
+          color: '#1a1a1a',
+          cursor: 'pointer',
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <FaUserCircle />
+      </button>
+      {showProfileMenu && (
+        <div style={{
+          position: 'absolute',
+          top: '55px',
+          right: 0,
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+          width: '220px',
+          zIndex: 1000
+        }}>
+          {/* menu content */}
         </div>
-      </header>
+      )}
+    </div>
+  </div>
+</header>
 
       <div className="payment-container">
         {/* New Order Banner for logged-in users with previous orders */}
