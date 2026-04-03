@@ -58,31 +58,6 @@ function Header({ showProfile = true }) {
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
 
-        {showProfile && (
-          <div style={{ position: 'relative' }}>
-            <img
-              src="/profile-icon.png"
-              alt="Profile"
-              style={{ width: '33px', height: '33px', borderRadius: '50%', cursor: 'pointer' }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            />
-            {dropdownOpen && (
-              <div style={{
-                position: 'absolute',
-                top: '50px',
-                right: 0,
-                background: 'white',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                zIndex: 2000
-              }}>
-                <button onClick={goToProfile} style={{ display: 'block', padding: '10px 20px', width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>Profile</button>
-                <button onClick={handleLogout} style={{ display: 'block', padding: '10px 20px', width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>Logout</button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </header>
   );
