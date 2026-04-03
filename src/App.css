@@ -22,8 +22,6 @@ body {
   overflow: hidden;
 }
 
-
-
 /* Main Content */
 .app-main {
   min-height: 100vh;
@@ -31,6 +29,8 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  position: relative;
+  z-index: 5;
 }
 
 .app-container {
@@ -515,10 +515,6 @@ body {
     padding: 12px 24px;
   }
   
-  .app-header {
-    padding: 20px 16px;
-  }
-  
   .divider-line {
     max-width: 320px;
     margin: 35px auto;
@@ -557,19 +553,6 @@ body {
     font-size: 16px;
     width: 100%;
     max-width: 280px;
-  }
-  
-  .app-header {
-    padding: 16px 20px;
-  }
-  
-  .logo-image {
-    width: 36px;
-    height: 36px;
-  }
-  
-  .logo-text {
-    font-size: 24px;
   }
   
   .divider-line {
@@ -663,14 +646,9 @@ body, html, #root {
 }
 
 /* Ensure content is above background */
-.app-header,
 .app-main {
   position: relative;
   z-index: 10;
-}
-
-.app-main {
-  z-index: 5;
 }
 
 /* ============ ABSOLUTE LAST RESORT HEADER CENTERING ============ */
@@ -707,6 +685,7 @@ h1.main-heading,
   justify-content: center !important;
   width: 100% !important;
 }
+
 /* Divider Line - Lighter and Closer */
 .divider-line {
   height: 1.5px !important;
@@ -725,6 +704,7 @@ h1.main-heading,
   visibility: visible !important;
   animation: fadeIn 0.8s ease-out 0.2s both;
 }
+
 /* Terms and Conditions Page - Justified Text */
 .terms-section p,
 .terms-section li,
@@ -755,7 +735,6 @@ h1.main-heading,
   -webkit-hyphens: auto !important;
   -moz-hyphens: auto !important;
 }
-
 
 /* Sign In Styles */
 .signin-wrapper {
