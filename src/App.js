@@ -14,6 +14,19 @@ import PaymentError from './Pages/PaymentError';
 
 
 function Header({ showProfile = true }) {
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate('/');
+  };
+
+  const goToProfile = () => {
+    navigate('/profile');
+  };
+
   return (
     <header style={{
       padding: '0px 40px',
@@ -36,14 +49,38 @@ function Header({ showProfile = true }) {
         margin: '0 auto',
         width: '100%'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-          <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <img
+            src="/Skolify-Logo.jpeg"
+            alt="Skolify Logo"
+            style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px' }} // logo bigger
+          />
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
 
         {showProfile && (
-          <div>
-            {/* future profile button */}
+          <div style={{ position: 'relative' }}>
+            <img
+              src="/profile-icon.png"
+              alt="Profile"
+              style={{ width: '33px', height: '33px', borderRadius: '50%', cursor: 'pointer' }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            />
+            {dropdownOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '50px',
+                right: 0,
+                background: 'white',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                zIndex: 2000
+              }}>
+                <button onClick={goToProfile} style={{ display: 'block', padding: '10px 20px', width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>Profile</button>
+                <button onClick={handleLogout} style={{ display: 'block', padding: '10px 20px', width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>Logout</button>
+              </div>
+            )}
           </div>
         )}
       </div>
