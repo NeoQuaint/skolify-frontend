@@ -37,7 +37,7 @@ function Header({ showProfile = true }) {
         width: '100%'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-          <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px' }} />
+          <img src="/Skolify-Logo.jpeg" alt="Skolify Logo" style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px' }} />
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
 
