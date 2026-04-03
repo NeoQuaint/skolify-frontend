@@ -2,7 +2,6 @@ import API_URL from './config';
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
-import Header from './components/Header';
 import Background from './Background';
 import Dashboard from './Dashboard';
 import PaymentPage from './PaymentPage';
