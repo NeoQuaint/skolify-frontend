@@ -53,7 +53,7 @@ function Header({ showProfile = true }) {
           <img
             src="/Skolify-Logo.jpeg"
             alt="Skolify Logo"
-            style={{ width: '60px', height: '60px', objectFit: 'contain', borderRadius: '8px' }} // logo bigger
+            style={{ width: '63px', height: '63px', objectFit: 'contain', borderRadius: '8px' }} // logo bigger
           />
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>

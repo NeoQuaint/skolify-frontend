@@ -63,7 +63,7 @@ function DashboardHeader({ showProfile = true, logoSize = "60px" }) {
           <img
             src="/Skolify-Logo.jpeg"
             alt="Skolify Logo"
-            style={{ width: logoSize, height: logoSize, objectFit: 'contain', borderRadius: '8px' }}
+            style={{ width: 63px, height: 63px, objectFit: 'contain', borderRadius: '8px' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'block';
@@ -152,7 +152,7 @@ function DashboardHeader({ showProfile = true, logoSize = "60px" }) {
                     e.currentTarget.style.background = 'none';
                   }}
                 >
-                  <span style={{ fontSize: '18px' }}>🚪</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <span>Logout</span>
                 </button>
               </div>
@@ -1108,7 +1108,7 @@ const Dashboard = () => {
 
   return (
     <div className={`dashboard-app ${isNavigating ? 'page-exit' : ''}`}>
-      <DashboardHeader showProfile={true} logoSize="40px" />
+      <DashboardHeader showProfile={true} logoSize="30px" />
 
       {/* Navigation Loading Overlay */}
       {isNavigating && (
