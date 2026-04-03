@@ -6,7 +6,7 @@ import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
-function DashboardHeader({ showProfile = true, logoSize = "10px" }) {
+function DashboardHeader({ showProfile = true, logoSize = "100px" }) {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
