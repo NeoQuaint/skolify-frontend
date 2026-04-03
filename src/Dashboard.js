@@ -63,7 +63,7 @@ function DashboardHeader({ showProfile = true, logoSize = "90px" }) {
           <img
             src="/Skolify-Logo.jpeg"
             alt="Skolify Logo"
-            style={{ width: 63px, height: 63px, objectFit: 'contain', borderRadius: '8px' }}
+            style={{ width: logoSize, height: logoSize, objectFit: 'contain', borderRadius: '8px' }}
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'block';
@@ -76,7 +76,7 @@ function DashboardHeader({ showProfile = true, logoSize = "90px" }) {
         {showProfile && (
           <div ref={dropdownRef} style={{ position: 'relative' }}>
             <FaUserCircle 
-              size={40}
+              size={30}
               style={{ 
                 cursor: 'pointer',
                 color: '#4a5568',
