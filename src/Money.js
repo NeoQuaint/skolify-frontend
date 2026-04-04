@@ -7,6 +7,7 @@ import {
   FaChevronDown, FaChevronUp, FaInfoCircle, FaUniversity, FaSpinner, FaLock, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import PayFastPayment from './PayFastPayment';
+import YocoPayment from './YocoPayment';
 import API_URL from './config';
 
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
@@ -49,7 +50,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('credit');
+  const [paymentMethod, setPaymentMethod] = useState('card');
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -235,11 +236,11 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
   };
 
   const validateForm = () => {
-    // For PayFast, we don't need card validation
-    if (paymentMethod === 'payfast') {
+    // For EFT (PayFast), we don't need card validation
+    if (paymentMethod === 'eft') {
       if (isLoggedIn) return true;
       
-      // For non-logged-in users with PayFast, validate personal info, password, but not card
+      // For non-logged-in users with EFT, validate personal info, password, but not card
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
         return false;
@@ -326,125 +327,96 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       return true;
     }
 
-    // For logged-in users with credit card, only validate card details
-    if (isLoggedIn) {
-      if (!formData.cardNumber || formData.cardNumber.replace(/\s/g, '').length < 16) {
-        setError('Please enter a valid 16-digit card number');
+    // For Card (Yoco), we only need basic validation (no card details stored)
+    if (paymentMethod === 'card') {
+      if (isLoggedIn) return true;
+      
+      // For non-logged-in users with Card, validate personal info and password
+      if (!formData.firstName || formData.firstName.trim().length < 2) {
+        setError('Please enter your first name');
         return false;
       }
-      if (!formData.cardName || formData.cardName.trim().length < 3) {
-        setError('Please enter the name on card');
+      if (!formData.lastName || formData.lastName.trim().length < 2) {
+        setError('Please enter your last name');
         return false;
       }
-      if (!formData.expiryDate || formData.expiryDate.length < 5) {
-        setError('Please enter a valid expiry date (MM/YY)');
+      if (!formData.idNumber || formData.idNumber.trim().length < 6) {
+        setError('Please enter a valid ID/Passport number');
         return false;
       }
-      if (!formData.cvc || formData.cvc.length < 3) {
-        setError('Please enter a valid CVC');
+      if (!isLoggedIn) {
+        if (!formData.password || formData.password.length < 8) {
+          setError('Password must be at least 8 characters');
+          return false;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          return false;
+        }
+      }
+      if (!formData.dateOfBirth) {
+        setError('Please enter your date of birth');
+        return false;
+      }
+      if (!formData.gender) {
+        setError('Please select your gender');
+        return false;
+      }
+      if (!formData.nationality) {
+        setError('Please enter your nationality');
+        return false;
+      }
+      if (!formData.email || !formData.email.includes('@')) {
+        setError('Please enter a valid email address');
+        return false;
+      }
+      if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
+        setError('Please enter a valid phone number');
+        return false;
+      }
+      if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
+        setError('Please enter a valid WhatsApp number');
+        return false;
+      }
+      if (!formData.address || formData.address.trim().length < 3) {
+        setError('Please enter your street address');
+        return false;
+      }
+      if (!formData.city || formData.city.trim().length < 2) {
+        setError('Please enter your city');
+        return false;
+      }
+      if (!formData.province) {
+        setError('Please select your province');
+        return false;
+      }
+      if (!formData.postalCode || formData.postalCode.trim().length < 4) {
+        setError('Please enter a valid postal code');
+        return false;
+      }
+      if (!formData.kinName || formData.kinName.trim().length < 3) {
+        setError('Please enter next of kin full name');
+        return false;
+      }
+      if (!formData.kinRelationship || formData.kinRelationship.trim().length < 2) {
+        setError('Please enter relationship with next of kin');
+        return false;
+      }
+      if (!formData.kinPhone || formData.kinPhone.trim().length < 10) {
+        setError('Please enter a valid next of kin phone number');
+        return false;
+      }
+      if (!documents.id.uploaded) {
+        setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
+        return false;
+      }
+      if (!documents.results.uploaded) {
+        setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
         return false;
       }
       return true;
     }
 
-    // For non-logged-in users with credit card, validate everything including password
-    if (!formData.firstName || formData.firstName.trim().length < 2) {
-      setError('Please enter your first name');
-      return false;
-    }
-    if (!formData.lastName || formData.lastName.trim().length < 2) {
-      setError('Please enter your last name');
-      return false;
-    }
-    if (!formData.idNumber || formData.idNumber.trim().length < 6) {
-      setError('Please enter a valid ID/Passport number');
-      return false;
-    }
-    // Password validation for new users - 8 characters
-    if (!formData.password || formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (!formData.dateOfBirth) {
-      setError('Please enter your date of birth');
-      return false;
-    }
-    if (!formData.gender) {
-      setError('Please select your gender');
-      return false;
-    }
-    if (!formData.nationality) {
-      setError('Please enter your nationality');
-      return false;
-    }
-    if (!formData.email || !formData.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
-      setError('Please enter a valid phone number');
-      return false;
-    }
-    if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
-      setError('Please enter a valid WhatsApp number');
-      return false;
-    }
-    if (!formData.address || formData.address.trim().length < 3) {
-      setError('Please enter your street address');
-      return false;
-    }
-    if (!formData.city || formData.city.trim().length < 2) {
-      setError('Please enter your city');
-      return false;
-    }
-    if (!formData.province) {
-      setError('Please select your province');
-      return false;
-    }
-    if (!formData.postalCode || formData.postalCode.trim().length < 4) {
-      setError('Please enter a valid postal code');
-      return false;
-    }
-    if (!formData.kinName || formData.kinName.trim().length < 3) {
-      setError('Please enter next of kin full name');
-      return false;
-    }
-    if (!formData.kinRelationship || formData.kinRelationship.trim().length < 2) {
-      setError('Please enter relationship with next of kin');
-      return false;
-    }
-    if (!formData.kinPhone || formData.kinPhone.trim().length < 10) {
-      setError('Please enter a valid next of kin phone number');
-      return false;
-    }
-    if (!documents.id.uploaded) {
-      setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
-      return false;
-    }
-    if (!documents.results.uploaded) {
-      setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
-      return false;
-    }
-    if (!formData.cardNumber || formData.cardNumber.replace(/\s/g, '').length < 16) {
-      setError('Please enter a valid 16-digit card number');
-      return false;
-    }
-    if (!formData.cardName || formData.cardName.trim().length < 3) {
-      setError('Please enter the name on card');
-      return false;
-    }
-    if (!formData.expiryDate || formData.expiryDate.length < 5) {
-      setError('Please enter a valid expiry date (MM/YY)');
-      return false;
-    }
-    if (!formData.cvc || formData.cvc.length < 3) {
-      setError('Please enter a valid CVC');
-      return false;
-    }
     return true;
   };
 
@@ -505,244 +477,29 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       return;
     }
 
-    // If PayFast is selected, the PayFast component handles the redirect
-    if (paymentMethod === 'payfast') {
+    // If EFT is selected, the PayFast component handles the redirect
+    if (paymentMethod === 'eft') {
       // The PayFast component will handle the redirect
       return;
     }
 
-    // Existing credit card flow continues here...
-    setIsProcessing(true);
-    setError('');
-
-    const formDataToSend = new FormData();
-    
-    Object.keys(formData).forEach(key => {
-      if (formData[key]) {
-        formDataToSend.append(key, formData[key]);
-      }
-    });
-
-    if (documents.id.file) {
-      formDataToSend.append('id', documents.id.file);
+    // For Card payments, Yoco handles the redirect
+    if (paymentMethod === 'card') {
+      // YocoPayment component will handle the redirect
+      return;
     }
-    if (documents.results.file) {
-      formDataToSend.append('results', documents.results.file);
-    }
+  };
 
-    let finalTrackingNumber;
-    
-    if (paymentTrackingNumber) {
-      finalTrackingNumber = paymentTrackingNumber;
-      console.log('🔵 Using tracking number from PaymentPage:', finalTrackingNumber);
-    } else {
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${year}${month}${day}`;
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      finalTrackingNumber = `SKL-${dateStr}-${random}`;
-      console.log('⚠️ No tracking from PaymentPage, generated TEMP tracking:', finalTrackingNumber);
-    }
-    
-    formDataToSend.append('trackingNumber', finalTrackingNumber);
-    formDataToSend.append('totalAmount', totalAmount);
-    formDataToSend.append('paymentMethod', paymentMethod);
+  // Handle Yoco payment success
+  const handleYocoSuccess = (transactionId) => {
+    console.log('✅ Yoco payment successful:', transactionId);
+    // The redirect to payment-success page will handle the rest
+  };
 
-    try {
-      const uploadResponse = await fetch(`${API_URL}/api/upload-documents`, {
-        method: 'POST',
-        body: formDataToSend
-      });
-
-      const uploadResult = await uploadResponse.json();
-      
-      if (!uploadResult.success) {
-        throw new Error('File upload failed');
-      }
-
-      console.log('✅ Files uploaded:', uploadResult.paths);
-
-      let accountCredentials = null;
-
-      if (!isLoggedIn) {
-        try {
-          console.log('📝 Creating account with custom password...');
-
-          const response = await fetch(`${API_URL}/api/auth/create-account`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              idNumber: formData.idNumber,
-              email: formData.email,
-              password: formData.password
-            })
-          });
-          
-          const result = await response.json();
-          console.log('📥 Account creation response:', result);
-          
-          if (result.success && result.newUser) {
-            localStorage.setItem('authToken', result.token);
-            localStorage.setItem('user', JSON.stringify(result.user));
-            
-            accountCredentials = {
-              username: result.credentials.username,
-              password: formData.password
-            };
-            
-            try {
-              const savedSelection = localStorage.getItem('applicationSummary');
-              console.log('📦 Saved selection from localStorage:', savedSelection);
-              
-              if (savedSelection) {
-                const selectionData = JSON.parse(savedSelection);
-                console.log('📤 Transferring payment selection to database:', selectionData);
-                
-                const paymentResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${result.token}`
-                  },
-                  body: JSON.stringify({
-                    selectedPackage: selectionData.package,
-                    universities: selectionData.universities,
-                    totalCourses: selectionData.totalCourses,
-                    totalUniversities: selectionData.totalUniversities,
-                    totalCost: selectionData.totalCost,
-                    courseDetails: selectionData.courseDetails || []
-                  })
-                });
-                
-                const paymentResult = await paymentResponse.json();
-                console.log('📥 Payment selection transfer response:', paymentResult);
-                
-                if (paymentResult.success) {
-                  const backendTrackingNumber = paymentResult.trackingNumber;
-                  console.log('✅ Payment selection saved with backend tracking:', backendTrackingNumber);
-                  
-                  setBackendTrackingNumber(backendTrackingNumber);
-                  
-                  const updatedSelection = {
-                    ...selectionData,
-                    trackingNumber: backendTrackingNumber
-                  };
-                  localStorage.setItem('applicationSummary', JSON.stringify(updatedSelection));
-                  
-                  finalTrackingNumber = backendTrackingNumber;
-                  
-                  const saveResult = await saveApplicationToDatabase(backendTrackingNumber, uploadResult.paths);
-                  if (saveResult.success) {
-                    console.log('✅ Application saved with backend tracking:', backendTrackingNumber);
-                  }
-                } else {
-                  console.log('⚠️ Payment selection failed, using current tracking for application');
-                  const saveResult = await saveApplicationToDatabase(finalTrackingNumber, uploadResult.paths);
-                  if (saveResult.success) {
-                    console.log('✅ Application saved with tracking:', finalTrackingNumber);
-                  }
-                }
-              }
-            } catch (transferError) {
-              console.error('❌ Error transferring payment selection:', transferError);
-              const saveResult = await saveApplicationToDatabase(finalTrackingNumber, uploadResult.paths);
-              if (saveResult.success) {
-                console.log('✅ Application saved with tracking after error:', finalTrackingNumber);
-              }
-            }
-            
-          } else if (result.success && result.existingUser) {
-            console.log('👤 User already exists, logging in...');
-            
-            const signInResponse = await fetch(`${API_URL}/api/auth/signin`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                username: result.user.username,
-                password: formData.password
-              })
-            });
-            
-            const signInResult = await signInResponse.json();
-            if (signInResult.success) {
-              localStorage.setItem('authToken', signInResult.token);
-              localStorage.setItem('user', JSON.stringify(signInResult.user));
-            }
-          }
-        } catch (error) {
-          console.error('❌ Account creation error:', error);
-        }
-      } else {
-        try {
-          const saveResult = await saveApplicationToDatabase(finalTrackingNumber, uploadResult.paths);
-          if (saveResult.success) {
-            console.log('✅ Application saved with tracking:', finalTrackingNumber);
-          }
-        } catch (error) {
-          console.error('❌ Error in logged-in payment flow:', error);
-        }
-      }
-      
-      setTimeout(() => {
-        setIsProcessing(false);
-        
-        const profileData = {
-          ...formData,
-          documents: {
-            id: documents.id.name,
-            results: documents.results.name
-          }
-        };
-        localStorage.setItem('userProfileData', JSON.stringify(profileData));
-        
-        onPaymentComplete({
-          success: true,
-          transactionId: finalTrackingNumber,
-          amount: totalAmount,
-          method: paymentMethod,
-          cardLast4: formData.cardNumber?.slice(-4) || '',
-          firstName: formData.firstName,
-          middleName: formData.middleName,
-          lastName: formData.lastName,
-          fullName: `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.lastName}`,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          nationality: formData.nationality,
-          homeLanguage: formData.homeLanguage,
-          address: formData.address,
-          suburb: formData.suburb,
-          city: formData.city,
-          province: formData.province,
-          postalCode: formData.postalCode,
-          kinName: formData.kinName,
-          kinRelationship: formData.kinRelationship,
-          kinPhone: formData.kinPhone,
-          kinEmail: formData.kinEmail,
-          documents: documents,
-          trackingNumber: finalTrackingNumber,
-          password: formData.password,
-          ...(accountCredentials && {
-            showCredentials: true,
-            username: accountCredentials.username,
-            password: accountCredentials.password
-          })
-        });
-        
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Upload error:', error);
-      setError('Failed to upload files');
-      setIsProcessing(false);
-    }
+  // Handle Yoco payment error
+  const handleYocoError = (errorMessage) => {
+    console.error('❌ Yoco payment error:', errorMessage);
+    setError(errorMessage);
   };
 
   if (!isOpen) return null;
@@ -818,73 +575,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                   You can update them later in your profile.
                 </p>
               </div>
-
-              {/* Show credit card fields only if credit card is selected */}
-              {paymentMethod === 'credit' && (
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">1</span>
-                    <h3>Payment Details</h3>
-                  </div>
-
-                  <div className="money-group">
-                    <label>Card number</label>
-                    <div className="card-input-wrapper">
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        placeholder="1234 5678 9012 3456"
-                        value={formData.cardNumber}
-                        onChange={handleInputChange}
-                        maxLength="19"
-                        required={paymentMethod === 'credit'}
-                        autoFocus
-                      />
-                      <span className="card-icon">VISA</span>
-                    </div>
-                  </div>
-
-                  <div className="money-group">
-                    <label>Name on card</label>
-                    <input
-                      type="text"
-                      name="cardName"
-                      placeholder="JOHN DOE"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      required={paymentMethod === 'credit'}
-                    />
-                  </div>
-
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label>Expiry</label>
-                      <input
-                        type="text"
-                        name="expiryDate"
-                        placeholder="MM/YY"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        maxLength="5"
-                        required={paymentMethod === 'credit'}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label>CVC</label>
-                      <input
-                        type="text"
-                        name="cvc"
-                        placeholder="123"
-                        value={formData.cvc}
-                        onChange={handleInputChange}
-                        maxLength="4"
-                        required={paymentMethod === 'credit'}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           ) : (
             /* For non-logged-in users, show all sections expanded */
@@ -946,7 +636,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                   <small className="field-note">This will be used for verification</small>
                 </div>
 
-                {/* Password Fields with Toggle Visibility - CORRECTED */}
+                {/* Password Fields with Toggle Visibility */}
                 <div className="money-row">
                   <div className="money-group">
                     <label><FaLock /> Create Password *</label>
@@ -1342,23 +1032,35 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
             <div className="payment-methods">
               <button
                 type="button"
-                className={`payment-method-btn ${paymentMethod === 'credit' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('credit')}
+                className={`payment-method-btn ${paymentMethod === 'card' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('card')}
               >
-                <FaCreditCard /> Credit Card
+                <FaCreditCard /> Card
               </button>
               <button
                 type="button"
-                className={`payment-method-btn ${paymentMethod === 'payfast' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('payfast')}
+                className={`payment-method-btn ${paymentMethod === 'eft' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('eft')}
               >
-                <FaUniversity /> PayFast (Instant EFT)
+                <FaUniversity /> EFT
               </button>
             </div>
           </div>
 
-          {/* PayFast Button */}
-          {paymentMethod === 'payfast' && (
+          {/* Card Payment (Yoco) - Shows when Card is selected */}
+          {paymentMethod === 'card' && (
+            <div className="yoco-section">
+              <YocoPayment
+                amount={totalAmount}
+                trackingNumber={paymentTrackingNumber || ''}
+                onSuccess={handleYocoSuccess}
+                onError={handleYocoError}
+              />
+            </div>
+          )}
+
+          {/* EFT Payment (PayFast) - Shows when EFT is selected */}
+          {paymentMethod === 'eft' && (
             <div className="payfast-section">
               <PayFastPayment
                 amount={totalAmount}
@@ -1370,90 +1072,11 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
             </div>
           )}
 
-          {/* Credit Card Fields - Only show if credit card is selected and user is not logged in */}
-          {!isLoggedIn && paymentMethod === 'credit' && (
-            <div className="money-section-card">
-              <div className="section-title">
-                <span className="section-number">6</span>
-                <h3>Payment Details</h3>
-              </div>
-
-              <div className="money-group">
-                <label>Card number</label>
-                <div className="card-input-wrapper">
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    value={formData.cardNumber}
-                    onChange={handleInputChange}
-                    maxLength="19"
-                    required={paymentMethod === 'credit'}
-                  />
-                  <span className="card-icon">VISA</span>
-                </div>
-              </div>
-
-              <div className="money-group">
-                <label>Name on card</label>
-                <input
-                  type="text"
-                  name="cardName"
-                  placeholder="JOHN DOE"
-                  value={formData.cardName}
-                  onChange={handleInputChange}
-                  required={paymentMethod === 'credit'}
-                />
-              </div>
-
-              <div className="money-row">
-                <div className="money-group">
-                  <label>Expiry</label>
-                  <input
-                    type="text"
-                    name="expiryDate"
-                    placeholder="MM/YY"
-                    value={formData.expiryDate}
-                    onChange={handleInputChange}
-                    maxLength="5"
-                    required={paymentMethod === 'credit'}
-                  />
-                </div>
-
-                <div className="money-group">
-                  <label>CVC</label>
-                  <input
-                    type="text"
-                    name="cvc"
-                    placeholder="123"
-                    value={formData.cvc}
-                    onChange={handleInputChange}
-                    maxLength="4"
-                    required={paymentMethod === 'credit'}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="money-summary">
             <div className="summary-left">
               <span>Total Amount:</span>
               <span className="total-amount">R{totalAmount}</span>
             </div>
-            {paymentMethod === 'credit' && (
-              <button 
-                type="submit" 
-                className="pay-now-btn"
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <><FaSpinner className="spinner-icon" /> Processing...</>
-                ) : (
-                  'Submit & Pay'
-                )}
-              </button>
-            )}
           </div>
 
           <p className="secure-payment">
