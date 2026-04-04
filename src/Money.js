@@ -254,8 +254,8 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       }
       // Password validation for new users
       if (!isLoggedIn) {
-        if (!formData.password || formData.password.length < 6) {
-          setError('Password must be at least 6 characters');
+        if (!formData.password || formData.password.length < 8) {
+          setError('Password must be at least 8 characters');
           return false;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -952,13 +952,13 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                     <label><FaLock /> Create Password *</label>
                     <div className="password-input-wrapper">
                       <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        placeholder="Minimum 6 characters"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      type={showConfirmPassword ? "text" : "password"}
+                       name="confirmPassword"
+                       placeholder="Re-enter password (minimum 8 characters)"
+                      value={formData.confirmPassword}
+                       onChange={handleInputChange}
+                       required
+                           />
                       <button
                         type="button"
                         className="password-toggle-btn"
