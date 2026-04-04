@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePopup, useEFT } from '@lekkercommerce/yoco-react';
-import API_URL from '../config';
+import API_URL from './config';
 
 const YocoPayment = ({ amount, trackingNumber, paymentMethod, onSuccess, onError }) => {
   const [isLoading, setIsLoading] = useState(false);
