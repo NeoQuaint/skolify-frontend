@@ -1307,8 +1307,9 @@ const Dashboard = () => {
           {/* Subjects Section */}
           <div className="subjects-section" ref={subjectsSectionRef}>
             <p className="section-description">
-              Enter your final high school marks. Click "Find My Options" to see eligible faculties.
-            </p>
+            Enter your final high school marks. Click "Find My Options" to see eligible faculties.<br />
+             <strong>Life Orientation is excluded</strong>
+              </p>
             
             <div className="subjects-table">
               <div className="table-header">
