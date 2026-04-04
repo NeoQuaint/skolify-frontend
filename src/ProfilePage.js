@@ -7,7 +7,8 @@ import {
   FaEdit, FaSave, FaTimes, FaCheck, FaIdCard, FaGraduationCap,
   FaReceipt, FaUpload, FaWhatsapp, FaVenusMars, FaGlobe,
   FaLanguage, FaHome, FaUserTie, FaPhoneAlt, FaCalendarAlt,
-  FaUserCircle 
+  FaUserCircle, FaHistory, FaChevronUp, FaChevronDown, 
+  FaHashtag, FaBoxOpen, FaLock, FaSpinner
 } from 'react-icons/fa';
 import API_URL from './config';
 
