@@ -252,7 +252,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         setError('Please enter a valid ID/Passport number');
         return false;
       }
-      // Password validation for new users
+      // Password validation for new users - 8 characters
       if (!isLoggedIn) {
         if (!formData.password || formData.password.length < 8) {
           setError('Password must be at least 8 characters');
@@ -360,9 +360,9 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       setError('Please enter a valid ID/Passport number');
       return false;
     }
-    // Password validation for new users
-    if (!formData.password || formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // Password validation for new users - 8 characters
+    if (!formData.password || formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -946,19 +946,19 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                   <small className="field-note">This will be used for verification</small>
                 </div>
 
-                {/* Password Fields with Toggle Visibility */}
+                {/* Password Fields with Toggle Visibility - CORRECTED */}
                 <div className="money-row">
                   <div className="money-group">
                     <label><FaLock /> Create Password *</label>
                     <div className="password-input-wrapper">
                       <input
-                      type={showConfirmPassword ? "text" : "password"}
-                       name="confirmPassword"
-                       placeholder="Re-enter password (minimum 8 characters)"
-                      value={formData.confirmPassword}
-                       onChange={handleInputChange}
-                       required
-                           />
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        placeholder="Minimum 8 characters"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required
+                      />
                       <button
                         type="button"
                         className="password-toggle-btn"
@@ -967,7 +967,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
                         {showPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
                     </div>
-                    <small className="field-note">This will be your login password</small>
+                    <small className="field-note">Password must be at least 8 characters</small>
                   </div>
 
                   <div className="money-group">
