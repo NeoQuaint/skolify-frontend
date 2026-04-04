@@ -6,8 +6,6 @@ import {
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
   FaChevronDown, FaChevronUp, FaInfoCircle, FaUniversity, FaSpinner, FaLock, FaEye, FaEyeSlash
 } from 'react-icons/fa';
-import PayFastPayment from './PayFastPayment';
-import YocoPayment from './YocoPayment';
 import API_URL from './config';
 
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
@@ -33,14 +31,12 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   // Get tracking number from sessionStorage
   const [paymentTrackingNumber, setPaymentTrackingNumber] = useState(() => {
     const tracking = sessionStorage.getItem('paymentTrackingNumber');
-    console.log('🔵 Money component - Retrieved tracking from sessionStorage:', tracking);
     return tracking || null;
   });
 
   // Clear sessionStorage after reading
   useEffect(() => {
     if (paymentTrackingNumber) {
-      console.log('🔵 Money component - Using tracking number:', paymentTrackingNumber);
       sessionStorage.removeItem('paymentTrackingNumber');
     }
   }, [paymentTrackingNumber]);
@@ -51,6 +47,19 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
+  const [isUploading, setIsUploading] = useState(false);
+  const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
+  
+  // Card payment fields
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    cardName: '',
+    expiryDate: '',
+    cvc: ''
+  });
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -75,22 +84,12 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     kinEmail: '',
     password: '',
     confirmPassword: '',
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvc: ''
   });
   
   const [documents, setDocuments] = useState({
     id: { name: null, uploaded: false, file: null },
     results: { name: null, uploaded: false, file: null }
   });
-  
- const [isProcessing, setIsProcessing] = useState(false);
-const [error, setError] = useState('');
-const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
-const [isUploading, setIsUploading] = useState(false);  
-const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
 
   // Real-time password match check
   useEffect(() => {
@@ -109,7 +108,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         const token = localStorage.getItem('authToken');
         
         try {
-          console.log('🔍 Fetching user profile...');
           const response = await fetch(`${API_URL}/api/user/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -117,7 +115,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
           });
           
           const data = await response.json();
-          console.log('📥 Profile data received:', data);
           
           if (data.success) {
             setFormData(prev => ({
@@ -142,10 +139,9 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
               kinRelationship: data.user.kin_relationship || '',
               kinEmail: data.user.kin_email || ''
             }));
-            console.log('✅ Profile loaded for:', data.user.first_name);
           }
         } catch (error) {
-          console.error('❌ Error fetching profile:', error);
+          console.error('Error fetching profile:', error);
         } finally {
           setIsLoadingProfile(false);
         }
@@ -158,12 +154,17 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setError('');
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCardInputChange = (e) => {
+    const { name, value } = e.target;
     
     if (name === 'cardNumber') {
       const cleaned = value.replace(/\s/g, '');
       if (cleaned.length <= 16) {
         const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
-        setFormData(prev => ({ ...prev, [name]: formatted }));
+        setCardDetails(prev => ({ ...prev, [name]: formatted }));
       }
     } 
     else if (name === 'expiryDate') {
@@ -173,20 +174,19 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         if (cleaned.length > 2) {
           formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
         }
-        setFormData(prev => ({ ...prev, [name]: formatted }));
+        setCardDetails(prev => ({ ...prev, [name]: formatted }));
       }
     }
     else if (name === 'cvc') {
       if (value.length <= 4) {
-        setFormData(prev => ({ ...prev, [name]: value.replace(/\D/g, '') }));
+        setCardDetails(prev => ({ ...prev, [name]: value.replace(/\D/g, '') }));
       }
     }
     else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setCardDetails(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  // UPDATED: Enhanced file upload handler with specific error messages
   const handleFileUpload = async (type, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -195,13 +195,13 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
     setError('');
     setFieldErrors(prev => ({ ...prev, [type]: '' }));
     
-    const formData = new FormData();
-    formData.append(type, file);
+    const formDataFile = new FormData();
+    formDataFile.append(type, file);
     
     try {
       const response = await fetch(`${API_URL}/api/upload-documents`, {
         method: 'POST',
-        body: formData
+        body: formDataFile
       });
       
       const result = await response.json();
@@ -236,11 +236,10 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
   };
 
   const validateForm = () => {
-    // For EFT (PayFast), we don't need card validation
+    // For EFT, we don't need card validation
     if (paymentMethod === 'eft') {
       if (isLoggedIn) return true;
       
-      // For non-logged-in users with EFT, validate personal info, password, but not card
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
         return false;
@@ -253,7 +252,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         setError('Please enter a valid ID/Passport number');
         return false;
       }
-      // Password validation for new users - 8 characters
       if (!isLoggedIn) {
         if (!formData.password || formData.password.length < 8) {
           setError('Password must be at least 8 characters');
@@ -264,56 +262,12 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
           return false;
         }
       }
-      if (!formData.dateOfBirth) {
-        setError('Please enter your date of birth');
-        return false;
-      }
-      if (!formData.gender) {
-        setError('Please select your gender');
-        return false;
-      }
-      if (!formData.nationality) {
-        setError('Please enter your nationality');
-        return false;
-      }
       if (!formData.email || !formData.email.includes('@')) {
         setError('Please enter a valid email address');
         return false;
       }
       if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
         setError('Please enter a valid phone number');
-        return false;
-      }
-      if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
-        setError('Please enter a valid WhatsApp number');
-        return false;
-      }
-      if (!formData.address || formData.address.trim().length < 3) {
-        setError('Please enter your street address');
-        return false;
-      }
-      if (!formData.city || formData.city.trim().length < 2) {
-        setError('Please enter your city');
-        return false;
-      }
-      if (!formData.province) {
-        setError('Please select your province');
-        return false;
-      }
-      if (!formData.postalCode || formData.postalCode.trim().length < 4) {
-        setError('Please enter a valid postal code');
-        return false;
-      }
-      if (!formData.kinName || formData.kinName.trim().length < 3) {
-        setError('Please enter next of kin full name');
-        return false;
-      }
-      if (!formData.kinRelationship || formData.kinRelationship.trim().length < 2) {
-        setError('Please enter relationship with next of kin');
-        return false;
-      }
-      if (!formData.kinPhone || formData.kinPhone.trim().length < 10) {
-        setError('Please enter a valid next of kin phone number');
         return false;
       }
       if (!documents.id.uploaded) {
@@ -327,11 +281,10 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       return true;
     }
 
-    // For Card (Yoco), we only need basic validation (no card details stored)
+    // For Card - validate card details
     if (paymentMethod === 'card') {
       if (isLoggedIn) return true;
       
-      // For non-logged-in users with Card, validate personal info and password
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
         return false;
@@ -354,18 +307,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
           return false;
         }
       }
-      if (!formData.dateOfBirth) {
-        setError('Please enter your date of birth');
-        return false;
-      }
-      if (!formData.gender) {
-        setError('Please select your gender');
-        return false;
-      }
-      if (!formData.nationality) {
-        setError('Please enter your nationality');
-        return false;
-      }
       if (!formData.email || !formData.email.includes('@')) {
         setError('Please enter a valid email address');
         return false;
@@ -374,36 +315,20 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
         setError('Please enter a valid phone number');
         return false;
       }
-      if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
-        setError('Please enter a valid WhatsApp number');
+      if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
+        setError('Please enter a valid card number');
         return false;
       }
-      if (!formData.address || formData.address.trim().length < 3) {
-        setError('Please enter your street address');
+      if (!cardDetails.cardName || cardDetails.cardName.trim().length < 3) {
+        setError('Please enter the name on card');
         return false;
       }
-      if (!formData.city || formData.city.trim().length < 2) {
-        setError('Please enter your city');
+      if (!cardDetails.expiryDate || cardDetails.expiryDate.length < 5) {
+        setError('Please enter a valid expiry date (MM/YY)');
         return false;
       }
-      if (!formData.province) {
-        setError('Please select your province');
-        return false;
-      }
-      if (!formData.postalCode || formData.postalCode.trim().length < 4) {
-        setError('Please enter a valid postal code');
-        return false;
-      }
-      if (!formData.kinName || formData.kinName.trim().length < 3) {
-        setError('Please enter next of kin full name');
-        return false;
-      }
-      if (!formData.kinRelationship || formData.kinRelationship.trim().length < 2) {
-        setError('Please enter relationship with next of kin');
-        return false;
-      }
-      if (!formData.kinPhone || formData.kinPhone.trim().length < 10) {
-        setError('Please enter a valid next of kin phone number');
+      if (!cardDetails.cvc || cardDetails.cvc.length < 3) {
+        setError('Please enter a valid CVC code');
         return false;
       }
       if (!documents.id.uploaded) {
@@ -448,8 +373,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       trackingNumber: trackingNumber
     };
 
-    console.log('📤 SENDING TO DATABASE WITH TRACKING:', trackingNumber, applicationData);
-
     try {
       const response = await fetch(`${API_URL}/api/applications/create`, {
         method: 'POST',
@@ -461,45 +384,94 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
       });
       
       const result = await response.json();
-      console.log('📥 SERVER RESPONSE:', result);
-      
       return result;
     } catch (error) {
-      console.error('❌ NETWORK ERROR:', error);
+      console.error('Network error:', error);
       throw error;
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleCardPayment = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
-
-    // If EFT is selected, the PayFast component handles the redirect
-    if (paymentMethod === 'eft') {
-      // The PayFast component will handle the redirect
-      return;
-    }
-
-    // For Card payments, Yoco handles the redirect
-    if (paymentMethod === 'card') {
-      // YocoPayment component will handle the redirect
-      return;
+    
+    setIsProcessing(true);
+    setError('');
+    
+    try {
+      // Generate tracking number
+      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      // Save application to database
+      const filePaths = {
+        id: documents.id.file ? documents.id.file.name : null,
+        results: documents.results.file ? documents.results.file.name : null
+      };
+      
+      await saveApplicationToDatabase(trackingNumber, filePaths);
+      
+      // Store tracking number
+      localStorage.setItem('paymentTrackingNumber', trackingNumber);
+      
+      // Simulate card payment processing
+      setTimeout(() => {
+        setIsProcessing(false);
+        // Navigate to success page
+        navigate('/payment/success', { 
+          state: { 
+            trackingNumber: trackingNumber,
+            amount: totalAmount,
+            paymentMethod: 'card'
+          } 
+        });
+        if (onPaymentComplete) onPaymentComplete();
+        onClose();
+      }, 2000);
+      
+    } catch (error) {
+      setError('Payment failed. Please try again.');
+      setIsProcessing(false);
     }
   };
 
-  // Handle Yoco payment success
-  const handleYocoSuccess = (transactionId) => {
-    console.log('✅ Yoco payment successful:', transactionId);
-    // The redirect to payment-success page will handle the rest
-  };
-
-  // Handle Yoco payment error
-  const handleYocoError = (errorMessage) => {
-    console.error('❌ Yoco payment error:', errorMessage);
-    setError(errorMessage);
+  const handleEFTPayment = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsProcessing(true);
+    setError('');
+    
+    try {
+      // Generate tracking number
+      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      // Save application to database
+      const filePaths = {
+        id: documents.id.file ? documents.id.file.name : null,
+        results: documents.results.file ? documents.results.file.name : null
+      };
+      
+      await saveApplicationToDatabase(trackingNumber, filePaths);
+      
+      // Store tracking number
+      localStorage.setItem('paymentTrackingNumber', trackingNumber);
+      
+      // Show EFT details
+      setError('');
+      alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
+      
+      setIsProcessing(false);
+      
+    } catch (error) {
+      setError('Failed to process. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -543,7 +515,7 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="money-form">
+        <form onSubmit={paymentMethod === 'card' ? handleCardPayment : handleEFTPayment} className="money-form">
           {isLoggedIn ? (
             <>
               {/* For logged-in users: Show summary of their info */}
@@ -577,7 +549,6 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
               </div>
             </>
           ) : (
-            /* For non-logged-in users, show all sections expanded */
             <>
               {/* Personal Information Section */}
               <div className="money-section-card">
@@ -1047,28 +1018,83 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
             </div>
           </div>
 
-          {/* Card Payment (Yoco) - Shows when Card is selected */}
+          {/* Card Payment Fields - Shows when Card is selected */}
           {paymentMethod === 'card' && (
-            <div className="yoco-section">
-              <YocoPayment
-                amount={totalAmount}
-                trackingNumber={paymentTrackingNumber || ''}
-                onSuccess={handleYocoSuccess}
-                onError={handleYocoError}
-              />
+            <div className="card-payment-section">
+              <div className="money-group">
+                <label><FaCreditCard /> Card Number *</label>
+                <input
+                  type="text"
+                  name="cardNumber"
+                  placeholder="1234 5678 9012 3456"
+                  value={cardDetails.cardNumber}
+                  onChange={handleCardInputChange}
+                  maxLength="19"
+                  required
+                />
+              </div>
+
+              <div className="money-group">
+                <label>Name on Card *</label>
+                <input
+                  type="text"
+                  name="cardName"
+                  placeholder="JOHN DOE"
+                  value={cardDetails.cardName}
+                  onChange={handleCardInputChange}
+                  required
+                />
+              </div>
+
+              <div className="money-row">
+                <div className="money-group">
+                  <label>Expiry Date *</label>
+                  <input
+                    type="text"
+                    name="expiryDate"
+                    placeholder="MM/YY"
+                    value={cardDetails.expiryDate}
+                    onChange={handleCardInputChange}
+                    maxLength="5"
+                    required
+                  />
+                </div>
+
+                <div className="money-group">
+                  <label>CVC *</label>
+                  <input
+                    type="text"
+                    name="cvc"
+                    placeholder="123"
+                    value={cardDetails.cvc}
+                    onChange={handleCardInputChange}
+                    maxLength="4"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* EFT Payment (PayFast) - Shows when EFT is selected */}
+          {/* EFT Payment Instructions - Shows when EFT is selected */}
           {paymentMethod === 'eft' && (
-            <div className="payfast-section">
-              <PayFastPayment
-                amount={totalAmount}
-                itemName="Skolify Application Package"
-                email={formData.email}
-                firstName={formData.firstName}
-                lastName={formData.lastName}
-              />
+            <div className="eft-payment-section">
+              <div className="eft-instructions">
+                <FaUniversity className="eft-icon" />
+                <h4>EFT Bank Transfer</h4>
+                <p>Please use the following bank details to make your payment:</p>
+                <div className="bank-details">
+                  <p><strong>Bank:</strong> Skolify Banking</p>
+                  <p><strong>Account Name:</strong> Skolify (Pty) Ltd</p>
+                  <p><strong>Account Number:</strong> 1234567890</p>
+                  <p><strong>Branch Code:</strong> 123456</p>
+                  <p><strong>Reference:</strong> Will be generated after submission</p>
+                  <p><strong>Amount:</strong> R{totalAmount}</p>
+                </div>
+                <p className="eft-note">
+                  After completing the payment, your application will be processed within 24-48 hours.
+                </p>
+              </div>
             </div>
           )}
 
@@ -1078,6 +1104,20 @@ const [backendTrackingNumber, setBackendTrackingNumber] = useState(null);
               <span className="total-amount">R{totalAmount}</span>
             </div>
           </div>
+
+          <button 
+            type="submit" 
+            className="pay-now-btn"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <FaSpinner className="spinner-icon" /> Processing...
+              </>
+            ) : (
+              `Pay R${totalAmount}`
+            )}
+          </button>
 
           <p className="secure-payment">
             🔒 All information is encrypted and secure
