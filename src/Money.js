@@ -345,75 +345,67 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
-  const saveEverythingToDatabase = async (trackingNumber, filePaths) => {
-    const token = localStorage.getItem('authToken');
+  const handleCardPayment = async (e) => {
+    console.log('🔥 handleCardPayment FIRED!');
+    e.preventDefault();
     
-    // Get the pending application from sessionStorage
-    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
-    let applicationData = {};
-    
-    if (pendingSummary) {
-      const summary = JSON.parse(pendingSummary);
-      applicationData = {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth || null,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        homeLanguage: formData.homeLanguage,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        address: formData.address,
-        suburb: formData.suburb,
-        city: formData.city,
-        province: formData.province,
-        postalCode: formData.postalCode,
-        kinName: formData.kinName,
-        kinRelationship: formData.kinRelationship,
-        kinPhone: formData.kinPhone,
-        kinEmail: formData.kinEmail,
-        documents: filePaths,
-        trackingNumber: trackingNumber,
-        package: summary.package,
-        universities: summary.universities,
-        totalCourses: summary.totalCourses,
-        totalUniversities: summary.totalUniversities,
-        totalCost: summary.totalCost,
-        courseDetails: summary.courseDetails
-      };
-    } else {
-      applicationData = {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth || null,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        homeLanguage: formData.homeLanguage,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        address: formData.address,
-        suburb: formData.suburb,
-        city: formData.city,
-        province: formData.province,
-        postalCode: formData.postalCode,
-        kinName: formData.kinName,
-        kinRelationship: formData.kinRelationship,
-        kinPhone: formData.kinPhone,
-        kinEmail: formData.kinEmail,
-        documents: filePaths,
-        trackingNumber: trackingNumber
-      };
+    if (!validateForm()) {
+      return;
     }
-
+    
+    setIsProcessing(true);
+    setError('');
+    
     try {
-      // Save application
-      const response = await fetch(`${API_URL}/api/applications/create`, {
+      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      const filePaths = {
+        id: documents.id.file ? documents.id.file.name : null,
+        results: documents.results.file ? documents.results.file.name : null
+      };
+      
+      // Get the pending application summary from sessionStorage
+      const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+      let applicationData = {};
+      
+      if (pendingSummary) {
+        const summary = JSON.parse(pendingSummary);
+        applicationData = {
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth || null,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          homeLanguage: formData.homeLanguage,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          address: formData.address,
+          suburb: formData.suburb,
+          city: formData.city,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          kinName: formData.kinName,
+          kinRelationship: formData.kinRelationship,
+          kinPhone: formData.kinPhone,
+          kinEmail: formData.kinEmail,
+          documents: filePaths,
+          trackingNumber: trackingNumber,
+          package: summary.package,
+          universities: summary.universities,
+          totalCourses: summary.totalCourses,
+          totalUniversities: summary.totalUniversities,
+          totalCost: summary.totalCost,
+          courseDetails: summary.courseDetails
+        };
+      }
+      
+      const token = localStorage.getItem('authToken');
+      
+      // Save application to database
+      const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -422,7 +414,8 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         body: JSON.stringify(applicationData)
       });
       
-      const result = await response.json();
+      const saveResult = await saveResponse.json();
+      console.log('Application save result:', saveResult);
       
       // Save payment selection
       if (applicationData.package) {
@@ -443,151 +436,75 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         });
       }
       
-      // Clear pending data
-      sessionStorage.removeItem('pendingApplicationSummary');
-      
-      return result;
-    } catch (error) {
-      console.error('Network error:', error);
-      throw error;
-    }
-  };
-const handleCardPayment = async (e) => {
-  console.log('🔥 handleCardPayment FIRED!');
-  e.preventDefault();
-  
-  if (!validateForm()) {
-    return;
-  }
-  
-  setIsProcessing(true);
-  setError('');
-  
-  try {
-    const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-    
-    const filePaths = {
-      id: documents.id.file ? documents.id.file.name : null,
-      results: documents.results.file ? documents.results.file.name : null
-    };
-    
-    // Get the pending application summary from sessionStorage
-    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
-    let applicationData = {};
-    
-    if (pendingSummary) {
-      const summary = JSON.parse(pendingSummary);
-      applicationData = {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth || null,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        homeLanguage: formData.homeLanguage,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        address: formData.address,
-        suburb: formData.suburb,
-        city: formData.city,
-        province: formData.province,
-        postalCode: formData.postalCode,
-        kinName: formData.kinName,
-        kinRelationship: formData.kinRelationship,
-        kinPhone: formData.kinPhone,
-        kinEmail: formData.kinEmail,
-        documents: filePaths,
-        trackingNumber: trackingNumber,
-        package: summary.package,
-        universities: summary.universities,
-        totalCourses: summary.totalCourses,
-        totalUniversities: summary.totalUniversities,
-        totalCost: summary.totalCost,
-        courseDetails: summary.courseDetails
-      };
-    }
-    
-    const token = localStorage.getItem('authToken');
-    
-    // Save application to database
-    const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(applicationData)
-    });
-    
-    const saveResult = await saveResponse.json();
-    console.log('Application save result:', saveResult);
-    
-    // Save payment selection
-    if (applicationData.package) {
-      await fetch(`${API_URL}/api/payment/save-selection`, {
+      // Submit order
+      const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          selectedPackage: applicationData.package,
+          trackingNumber: trackingNumber,
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          gender: formData.gender,
+          province: formData.province,
+          city: formData.city,
+          homeLanguage: formData.homeLanguage,
+          nationality: formData.nationality,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          kinName: formData.kinName,
+          kinPhone: formData.kinPhone,
+          package: applicationData.package,
+          amount: totalAmount,
           universities: applicationData.universities,
-          totalCourses: applicationData.totalCourses,
-          totalUniversities: applicationData.totalUniversities,
-          totalCost: applicationData.totalCost,
-          courseDetails: applicationData.courseDetails
+          courses: applicationData.courses
         })
       });
+      
+      const orderResult = await orderResponse.json();
+      console.log('Order submit result:', orderResult);
+      
+      localStorage.setItem('paymentTrackingNumber', trackingNumber);
+      localStorage.setItem('hasCompletedPayment', 'true');
+      sessionStorage.removeItem('pendingApplicationSummary');
+      
+      setIsProcessing(false);
+      
+      if (onPaymentComplete) {
+        onPaymentComplete({
+          success: true,
+          transactionId: trackingNumber,
+          amount: totalAmount,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          gender: formData.gender,
+          province: formData.province,
+          city: formData.city,
+          homeLanguage: formData.homeLanguage,
+          nationality: formData.nationality,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          kinName: formData.kinName,
+          kinPhone: formData.kinPhone
+        });
+      }
+      
+      onClose();
+      
+    } catch (error) {
+      console.error('Payment error:', error);
+      setError('Payment failed. Please try again.');
+      setIsProcessing(false);
     }
-    
-    // Submit order
-    const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        trackingNumber: trackingNumber,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        package: applicationData.package,
-        amount: totalAmount
-      })
-    });
-    
-    const orderResult = await orderResponse.json();
-    console.log('Order submit result:', orderResult);
-    
-    localStorage.setItem('paymentTrackingNumber', trackingNumber);
-    localStorage.setItem('hasCompletedPayment', 'true');
-    sessionStorage.removeItem('pendingApplicationSummary');
-    
-    setIsProcessing(false);
-    
-    if (onPaymentComplete) {
-      onPaymentComplete({
-        success: true,
-        transactionId: trackingNumber,
-        amount: totalAmount,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email
-      });
-    }
-    
-    onClose();
-    
-  } catch (error) {
-    console.error('Payment error:', error);
-    setError('Payment failed. Please try again.');
-    setIsProcessing(false);
-  }
-};
+  };
 
   const handleEFTPayment = async (e) => {
     e.preventDefault();
@@ -607,10 +524,81 @@ const handleCardPayment = async (e) => {
         results: documents.results.file ? documents.results.file.name : null
       };
       
-      await saveEverythingToDatabase(trackingNumber, filePaths);
+      // Get the pending application summary from sessionStorage
+      const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+      let applicationData = {};
+      
+      if (pendingSummary) {
+        const summary = JSON.parse(pendingSummary);
+        applicationData = {
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth || null,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          homeLanguage: formData.homeLanguage,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          address: formData.address,
+          suburb: formData.suburb,
+          city: formData.city,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          kinName: formData.kinName,
+          kinRelationship: formData.kinRelationship,
+          kinPhone: formData.kinPhone,
+          kinEmail: formData.kinEmail,
+          documents: filePaths,
+          trackingNumber: trackingNumber,
+          package: summary.package,
+          universities: summary.universities,
+          totalCourses: summary.totalCourses,
+          totalUniversities: summary.totalUniversities,
+          totalCost: summary.totalCost,
+          courseDetails: summary.courseDetails
+        };
+      }
+      
+      const token = localStorage.getItem('authToken');
+      
+      // Save application to database
+      const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(applicationData)
+      });
+      
+      const saveResult = await saveResponse.json();
+      console.log('Application save result:', saveResult);
+      
+      // Save payment selection
+      if (applicationData.package) {
+        await fetch(`${API_URL}/api/payment/save-selection`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            selectedPackage: applicationData.package,
+            universities: applicationData.universities,
+            totalCourses: applicationData.totalCourses,
+            totalUniversities: applicationData.totalUniversities,
+            totalCost: applicationData.totalCost,
+            courseDetails: applicationData.courseDetails
+          })
+        });
+      }
       
       localStorage.setItem('paymentTrackingNumber', trackingNumber);
       localStorage.setItem('hasCompletedPayment', 'true');
+      sessionStorage.removeItem('pendingApplicationSummary');
       
       alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
       
@@ -623,13 +611,25 @@ const handleCardPayment = async (e) => {
           amount: totalAmount,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          email: formData.email
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          gender: formData.gender,
+          province: formData.province,
+          city: formData.city,
+          homeLanguage: formData.homeLanguage,
+          nationality: formData.nationality,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          kinName: formData.kinName,
+          kinPhone: formData.kinPhone
         });
       }
       
       onClose();
       
     } catch (error) {
+      console.error('Payment error:', error);
       setError('Failed to process. Please try again.');
       setIsProcessing(false);
     }
@@ -689,7 +689,7 @@ const handleCardPayment = async (e) => {
           {/* Show FULL FORM for first-time applicants ONLY */}
           {!hasCompletedPaymentBefore && (
             <>
-              {/* Personal Information Section - Same as before */}
+              {/* Personal Information Section */}
               <div className="money-section-card">
                 <div className="section-title">
                   <span className="section-number">1</span>

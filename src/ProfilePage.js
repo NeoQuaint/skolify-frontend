@@ -554,7 +554,7 @@ const ProfilePage = () => {
         {/* Welcome banner */}
         {isLoggedIn && loggedInUser && (
           <div className="welcome-banner">
-            <h2>Welcome back, {loggedInUser.firstName}!</h2>
+      <h2>Welcome back, {profileData?.first_name || profileData?.firstName || loggedInUser?.firstName || 'User'}!</h2>
             <p>Your profile and all your orders are shown below.</p>
           </div>
         )}
