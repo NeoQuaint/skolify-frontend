@@ -452,40 +452,122 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       throw error;
     }
   };
-
-  const handleCardPayment = async (e) => {
-    e.preventDefault();
+const handleCardPayment = async (e) => {
+  console.log('🔥 handleCardPayment FIRED!');
+  e.preventDefault();
+  
+  if (!validateForm()) {
+    return;
+  }
+  
+  setIsProcessing(true);
+  setError('');
+  
+  try {
+    const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     
-    if (!validateForm()) {
-      return;
+    const filePaths = {
+      id: documents.id.file ? documents.id.file.name : null,
+      results: documents.results.file ? documents.results.file.name : null
+    };
+    
+    // Get the pending application summary from sessionStorage
+    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+    let applicationData = {};
+    
+    if (pendingSummary) {
+      const summary = JSON.parse(pendingSummary);
+      applicationData = {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth || null,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        homeLanguage: formData.homeLanguage,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        kinName: formData.kinName,
+        kinRelationship: formData.kinRelationship,
+        kinPhone: formData.kinPhone,
+        kinEmail: formData.kinEmail,
+        documents: filePaths,
+        trackingNumber: trackingNumber,
+        package: summary.package,
+        universities: summary.universities,
+        totalCourses: summary.totalCourses,
+        totalUniversities: summary.totalUniversities,
+        totalCost: summary.totalCost,
+        courseDetails: summary.courseDetails
+      };
     }
     
-    setIsProcessing(true);
-    setError('');
+    const token = localStorage.getItem('authToken');
     
-    try {
-      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      
-      const filePaths = {
-        id: documents.id.file ? documents.id.file.name : null,
-        results: documents.results.file ? documents.results.file.name : null
-      };
-      
-      // Save EVERYTHING only after payment is confirmed
-      await saveEverythingToDatabase(trackingNumber, filePaths);
-      
-      localStorage.setItem('paymentTrackingNumber', trackingNumber);
-      localStorage.setItem('hasCompletedPayment', 'true');
-      
-      setTimeout(() => {
-  setIsProcessing(false);
-  
-  // Simulate random payment result (50% success, 50% fail)
-  const paymentSuccess = Math.random() > 0.5; // Change to false for always fail, true for always success
-  
-  if (paymentSuccess) {
-    // ONLY save to database on success
-    saveEverythingToDatabase(trackingNumber, filePaths).catch(console.error);
+    // Save application to database
+    const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(applicationData)
+    });
+    
+    const saveResult = await saveResponse.json();
+    console.log('Application save result:', saveResult);
+    
+    // Save payment selection
+    if (applicationData.package) {
+      await fetch(`${API_URL}/api/payment/save-selection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedPackage: applicationData.package,
+          universities: applicationData.universities,
+          totalCourses: applicationData.totalCourses,
+          totalUniversities: applicationData.totalUniversities,
+          totalCost: applicationData.totalCost,
+          courseDetails: applicationData.courseDetails
+        })
+      });
+    }
+    
+    // Submit order
+    const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        trackingNumber: trackingNumber,
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        package: applicationData.package,
+        amount: totalAmount
+      })
+    });
+    
+    const orderResult = await orderResponse.json();
+    console.log('Order submit result:', orderResult);
+    
+    localStorage.setItem('paymentTrackingNumber', trackingNumber);
+    localStorage.setItem('hasCompletedPayment', 'true');
+    sessionStorage.removeItem('pendingApplicationSummary');
+    
+    setIsProcessing(false);
     
     if (onPaymentComplete) {
       onPaymentComplete({
@@ -494,35 +576,18 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         amount: totalAmount,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone
+        email: formData.email
       });
     }
+    
     onClose();
-  } else {
-    // Show error - NO database save
+    
+  } catch (error) {
+    console.error('Payment error:', error);
     setError('Payment failed. Please try again.');
-    // Don't call onPaymentComplete
-    // Don't save to database
-    // Don't close the modal - let user try again
+    setIsProcessing(false);
   }
-}, 2000);
-      
-    } catch (error) {
-      setError('Payment failed. Please try again.');
-      setIsProcessing(false);
-    }
-  };
+};
 
   const handleEFTPayment = async (e) => {
     e.preventDefault();
