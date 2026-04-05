@@ -1,9 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './Dashboard.css';
-import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
-import RadialPulseLoader from './RadialPulseLoader';
-import API_URL from './config';
+
 
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
 function DashboardHeader({ showProfile = true}) {
@@ -167,7 +162,7 @@ function DashboardHeader({ showProfile = true}) {
 
 // ==================== AUTH POPUP COMPONENT (Sign In + Create Account) ====================
 function AuthPopup({ isOpen, onClose, onSuccess }) {
-  const [isLogin, setIsLogin] = useState(true); // true = Sign In, false = Create Account
+  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -185,7 +180,7 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
     setError('');
   };
 
-  // Sign In Handler (copied from App.js)
+  // ==================== SIGN IN ====================
   const handleSignIn = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -202,22 +197,28 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
       });
 
       const data = await response.json();
+      console.log("SIGNIN RESPONSE:", data);
 
       if (data.success) {
         localStorage.setItem('authToken', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
+
         onSuccess(data.user);
         onClose();
       } else {
         setError(data.error || 'Invalid email or password');
       }
+
     } catch (err) {
+      console.error('Signin error:', err);
       setError('Network error. Please try again.');
     }
+
     setIsLoading(false);
   };
 
-  // Create Account Handler
+  // ==================== SIGN UP ====================
   const handleSignUp = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -246,39 +247,30 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
       });
 
       const data = await response.json();
+      console.log("SIGNUP RESPONSE:", data);
 
       if (data.success && data.newUser) {
-        // Account created, now sign them in automatically
-        const signinResponse = await fetch(`${API_URL}/api/auth/signin`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password
-          })
-        });
+        // ✅ USE TOKEN DIRECTLY (FIXED)
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
 
-        const signinData = await signinResponse.json();
+        onSuccess(data.user);
+        onClose();
 
-        if (signinData.success) {
-          localStorage.setItem('authToken', signinData.token);
-          localStorage.setItem('user', JSON.stringify(signinData.user));
-          onSuccess(signinData.user);
-          onClose();
-        } else {
-          setError('Account created! Please sign in.');
-          setIsLogin(true);
-        }
       } else if (data.existingUser) {
         setError('An account with this email already exists. Please sign in.');
         setIsLogin(true);
+
       } else {
         setError(data.error || 'Registration failed. Please try again.');
       }
+
     } catch (err) {
       console.error('Signup error:', err);
       setError('Network error. Please try again.');
     }
+
     setIsLoading(false);
   };
 
@@ -305,13 +297,31 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
         <form onSubmit={handleSubmit}>
           <div className="auth-popup-group">
             <FaEnvelope className="auth-popup-icon" />
-            <input type="email" name="email" placeholder="Email Address" value={formData.email} onChange={handleChange} required />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
           </div>
 
           <div className="auth-popup-group">
             <FaLock className="auth-popup-icon" />
-            <input type={showPassword ? "text" : "password"} name="password" placeholder="Password" value={formData.password} onChange={handleChange} required />
-            <button type="button" className="auth-popup-password-toggle" onClick={() => setShowPassword(!showPassword)}>
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+            <button
+              type="button"
+              className="auth-popup-password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+            >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
           </div>
@@ -319,8 +329,19 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
           {!isLogin && (
             <div className="auth-popup-group">
               <FaLock className="auth-popup-icon" />
-              <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} required />
-              <button type="button" className="auth-popup-password-toggle" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="auth-popup-password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
@@ -332,12 +353,17 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
         </form>
 
         <div className="auth-popup-footer">
-          <button type="button" onClick={() => { 
-            setIsLogin(!isLogin); 
-            setError(''); 
-            setFormData({ email: '', password: '', confirmPassword: '' }); 
-          }}>
-            {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+              setFormData({ email: '', password: '', confirmPassword: '' });
+            }}
+          >
+            {isLogin
+              ? "Don't have an account? Sign Up"
+              : "Already have an account? Sign In"}
           </button>
         </div>
       </div>
