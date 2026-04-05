@@ -184,36 +184,43 @@ function CreateAccountPopup({ isOpen, onClose, onSuccess }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  e.preventDefault();
+  setIsLoading(true);
+  setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
+  if (formData.password !== formData.confirmPassword) {
+    setError('Passwords do not match');
+    setIsLoading(false);
+    return;
+  }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      setIsLoading(false);
-      return;
-    }
+  if (formData.password.length < 8) {
+    setError('Password must be at least 8 characters');
+    setIsLoading(false);
+    return;
+  }
 
-    try {
-      const response = await fetch(`${API_URL}/api/auth/create-account`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
+  try {
+    const response = await fetch(`${API_URL}/api/auth/create-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password
+      })
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (data.success && data.newUser) {
-        // Account created successfully, now sign in
+    if (data.success && data.newUser) {
+      // Use the token from registration response directly
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onSuccess(data.user);
+        onClose();
+      } else {
+        // Fallback: try to sign in
         const signinResponse = await fetch(`${API_URL}/api/auth/signin`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -234,17 +241,18 @@ function CreateAccountPopup({ isOpen, onClose, onSuccess }) {
         } else {
           setError('Account created! Please sign in.');
         }
-      } else if (data.existingUser) {
-        setError('An account with this email already exists. Please sign in.');
-      } else {
-        setError(data.error || 'Registration failed. Please try again.');
       }
-    } catch (err) {
-      console.error('Signup error:', err);
-      setError('Network error. Please try again.');
+    } else if (data.existingUser) {
+      setError('An account with this email already exists. Please sign in.');
+    } else {
+      setError(data.error || 'Registration failed. Please try again.');
     }
-    setIsLoading(false);
-  };
+  } catch (err) {
+    console.error('Signup error:', err);
+    setError('Network error. Please try again.');
+  }
+  setIsLoading(false);
+};
 
   return (
     <div className="create-account-popup-overlay" onClick={onClose}>
