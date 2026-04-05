@@ -21,6 +21,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   });
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -74,6 +75,10 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       const hasPaidLocally = localStorage.getItem('hasCompletedPayment') === 'true';
       if (hasPaidLocally) {
         setHasCompletedPaymentBefore(true);
+        // Only load profile for returning users
+        if (token) {
+          await fetchUserProfile(true);
+        }
         return;
       }
       
@@ -91,25 +96,26 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
           if (data.success && data.selections && data.selections.length > 0) {
             setHasCompletedPaymentBefore(true);
             localStorage.setItem('hasCompletedPayment', 'true');
+            // Only load profile for returning users
+            await fetchUserProfile(true);
+          } else {
+            // First time user - DO NOT auto-fill, keep form empty
+            setHasCompletedPaymentBefore(false);
+            setProfileLoaded(true);
           }
         } catch (error) {
           console.error('Error checking payment history:', error);
+          setProfileLoaded(true);
         }
+      } else {
+        setProfileLoaded(true);
       }
     };
     
-    if (isOpen) {
-      checkPaymentHistory();
-    }
-  }, [isOpen]);
-
-  // Fetch user profile from database
-  useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserProfile = async (shouldLoad) => {
       const token = localStorage.getItem('authToken');
       
-      if (!token) {
-        console.log('No auth token found');
+      if (!token || !shouldLoad) {
         return;
       }
       
@@ -152,11 +158,14 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         console.error('Error fetching profile:', error);
       } finally {
         setIsLoadingProfile(false);
+        setProfileLoaded(true);
       }
     };
     
-    fetchUserProfile();
-  }, []);
+    if (isOpen) {
+      checkPaymentHistory();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -528,7 +537,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
           <p>
             {hasCompletedPaymentBefore 
               ? 'Welcome back! Your information is already saved. Complete your payment below.' 
-              : 'Please provide all details for your university applications'}
+              : 'Please provide all your details for the university applications'}
           </p>
         </div>
 
@@ -545,7 +554,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
 
         {isLoadingProfile && (
           <div className="loading-profile">
-            <FaSpinner className="spinner-icon" /> Loading your profile...
+            <FaSpinner className="spinner-icon" /> Loading...
           </div>
         )}
 
@@ -556,7 +565,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         )}
 
         <form onSubmit={paymentMethod === 'card' ? handleCardPayment : handleEFTPayment} className="money-form">
-          {/* Show FULL FORM only for first-time users */}
+          {/* Show FULL EMPTY FORM only for first-time users (no auto-fill) */}
           {!hasCompletedPaymentBefore && (
             <>
               {/* Personal Information Section */}
