@@ -1382,92 +1382,56 @@ const PaymentPage = () => {
     return getCoursesForUniversity(selectedUniversity);
   }, [selectedUniversity, getCoursesForUniversity]);
 
-  const handleApply = useCallback(async () => {
-    const selectedUnis = getSelectedUniversities();
-    const totalCourses = calculateTotalApplications();
-    const totalUniversities = Object.keys(selectedCourses).length;
-    
-    if (totalCourses === 0) {
-      showNotificationMessage('Please select at least one course from any university', 'warning');
-      return;
-    }
+ const handleApply = useCallback(async () => {
+  const selectedUnis = getSelectedUniversities();
+  const totalCourses = calculateTotalApplications();
+  const totalUniversities = Object.keys(selectedCourses).length;
+  
+  if (totalCourses === 0) {
+    showNotificationMessage('Please select at least one course from any university', 'warning');
+    return;
+  }
 
-    const limits = packageLimits[selectedPackage];
-    
-    if (selectedPackage !== 'custom' && totalUniversities > limits.universities) {
-      setExceededItem({
-        type: 'university',
-        current: totalUniversities,
-        limit: limits.universities,
-        package: selectedPackage
-      });
-      setShowSwitchToCustomPopup(true);
-      return;
-    }
+  const limits = packageLimits[selectedPackage];
+  
+  if (selectedPackage !== 'custom' && totalUniversities > limits.universities) {
+    setExceededItem({
+      type: 'university',
+      current: totalUniversities,
+      limit: limits.universities,
+      package: selectedPackage
+    });
+    setShowSwitchToCustomPopup(true);
+    return;
+  }
 
-    const selectedUniversitiesList = selectedUnis.map(u => ({
-      code: u.code,
-      name: u.name,
-      courses: selectedCourses[u.code] || []
-    }));
+  const selectedUniversitiesList = selectedUnis.map(u => ({
+    code: u.code,
+    name: u.name,
+    courses: selectedCourses[u.code] || []
+  }));
 
-    const applicationSummary = {
-      package: selectedPackage,
-      universities: selectedUniversitiesList,
-      totalCourses: totalCourses,
-      totalUniversities: totalUniversities,
-      timestamp: new Date().toISOString(),
-      courseDetails: selectedCourseDetails,
-      totalCost: totalCost
-    };
-    
-    localStorage.setItem('applicationSummary', JSON.stringify(applicationSummary));
+  const applicationSummary = {
+    package: selectedPackage,
+    universities: selectedUniversitiesList,
+    totalCourses: totalCourses,
+    totalUniversities: totalUniversities,
+    timestamp: new Date().toISOString(),
+    courseDetails: selectedCourseDetails,
+    totalCost: totalCost
+  };
+  
+  // Store in sessionStorage temporarily (not localStorage)
+  sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
+  
+  // Open payment popup - NO DATABASE SAVE HERE
+  setShowPaymentPopup(true);
+  
+}, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage]);
+  
 
-    const token = localStorage.getItem('authToken');
-    
-    if (token) {
-      setIsSaving(true);
-      
-      try {
-        const requestBody = {
-          selectedPackage,
-          universities: selectedUniversitiesList,
-          totalCourses,
-          totalUniversities,
-          totalCost,
-          courseDetails: selectedCourseDetails
-        };
-        
-        const response = await fetch(`${API_URL}/api/payment/save-selection`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(requestBody)
-        });
 
-        const result = await response.json();
-
-        if (result.success) {
-          const updatedSummary = {
-            ...applicationSummary,
-            trackingNumber: result.trackingNumber
-          };
-          localStorage.setItem('applicationSummary', JSON.stringify(updatedSummary));
-          sessionStorage.setItem('paymentTrackingNumber', result.trackingNumber);
-        }
-      } catch (error) {
-        console.error('❌ Error saving to database:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    }
-
-    setShowPaymentPopup(true);
-  }, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage]);
-
-  const handlePaymentComplete = useCallback(async (paymentResult) => {
+const handlePaymentComplete = useCallback(async (paymentResult) => {
     setPaymentStatus(paymentResult);
     setShowPaymentPopup(false);
     

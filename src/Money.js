@@ -11,18 +11,13 @@ import API_URL from './config';
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const navigate = useNavigate();
   
-  // Check if user has completed payment before
+  // Track if user has successfully completed payment before (from database)
   const [hasCompletedPaymentBefore, setHasCompletedPaymentBefore] = useState(false);
+  const [isFirstTimeApplicant, setIsFirstTimeApplicant] = useState(true);
+  const [isLoadingCheck, setIsLoadingCheck] = useState(true);
   
-  // Get logged in user info
-  const [loggedInUser, setLoggedInUser] = useState(() => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  });
-
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [profileLoaded, setProfileLoaded] = useState(false);
-
+  
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -66,58 +61,50 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     results: { name: null, uploaded: false, file: null }
   });
 
-  // Check if user has completed payment before
+  // Check if user has successfully completed payment before
   useEffect(() => {
     const checkPaymentHistory = async () => {
       const token = localStorage.getItem('authToken');
       
-      // First check localStorage flag
-      const hasPaidLocally = localStorage.getItem('hasCompletedPayment') === 'true';
-      if (hasPaidLocally) {
-        setHasCompletedPaymentBefore(true);
-        // Only load profile for returning users
-        if (token) {
-          await fetchUserProfile(true);
-        }
+      if (!token) {
+        setIsLoadingCheck(false);
         return;
       }
       
-      // Then check backend if logged in
-      if (token) {
-        try {
-          const response = await fetch(`${API_URL}/api/payment/get-all-selections`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          const data = await response.json();
-          
-          if (data.success && data.selections && data.selections.length > 0) {
-            setHasCompletedPaymentBefore(true);
-            localStorage.setItem('hasCompletedPayment', 'true');
-            // Only load profile for returning users
-            await fetchUserProfile(true);
-          } else {
-            // First time user - DO NOT auto-fill, keep form empty
-            setHasCompletedPaymentBefore(false);
-            setProfileLoaded(true);
+      try {
+        // Check for COMPLETED payments only (not just selections)
+        const response = await fetch(`${API_URL}/api/user/completed-payments`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        } catch (error) {
-          console.error('Error checking payment history:', error);
-          setProfileLoaded(true);
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.hasCompletedPayments === true) {
+          setHasCompletedPaymentBefore(true);
+          setIsFirstTimeApplicant(false);
+          // Load profile for returning user
+          await fetchUserProfile(true);
+        } else {
+          setHasCompletedPaymentBefore(false);
+          setIsFirstTimeApplicant(true);
+          // Do NOT load profile - keep form empty
         }
-      } else {
-        setProfileLoaded(true);
+      } catch (error) {
+        console.error('Error checking payment history:', error);
+        setHasCompletedPaymentBefore(false);
+        setIsFirstTimeApplicant(true);
+      } finally {
+        setIsLoadingCheck(false);
       }
     };
     
     const fetchUserProfile = async (shouldLoad) => {
-      const token = localStorage.getItem('authToken');
+      if (!shouldLoad) return;
       
-      if (!token || !shouldLoad) {
-        return;
-      }
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
       
       setIsLoadingProfile(true);
       
@@ -158,7 +145,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         console.error('Error fetching profile:', error);
       } finally {
         setIsLoadingProfile(false);
-        setProfileLoaded(true);
       }
     };
     
@@ -252,9 +238,8 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   };
 
   const validateForm = () => {
-    // For returning users who completed payment before, skip most validation
+    // For returning users who completed payment before
     if (hasCompletedPaymentBefore) {
-      // Still need card details for payment
       if (paymentMethod === 'card') {
         if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
           setError('Please enter a valid card number');
@@ -277,7 +262,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     }
     
     // For first-time users - FULL VALIDATION
-    // For EFT
     if (paymentMethod === 'eft') {
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
@@ -310,7 +294,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       return true;
     }
 
-    // For Card - first-time users
     if (paymentMethod === 'card') {
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
@@ -362,35 +345,74 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
-  const saveApplicationToDatabase = async (trackingNumber, filePaths) => {
+  const saveEverythingToDatabase = async (trackingNumber, filePaths) => {
     const token = localStorage.getItem('authToken');
     
-    const applicationData = {
-      firstName: formData.firstName,
-      middleName: formData.middleName,
-      lastName: formData.lastName,
-      idNumber: formData.idNumber,
-      dateOfBirth: formData.dateOfBirth || null,
-      gender: formData.gender,
-      nationality: formData.nationality,
-      homeLanguage: formData.homeLanguage,
-      email: formData.email,
-      phoneNumber: formData.phoneNumber,
-      whatsappNumber: formData.whatsappNumber,
-      address: formData.address,
-      suburb: formData.suburb,
-      city: formData.city,
-      province: formData.province,
-      postalCode: formData.postalCode,
-      kinName: formData.kinName,
-      kinRelationship: formData.kinRelationship,
-      kinPhone: formData.kinPhone,
-      kinEmail: formData.kinEmail,
-      documents: filePaths,
-      trackingNumber: trackingNumber
-    };
+    // Get the pending application from sessionStorage
+    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+    let applicationData = {};
+    
+    if (pendingSummary) {
+      const summary = JSON.parse(pendingSummary);
+      applicationData = {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth || null,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        homeLanguage: formData.homeLanguage,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        kinName: formData.kinName,
+        kinRelationship: formData.kinRelationship,
+        kinPhone: formData.kinPhone,
+        kinEmail: formData.kinEmail,
+        documents: filePaths,
+        trackingNumber: trackingNumber,
+        package: summary.package,
+        universities: summary.universities,
+        totalCourses: summary.totalCourses,
+        totalUniversities: summary.totalUniversities,
+        totalCost: summary.totalCost,
+        courseDetails: summary.courseDetails
+      };
+    } else {
+      applicationData = {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth || null,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        homeLanguage: formData.homeLanguage,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        kinName: formData.kinName,
+        kinRelationship: formData.kinRelationship,
+        kinPhone: formData.kinPhone,
+        kinEmail: formData.kinEmail,
+        documents: filePaths,
+        trackingNumber: trackingNumber
+      };
+    }
 
     try {
+      // Save application
       const response = await fetch(`${API_URL}/api/applications/create`, {
         method: 'POST',
         headers: {
@@ -401,6 +423,29 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       });
       
       const result = await response.json();
+      
+      // Save payment selection
+      if (applicationData.package) {
+        await fetch(`${API_URL}/api/payment/save-selection`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            selectedPackage: applicationData.package,
+            universities: applicationData.universities,
+            totalCourses: applicationData.totalCourses,
+            totalUniversities: applicationData.totalUniversities,
+            totalCost: applicationData.totalCost,
+            courseDetails: applicationData.courseDetails
+          })
+        });
+      }
+      
+      // Clear pending data
+      sessionStorage.removeItem('pendingApplicationSummary');
+      
       return result;
     } catch (error) {
       console.error('Network error:', error);
@@ -419,27 +464,22 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      // Generate tracking number
       const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
-      // Save documents
       const filePaths = {
         id: documents.id.file ? documents.id.file.name : null,
         results: documents.results.file ? documents.results.file.name : null
       };
       
-      // Save application to database
-      await saveApplicationToDatabase(trackingNumber, filePaths);
+      // Save EVERYTHING only after payment is confirmed
+      await saveEverythingToDatabase(trackingNumber, filePaths);
       
-      // Store tracking number and payment flag
       localStorage.setItem('paymentTrackingNumber', trackingNumber);
       localStorage.setItem('hasCompletedPayment', 'true');
       
-      // Simulate card payment processing
       setTimeout(() => {
         setIsProcessing(false);
         
-        // Call onPaymentComplete with user data
         if (onPaymentComplete) {
           onPaymentComplete({
             success: true,
@@ -482,28 +522,22 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      // Generate tracking number
       const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
-      // Save documents
       const filePaths = {
         id: documents.id.file ? documents.id.file.name : null,
         results: documents.results.file ? documents.results.file.name : null
       };
       
-      // Save application to database
-      await saveApplicationToDatabase(trackingNumber, filePaths);
+      await saveEverythingToDatabase(trackingNumber, filePaths);
       
-      // Store tracking number and payment flag
       localStorage.setItem('paymentTrackingNumber', trackingNumber);
       localStorage.setItem('hasCompletedPayment', 'true');
       
-      // Show EFT details
       alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
       
       setIsProcessing(false);
       
-      // Call onPaymentComplete
       if (onPaymentComplete) {
         onPaymentComplete({
           success: true,
@@ -525,6 +559,16 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
 
   if (!isOpen) return null;
 
+  if (isLoadingCheck) {
+    return (
+      <div className="money-overlay">
+        <div className="money-container narrow">
+          <div className="loading-profile">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="money-overlay">
       <div className="money-container narrow" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
@@ -541,12 +585,11 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
           </p>
         </div>
 
-        {/* Welcome Back Banner for Returning Users */}
         {hasCompletedPaymentBefore && (
           <div className="welcome-back-banner">
             <FaUser className="welcome-icon" />
             <div className="welcome-text">
-              <span className="welcome-greeting">Welcome back, {formData.firstName || loggedInUser?.firstName || 'Valued Customer'}!</span>
+              <span className="welcome-greeting">Welcome back, {formData.firstName || 'Valued Customer'}!</span>
               <span className="welcome-message">Your details are already saved. Just complete your payment below.</span>
             </div>
           </div>
@@ -565,10 +608,10 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         )}
 
         <form onSubmit={paymentMethod === 'card' ? handleCardPayment : handleEFTPayment} className="money-form">
-          {/* Show FULL EMPTY FORM only for first-time users (no auto-fill) */}
+          {/* Show FULL FORM for first-time applicants ONLY */}
           {!hasCompletedPaymentBefore && (
             <>
-              {/* Personal Information Section */}
+              {/* Personal Information Section - Same as before */}
               <div className="money-section-card">
                 <div className="section-title">
                   <span className="section-number">1</span>
