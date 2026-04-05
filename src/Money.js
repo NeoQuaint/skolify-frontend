@@ -478,32 +478,45 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       localStorage.setItem('hasCompletedPayment', 'true');
       
       setTimeout(() => {
-        setIsProcessing(false);
-        
-        if (onPaymentComplete) {
-          onPaymentComplete({
-            success: true,
-            transactionId: trackingNumber,
-            amount: totalAmount,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phoneNumber: formData.phoneNumber,
-            whatsappNumber: formData.whatsappNumber,
-            gender: formData.gender,
-            province: formData.province,
-            city: formData.city,
-            homeLanguage: formData.homeLanguage,
-            nationality: formData.nationality,
-            idNumber: formData.idNumber,
-            dateOfBirth: formData.dateOfBirth,
-            kinName: formData.kinName,
-            kinPhone: formData.kinPhone
-          });
-        }
-        
-        onClose();
-      }, 2000);
+  setIsProcessing(false);
+  
+  // Simulate random payment result (50% success, 50% fail)
+  const paymentSuccess = Math.random() > 0.5; // Change to false for always fail, true for always success
+  
+  if (paymentSuccess) {
+    // ONLY save to database on success
+    saveEverythingToDatabase(trackingNumber, filePaths).catch(console.error);
+    
+    if (onPaymentComplete) {
+      onPaymentComplete({
+        success: true,
+        transactionId: trackingNumber,
+        amount: totalAmount,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        gender: formData.gender,
+        province: formData.province,
+        city: formData.city,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth,
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone
+      });
+    }
+    onClose();
+  } else {
+    // Show error - NO database save
+    setError('Payment failed. Please try again.');
+    // Don't call onPaymentComplete
+    // Don't save to database
+    // Don't close the modal - let user try again
+  }
+}, 2000);
       
     } catch (error) {
       setError('Payment failed. Please try again.');
