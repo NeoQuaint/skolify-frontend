@@ -2111,12 +2111,20 @@ const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
                   </div>
                 </div>
 
+                {/* FIXED BUTTON - THIS IS THE ONLY CHANGE */}
                 <button 
                   className="apply-now-btn"
                   onClick={handleApply}
                   disabled={totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving}
+                  style={{
+                    opacity: (totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving) ? 0.6 : 1,
+                    cursor: (totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving) ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  {isSaving ? 'Saving...' : (selectedPackage !== 'custom' && !usageStats.isWithinLimits) ? 'Exceeds Package Limits' : 'Apply Now'}
+                  {isSaving ? 'Saving...' : 
+                   (totalApplications === 0 ? 'Select Courses First' :
+                    (selectedPackage !== 'custom' && !usageStats.isWithinLimits) ? `Limit: ${packageLimits[selectedPackage].universities} Universities Max` : 
+                    'Apply Now')}
                 </button>
               </div>
             </div>
