@@ -2503,10 +2503,10 @@
   line-height: 1.5;
 }
 /* ============================================
-   CREATE ACCOUNT POPUP STYLES
+   AUTH POPUP STYLES (Sign In + Create Account)
    ============================================ */
 
-.create-account-popup-overlay {
+.auth-popup-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -2521,7 +2521,7 @@
   animation: fadeIn 0.2s ease;
 }
 
-.create-account-popup-container {
+.auth-popup-container {
   background: white;
   border-radius: 20px;
   width: 90%;
@@ -2532,7 +2532,7 @@
   animation: slideUp 0.3s ease;
 }
 
-.create-account-popup-close {
+.auth-popup-close {
   position: absolute;
   top: 18px;
   right: 22px;
@@ -2545,28 +2545,28 @@
   line-height: 1;
 }
 
-.create-account-popup-close:hover {
+.auth-popup-close:hover {
   color: #333;
 }
 
-.create-account-popup-header {
+.auth-popup-header {
   text-align: center;
   margin-bottom: 28px;
 }
 
-.create-account-popup-header h2 {
+.auth-popup-header h2 {
   font-size: 26px;
   font-weight: 700;
   color: #1a1a1a;
   margin-bottom: 8px;
 }
 
-.create-account-popup-header p {
+.auth-popup-header p {
   font-size: 14px;
   color: #666;
 }
 
-.create-account-popup-error {
+.auth-popup-error {
   background: #fff5f5;
   border: 1px solid #feb2b2;
   color: #c53030;
@@ -2577,12 +2577,12 @@
   text-align: center;
 }
 
-.create-account-popup-group {
+.auth-popup-group {
   position: relative;
   margin-bottom: 20px;
 }
 
-.create-account-popup-icon {
+.auth-popup-icon {
   position: absolute;
   left: 14px;
   top: 50%;
@@ -2592,7 +2592,7 @@
   pointer-events: none;
 }
 
-.create-account-popup-group input {
+.auth-popup-group input {
   width: 100%;
   padding: 14px 14px 14px 44px;
   border: 1.5px solid #e2e8f0;
@@ -2603,17 +2603,17 @@
   background: white;
 }
 
-.create-account-popup-group input:focus {
+.auth-popup-group input:focus {
   outline: none;
   border-color: #1a1a1a;
   box-shadow: 0 0 0 3px rgba(26, 26, 26, 0.05);
 }
 
-.create-account-popup-group input::placeholder {
+.auth-popup-group input::placeholder {
   color: #aaa;
 }
 
-.create-account-popup-password-toggle {
+.auth-popup-password-toggle {
   position: absolute;
   right: 14px;
   top: 50%;
@@ -2628,11 +2628,11 @@
   align-items: center;
 }
 
-.create-account-popup-password-toggle:hover {
+.auth-popup-password-toggle:hover {
   color: #666;
 }
 
-.create-account-popup-submit {
+.auth-popup-submit {
   width: 100%;
   padding: 14px;
   background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
@@ -2646,27 +2646,27 @@
   margin-top: 8px;
 }
 
-.create-account-popup-submit:hover:not(:disabled) {
+.auth-popup-submit:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-.create-account-popup-submit:disabled {
+.auth-popup-submit:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.create-account-popup-footer {
+.auth-popup-footer {
   text-align: center;
   margin-top: 20px;
 }
 
-.create-account-popup-footer p {
+.auth-popup-footer p {
   font-size: 14px;
   color: #666;
 }
 
-.create-account-popup-footer button {
+.auth-popup-footer button {
   background: none;
   border: none;
   color: #1a1a1a;
@@ -2677,7 +2677,7 @@
   text-underline-offset: 3px;
 }
 
-.create-account-popup-footer button:hover {
+.auth-popup-footer button:hover {
   color: #555;
 }
 
