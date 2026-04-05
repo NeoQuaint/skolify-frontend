@@ -53,7 +53,7 @@ function Header({ showProfile = true }) {
           <img
             src="/Skolify-Logo.jpeg"
             alt="Skolify Logo"
-            style={{ width: '63px', height: '63px', objectFit: 'contain', borderRadius: '8px' }} // logo bigger
+            style={{ width: '63px', height: '63px', objectFit: 'contain', borderRadius: '8px' }}
           />
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
@@ -70,7 +70,7 @@ function WelcomeScreen() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [signInData, setSignInData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [signInError, setSignInError] = useState('');
@@ -109,13 +109,17 @@ function WelcomeScreen() {
       const response = await fetch(`${API_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(signInData)
+        body: JSON.stringify({
+          email: signInData.email,
+          password: signInData.password
+        })
       });
 
       const data = await response.json();
 
       if (data.success) {
         localStorage.setItem('authToken', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
         
         sessionStorage.removeItem('dashboard_subjects');
@@ -128,7 +132,7 @@ function WelcomeScreen() {
         
         navigate('/dashboard');
       } else {
-        setSignInError('Invalid username or password');
+        setSignInError(data.error || 'Invalid email or password');
       }
     } catch (error) {
       setSignInError('Network error. Please try again.');
@@ -140,7 +144,7 @@ function WelcomeScreen() {
   const toggleSignIn = () => {
     setShowSignIn(!showSignIn);
     setSignInError('');
-    setSignInData({ username: '', password: '' });
+    setSignInData({ email: '', password: '' });
     setShowForgotPassword(false);
   };
 
@@ -154,9 +158,8 @@ function WelcomeScreen() {
 
   return (
     <div className="app">
-         <Header />
+      <Header />
 
-  
       <main className="app-main">
         <div className="app-container">
           <div className="welcome-content">
@@ -227,7 +230,7 @@ function WelcomeScreen() {
             ) : (
               <div className="signin-view">
                 <h2 className="signin-title">Welcome Back</h2>
-                <p className="signin-subtitle">Sign in with your credentials</p>
+                <p className="signin-subtitle">Sign in with your email and password</p>
 
                 {signInError && (
                   <div className="signin-error">{signInError}</div>
@@ -235,16 +238,15 @@ function WelcomeScreen() {
 
                 <form onSubmit={handleSignInSubmit} className="signin-form">
                   <div className="signin-group">
-                    <label>Username</label>
+                    <label>Email Address</label>
                     <input
-                      type="text"
-                      name="username"
-                      placeholder="John.Doe"
-                      value={signInData.username}
+                      type="email"
+                      name="email"
+                      placeholder="you@example.com"
+                      value={signInData.email}
                       onChange={handleSignInChange}
                       required
                     />
-                    <small>Format: FirstName.LastName</small>
                   </div>
 
                   <div className="signin-group">
@@ -257,7 +259,6 @@ function WelcomeScreen() {
                       onChange={handleSignInChange}
                       required
                     />
-                    <small>Use the password you created</small>
                   </div>
 
                   <button 
@@ -312,7 +313,7 @@ function WelcomeScreen() {
               <p className="support-email">
                 <a href="mailto:skolifyteam@gmail.com">skolifyteam@gmail.com</a>
               </p>
-              <p className="support-note">Include your username and ID number in the email.</p>
+              <p className="support-note">Include your email address in the message.</p>
             </div>
             <div className="forgot-password-footer">
               <button 
@@ -341,7 +342,7 @@ function TermsAndConditions() {
 
   return (
     <div className="app">
-  <Header />
+      <Header />
    
       <main className="app-main">
         <div className="app-container terms-page">
@@ -525,8 +526,8 @@ function PrivacyPolicy() {
   };
 
   return (
-   <div className="app">
-       <Header />
+    <div className="app">
+      <Header />
       
       <main className="app-main">
         <div className="app-container terms-page">
@@ -645,7 +646,6 @@ function PrivacyPolicy() {
               <h2>13. Contact Us</h2>
               <p>If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us:</p>
               <p className="contact-info">
-                
                 Support: skolifyteam@gmail.com<br />
                 Address: Pretoria, South Africa
               </p>
