@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
