@@ -271,11 +271,14 @@ const PaymentPage = () => {
   const [previousSelections, setPreviousSelections] = useState([]);
   const [isCreatingNewOrder, setIsCreatingNewOrder] = useState(false);
   const [studentMarks, setStudentMarks] = useState([]);
+  const [isProcessingComplete, setIsProcessingComplete] = useState(false);
   
   // State for notifications
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState('info');
+
+
   
   // State for Maximise Options feature
   const [showMaximiseModal, setShowMaximiseModal] = useState(false);
@@ -1431,7 +1434,17 @@ const PaymentPage = () => {
   
 
 
+
 const handlePaymentComplete = useCallback(async (paymentResult) => {
+  // Prevent duplicate processing
+  if (isProcessingComplete) {
+    console.log('⚠️ Already processing payment completion, ignoring duplicate call');
+    return;
+  }
+  
+  setIsProcessingComplete(true);
+  
+  try {
     setPaymentStatus(paymentResult);
     setShowPaymentPopup(false);
     
@@ -1484,12 +1497,14 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         homeLanguage: paymentResult.homeLanguage || '',
         nationality: paymentResult.nationality || '',
         idNumber: paymentResult.idNumber || '',
-        dateOfBirth: paymentResult.dateOfBirth || ''
+        dateOfBirth: paymentResult.dateOfBirth || '',
+        trackingNumber: paymentResult.transactionId
       };
 
       try {
         const token = localStorage.getItem('authToken');
         
+        // Save application
         const appResponse = await fetch(`${API_URL}/api/applications/create`, {
           method: 'POST',
           headers: {
@@ -1511,7 +1526,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
             kinPhone: userData.kinPhone,
             idNumber: userData.idNumber,
             dateOfBirth: userData.dateOfBirth,
-            trackingNumber: paymentResult.transactionId,
+            trackingNumber: userData.trackingNumber,
             documents: existingDocuments
           })
         });
@@ -1522,19 +1537,16 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
           console.log('✅ Application saved with tracking:', appResult.trackingNumber);
         }
 
-      
-
-const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-  method: 'POST',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : ''
-  },
-  body: JSON.stringify({
-    ...userData,
-    trackingNumber: paymentResult.transactionId
-  })
-});
+        // Submit order
+        const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify(userData)
+        });
+        
         const orderResult = await orderResponse.json();
         
         if (orderResult.success) {
@@ -1564,6 +1576,7 @@ const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
           
           sessionStorage.removeItem('paymentTrackingNumber');
           sessionStorage.removeItem('uploadedDocuments');
+          sessionStorage.removeItem('pendingApplicationSummary');
           
           if (!paymentResult.showCredentials) {
             setTimeout(() => {
@@ -1578,7 +1591,14 @@ const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
         showNotificationMessage('Failed to submit order. Please contact support.', 'error');
       }
     }
-  }, [selectedPackage, totalCost, getSelectedUniversities, selectedCourses, navigate, showNotificationMessage]);
+  } finally {
+    // Reset after 2 seconds to prevent rapid re-submissions
+    setTimeout(() => {
+      setIsProcessingComplete(false);
+    }, 2000);
+  }
+}, [selectedPackage, totalCost, getSelectedUniversities, selectedCourses, navigate, showNotificationMessage]);
+
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('authToken');
