@@ -1434,7 +1434,6 @@ const PaymentPage = () => {
   
 
 
-
 const handlePaymentComplete = useCallback(async (paymentResult) => {
   // Prevent duplicate processing
   if (isProcessingComplete) {
@@ -1455,6 +1454,17 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
     }
     
     if (paymentResult.success) {
+      // ✅ Get the tracking number from payment result (prioritize trackingNumber over transactionId)
+      const trackingNumber = paymentResult.trackingNumber || paymentResult.transactionId;
+      
+      if (!trackingNumber) {
+        console.error('❌ No tracking number in payment result!', paymentResult);
+        showNotificationMessage('Payment succeeded but tracking number missing. Please contact support.', 'error');
+        return;
+      }
+      
+      console.log('✅ Payment complete with tracking number:', trackingNumber);
+      
       const selectedUnis = getSelectedUniversities().map(u => ({
         code: u.code,
         name: u.name,
@@ -1491,7 +1501,8 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         amount: totalCost,
         universities: selectedUnis,
         courses: selectedCourses,
-        transactionId: paymentResult.transactionId,
+        transactionId: trackingNumber,
+        trackingNumber: trackingNumber,  // ✅ Store both for compatibility
         province: paymentResult.province || '',
         city: paymentResult.city || '',
         homeLanguage: paymentResult.homeLanguage || '',
@@ -1500,40 +1511,63 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         dateOfBirth: paymentResult.dateOfBirth || '',
       };
 
-      // REMOVED: The /api/applications/create call - Money.js already handles this
-      console.log('✅ Application already saved in Money.js with tracking:', userData.transactionId);
+      console.log('✅ Application data prepared with tracking:', userData.trackingNumber);
       
-      // Store data locally only
-      localStorage.setItem('userProfile', JSON.stringify({
+      // ✅ Verify the application was saved in Money.js by checking localStorage
+      const savedTrackingNumber = localStorage.getItem('paymentTrackingNumber');
+      if (savedTrackingNumber && savedTrackingNumber !== trackingNumber) {
+        console.warn('⚠️ Tracking number mismatch! Money.js saved:', savedTrackingNumber, 'Payment result:', trackingNumber);
+        // Use the one from localStorage if it exists (it's the source of truth)
+        if (savedTrackingNumber) {
+          userData.trackingNumber = savedTrackingNumber;
+          userData.transactionId = savedTrackingNumber;
+        }
+      }
+      
+      // ✅ Store data with the tracking number prominently displayed
+      const userProfileData = {
         ...userData,
-        trackingNumber: userData.transactionId,
+        trackingNumber: userData.trackingNumber,
         status: 'Processing',
         orderDate: new Date().toISOString(),
         documents: existingDocuments
-      }));
+      };
+      
+      localStorage.setItem('userProfile', JSON.stringify(userProfileData));
       
       const existingProfile = localStorage.getItem('userProfileData');
       const profileData = existingProfile ? JSON.parse(existingProfile) : {};
       localStorage.setItem('userProfileData', JSON.stringify({
         ...profileData,
         ...userData,
+        trackingNumber: userData.trackingNumber,  // ✅ Ensure tracking number is saved
         documents: existingDocuments
       }));
       
+      // ✅ Store tracking number in multiple places for redundancy
+      localStorage.setItem('lastTrackingNumber', userData.trackingNumber);
+      sessionStorage.setItem('lastTrackingNumber', userData.trackingNumber);
+      
+      // ✅ Clear only the data that should be cleared
       localStorage.removeItem('selectedUniversityCourses');
       localStorage.removeItem('selectedCourseDetails');
       localStorage.removeItem('selectedCourseNames');
       localStorage.removeItem('selectedPackage');
       localStorage.removeItem('applicationSummary');
       
-      sessionStorage.removeItem('paymentTrackingNumber');
       sessionStorage.removeItem('uploadedDocuments');
       sessionStorage.removeItem('pendingApplicationSummary');
+      
+      // ✅ DON'T remove paymentTrackingNumber immediately - keep it for verification
+      // sessionStorage.removeItem('paymentTrackingNumber'); // Commented out - keep for now
+      
+      // ✅ Show success message with tracking number
+      showNotificationMessage(`Payment successful! Your order number is ${userData.trackingNumber}. You'll receive a confirmation email shortly.`, 'success');
       
       if (!paymentResult.showCredentials) {
         setTimeout(() => {
           navigate('/profile');
-        }, 500);
+        }, 1500); // Increased delay to show success message
       }
     }
   } catch (error) {

@@ -350,7 +350,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
- const handleCardPayment = async (e) => {
+const handleCardPayment = async (e) => {
   console.log('🔥 handleCardPayment FIRED!');
   e.preventDefault();
   
@@ -444,9 +444,247 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       })
     });
     
+    // ✅ CHECK: Did the order submission succeed?
+    if (!orderResponse.ok) {
+      const errorData = await orderResponse.json();
+      throw new Error(`Order submission failed: ${errorData.error || errorData.message || orderResponse.statusText}`);
+    }
+    
     const orderResult = await orderResponse.json();
-    const trackingNumber = orderResult.trackingNumber;
+    let trackingNumber = orderResult.trackingNumber;
+    
+    // ✅ CHECK: Did we get a tracking number?
+    if (!trackingNumber) {
+      console.error('❌ No tracking number in response:', orderResult);
+      throw new Error('No tracking number received from server. Please try again.');
+    }
+    
     console.log('✅ Got tracking number from backend:', trackingNumber);
+    
+    // ✅ STORE tracking number immediately (for debugging/fallback)
+    sessionStorage.setItem('currentTrackingNumber', trackingNumber);
+    
+    // STEP 2: Save payment selection with the tracking number
+    if (applicationData.package) {
+      const selectionResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedPackage: applicationData.package,
+          universities: applicationData.universities,
+          totalCourses: applicationData.totalCourses,
+          totalUniversities: applicationData.totalUniversities,
+          totalCost: applicationData.totalCost,
+          courseDetails: applicationData.courseDetails,
+          trackingNumber: trackingNumber
+        })
+      });
+      
+      if (!selectionResponse.ok) {
+        console.warn('⚠️ Payment selection save failed, but continuing:', await selectionResponse.text());
+      }
+    }
+    
+    // STEP 3: Save application with the SAME tracking number
+    const appResponse = await fetch(`${API_URL}/api/applications/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        gender: formData.gender,
+        province: formData.province,
+        city: formData.city,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth,
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone,
+        trackingNumber: trackingNumber,
+        documents: filePaths
+      })
+    });
+    
+    // ✅ CHECK: Did the application save succeed?
+    if (!appResponse.ok) {
+      const errorData = await appResponse.json();
+      console.error('❌ Application save failed:', errorData);
+      throw new Error(`Application save failed: ${errorData.error || errorData.message || 'Unknown error'}`);
+    }
+    
+    const appResult = await appResponse.json();
+    console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
+    
+    // ✅ VERIFY: The tracking number matches
+    const savedTrackingNumber = appResult.trackingNumber || trackingNumber;
+    if (savedTrackingNumber !== trackingNumber) {
+      console.warn('⚠️ Tracking number mismatch! Expected:', trackingNumber, 'Got:', savedTrackingNumber);
+      // Use the one from the server response if available
+      if (appResult.trackingNumber) {
+        trackingNumber = appResult.trackingNumber;
+      }
+    }
+    
+    // Store all relevant data
+    localStorage.setItem('paymentTrackingNumber', trackingNumber);
+    localStorage.setItem('hasCompletedPayment', 'true');
+    localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
+    
+    // Clear session data
+    sessionStorage.removeItem('pendingApplicationSummary');
+    sessionStorage.removeItem('currentTrackingNumber');
+    
+    setIsProcessing(false);
+    
+    // Call the completion callback with the tracking number
+    if (onPaymentComplete) {
+      onPaymentComplete({
+        success: true,
+        transactionId: trackingNumber,
+        trackingNumber: trackingNumber,  // Include both for compatibility
+        amount: totalAmount,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        gender: formData.gender,
+        province: formData.province,
+        city: formData.city,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth,
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone
+      });
+    }
+    
+    onClose();
+    
+  } catch (error) {
+    console.error('❌ Payment error:', error);
+    setError(error.message || 'Payment failed. Please try again.');
+    setIsProcessing(false);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+const handleEFTPayment = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) {
+    return;
+  }
+  
+  setIsProcessing(true);
+  setError('');
+  
+  try {
+    const filePaths = {
+      id: documents.id.path || null,
+      results: documents.results.path || null
+    };
+    
+    // Get the pending application summary from sessionStorage
+    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+    let applicationData = {};
+    
+    if (pendingSummary) {
+      const summary = JSON.parse(pendingSummary);
+      applicationData = {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth || null,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        homeLanguage: formData.homeLanguage,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        kinName: formData.kinName,
+        kinRelationship: formData.kinRelationship,
+        kinPhone: formData.kinPhone,
+        kinEmail: formData.kinEmail,
+        documents: filePaths,
+        package: summary.package,
+        universities: summary.universities,
+        totalCourses: summary.totalCourses,
+        totalUniversities: summary.totalUniversities,
+        totalCost: summary.totalCost,
+        courseDetails: summary.courseDetails
+      };
+    }
+    
+    const token = localStorage.getItem('authToken');
+    
+    // STEP 1: Submit order FIRST to get tracking number from backend
+    const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        gender: formData.gender,
+        province: formData.province,
+        city: formData.city,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth,
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone,
+        package: applicationData.package,
+        amount: totalAmount,
+        universities: applicationData.universities,
+        courses: applicationData.courses
+      })
+    });
+    
+    // ✅ CHECK: Did the order submission succeed?
+    if (!orderResponse.ok) {
+      const errorData = await orderResponse.json();
+      throw new Error(`Order submission failed: ${errorData.error || errorData.message || orderResponse.statusText}`);
+    }
+    
+    const orderResult = await orderResponse.json();
+    let trackingNumber = orderResult.trackingNumber;
+    
+    // ✅ CHECK: Did we get a tracking number?
+    if (!trackingNumber) {
+      console.error('❌ No tracking number in response:', orderResult);
+      throw new Error('No tracking number received from server. Please try again.');
+    }
+    
+    console.log('✅ Got tracking number from backend:', trackingNumber);
+    
+    // ✅ STORE tracking number immediately
+    sessionStorage.setItem('currentTrackingNumber', trackingNumber);
     
     // STEP 2: Save payment selection with the tracking number
     if (applicationData.package) {
@@ -495,12 +733,25 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       })
     });
     
-    const appResult = await appResponse.json();
-    console.log('✅ Application saved with same tracking:', appResult.trackingNumber);
+    // ✅ CHECK: Did the application save succeed?
+    if (!appResponse.ok) {
+      const errorData = await appResponse.json();
+      throw new Error(`Application save failed: ${errorData.error || errorData.message}`);
+    }
     
+    const appResult = await appResponse.json();
+    console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
+    
+    // Store all relevant data
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
     localStorage.setItem('hasCompletedPayment', 'true');
+    localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
+    
     sessionStorage.removeItem('pendingApplicationSummary');
+    sessionStorage.removeItem('currentTrackingNumber');
+    
+    // Show EFT instructions with tracking number
+    alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
     
     setIsProcessing(false);
     
@@ -508,6 +759,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       onPaymentComplete({
         success: true,
         transactionId: trackingNumber,
+        trackingNumber: trackingNumber,
         amount: totalAmount,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -529,190 +781,11 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     onClose();
     
   } catch (error) {
-    console.error('Payment error:', error);
-    setError('Payment failed. Please try again.');
+    console.error('❌ Payment error:', error);
+    setError(error.message || 'Failed to process. Please try again.');
     setIsProcessing(false);
-  } finally {
-    setIsSubmitting(false);
   }
 };
-
- const handleEFTPayment = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsProcessing(true);
-    setError('');
-    
-    try {
-      const filePaths = {
-        id: documents.id.path || null,
-        results: documents.results.path || null
-      };
-      
-      // Get the pending application summary from sessionStorage
-      const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
-      let applicationData = {};
-      
-      if (pendingSummary) {
-        const summary = JSON.parse(pendingSummary);
-        applicationData = {
-          firstName: formData.firstName,
-          middleName: formData.middleName,
-          lastName: formData.lastName,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth || null,
-          gender: formData.gender,
-          nationality: formData.nationality,
-          homeLanguage: formData.homeLanguage,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          address: formData.address,
-          suburb: formData.suburb,
-          city: formData.city,
-          province: formData.province,
-          postalCode: formData.postalCode,
-          kinName: formData.kinName,
-          kinRelationship: formData.kinRelationship,
-          kinPhone: formData.kinPhone,
-          kinEmail: formData.kinEmail,
-          documents: filePaths,
-          package: summary.package,
-          universities: summary.universities,
-          totalCourses: summary.totalCourses,
-          totalUniversities: summary.totalUniversities,
-          totalCost: summary.totalCost,
-          courseDetails: summary.courseDetails
-        };
-      }
-      
-      const token = localStorage.getItem('authToken');
-      
-      // STEP 1: Submit order FIRST to get tracking number from backend
-      const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          gender: formData.gender,
-          province: formData.province,
-          city: formData.city,
-          homeLanguage: formData.homeLanguage,
-          nationality: formData.nationality,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          kinName: formData.kinName,
-          kinPhone: formData.kinPhone,
-          package: applicationData.package,
-          amount: totalAmount,
-          universities: applicationData.universities,
-          courses: applicationData.courses
-        })
-      });
-      
-      const orderResult = await orderResponse.json();
-      const trackingNumber = orderResult.trackingNumber;
-      console.log('✅ Got tracking number from backend:', trackingNumber);
-      
-      // STEP 2: Save payment selection with the tracking number
-      if (applicationData.package) {
-        await fetch(`${API_URL}/api/payment/save-selection`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            selectedPackage: applicationData.package,
-            universities: applicationData.universities,
-            totalCourses: applicationData.totalCourses,
-            totalUniversities: applicationData.totalUniversities,
-            totalCost: applicationData.totalCost,
-            courseDetails: applicationData.courseDetails,
-            trackingNumber: trackingNumber
-          })
-        });
-      }
-      
-      // STEP 3: Save application with the SAME tracking number
-      const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          gender: formData.gender,
-          province: formData.province,
-          city: formData.city,
-          homeLanguage: formData.homeLanguage,
-          nationality: formData.nationality,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          kinName: formData.kinName,
-          kinPhone: formData.kinPhone,
-          trackingNumber: trackingNumber,
-          documents: filePaths
-        })
-      });
-      
-      const appResult = await appResponse.json();
-      console.log('✅ Application saved with same tracking:', appResult.trackingNumber);
-      
-      localStorage.setItem('paymentTrackingNumber', trackingNumber);
-      localStorage.setItem('hasCompletedPayment', 'true');
-      sessionStorage.removeItem('pendingApplicationSummary');
-      
-      alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
-      
-      setIsProcessing(false);
-      
-      if (onPaymentComplete) {
-        onPaymentComplete({
-          success: true,
-          transactionId: trackingNumber,
-          amount: totalAmount,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          gender: formData.gender,
-          province: formData.province,
-          city: formData.city,
-          homeLanguage: formData.homeLanguage,
-          nationality: formData.nationality,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          kinName: formData.kinName,
-          kinPhone: formData.kinPhone
-        });
-      }
-      
-      onClose();
-      
-    } catch (error) {
-      console.error('Payment error:', error);
-      setError('Failed to process. Please try again.');
-      setIsProcessing(false);
-    }
-  };
 
   if (!isOpen) return null;
 
