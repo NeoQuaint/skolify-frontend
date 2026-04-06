@@ -1498,7 +1498,6 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         nationality: paymentResult.nationality || '',
         idNumber: paymentResult.idNumber || '',
         dateOfBirth: paymentResult.dateOfBirth || '',
-        trackingNumber: paymentResult.transactionId
       };
 
       try {
@@ -1551,6 +1550,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         
         if (orderResult.success) {
           const trackingNumber = orderResult.trackingNumber;
+           console.log('✅ Tracking number from backend:', trackingNumber);
           
           localStorage.setItem('userProfile', JSON.stringify({
             ...userData,

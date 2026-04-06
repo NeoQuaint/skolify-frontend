@@ -190,52 +190,57 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   };
 
   const handleFileUpload = async (type, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  setIsUploading(true);
+  setError('');
+  setFieldErrors(prev => ({ ...prev, [type]: '' }));
+  
+  const formDataFile = new FormData();
+  formDataFile.append(type, file);
+  
+  try {
+    const response = await fetch(`${API_URL}/api/upload-documents`, {
+      method: 'POST',
+      body: formDataFile
+    });
     
-    setIsUploading(true);
-    setError('');
-    setFieldErrors(prev => ({ ...prev, [type]: '' }));
+    const result = await response.json();
     
-    const formDataFile = new FormData();
-    formDataFile.append(type, file);
-    
-    try {
-      const response = await fetch(`${API_URL}/api/upload-documents`, {
-        method: 'POST',
-        body: formDataFile
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        const errorMsg = result.error || 'Upload failed';
-        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
-        throw new Error(errorMsg);
-      }
-      
-      if (result.success) {
-        setDocuments({
-          ...documents,
-          [type]: { 
-            name: file.name, 
-            uploaded: true, 
-            file: file
-          }
-        });
-        setFieldErrors(prev => ({ ...prev, [type]: '' }));
-      } else {
-        const errorMsg = result.error || 'Upload failed';
-        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
-        throw new Error(errorMsg);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      e.target.value = '';
-    } finally {
-      setIsUploading(false);
+    if (!response.ok) {
+      const errorMsg = result.error || 'Upload failed';
+      setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+      throw new Error(errorMsg);
     }
-  };
+    
+    if (result.success) {
+      // ✅ FIX: Save the S3 path from the server
+      const s3Path = result.paths[type]; // This is the S3 file path/key
+      console.log(`✅ File uploaded to S3: ${s3Path}`);
+      
+      setDocuments({
+        ...documents,
+        [type]: { 
+          name: file.name, 
+          uploaded: true, 
+          file: file,
+          path: s3Path  // ← ADD THIS LINE
+        }
+      });
+      setFieldErrors(prev => ({ ...prev, [type]: '' }));
+    } else {
+      const errorMsg = result.error || 'Upload failed';
+      setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+      throw new Error(errorMsg);
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    e.target.value = '';
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const validateForm = () => {
     // For returning users who completed payment before
@@ -357,12 +362,12 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      let trackingNumber = null;
       
       const filePaths = {
-        id: documents.id.file ? documents.id.file.name : null,
-        results: documents.results.file ? documents.results.file.name : null
-      };
+  id: documents.id.path || null,  // ← Use path, not file.name
+  results: documents.results.path || null  // ← Use path, not file.name
+};
       
       // Get the pending application summary from sessionStorage
       const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
@@ -444,7 +449,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          trackingNumber: trackingNumber,
+        
           email: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -517,12 +522,12 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      const trackingNumber = `SKL-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      let trackingNumber = null;
       
       const filePaths = {
-        id: documents.id.file ? documents.id.file.name : null,
-        results: documents.results.file ? documents.results.file.name : null
-      };
+  id: documents.id.path || null,  // ← Use path, not file.name
+  results: documents.results.path || null  // ← Use path, not file.name
+};
       
       // Get the pending application summary from sessionStorage
       const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
