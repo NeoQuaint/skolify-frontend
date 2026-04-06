@@ -1491,7 +1491,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         amount: totalCost,
         universities: selectedUnis,
         courses: selectedCourses,
-        transactionId: paymentResult.transactionId, // This is the tracking number from order
+        transactionId: paymentResult.transactionId,
         province: paymentResult.province || '',
         city: paymentResult.city || '',
         homeLanguage: paymentResult.homeLanguage || '',
@@ -1500,81 +1500,45 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         dateOfBirth: paymentResult.dateOfBirth || '',
       };
 
-      try {
-        const token = localStorage.getItem('authToken');
-        
-        // ONLY save application here (NOT in Money.js anymore)
-        const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            email: userData.email,
-            phoneNumber: userData.phoneNumber,
-            whatsappNumber: userData.whatsappNumber,
-            gender: userData.gender,
-            province: userData.province,
-            city: userData.city,
-            homeLanguage: userData.homeLanguage,
-            nationality: userData.nationality,
-            kinName: userData.kinName,
-            kinPhone: userData.kinPhone,
-            idNumber: userData.idNumber,
-            dateOfBirth: userData.dateOfBirth,
-            trackingNumber: userData.transactionId, // Use the tracking number from order
-            documents: existingDocuments
-          })
-        });
-
-        const appResult = await appResponse.json();
-        
-        if (appResult.success) {
-          console.log('✅ Application saved with tracking:', appResult.trackingNumber);
-        }
-
-        // Order was already submitted in Money.js, so don't submit again
-        // Just store the data locally
-        
-        localStorage.setItem('userProfile', JSON.stringify({
-          ...userData,
-          trackingNumber: userData.transactionId,
-          status: 'Processing',
-          orderDate: new Date().toISOString(),
-          documents: existingDocuments
-        }));
-        
-        const existingProfile = localStorage.getItem('userProfileData');
-        const profileData = existingProfile ? JSON.parse(existingProfile) : {};
-        localStorage.setItem('userProfileData', JSON.stringify({
-          ...profileData,
-          ...userData,
-          documents: existingDocuments
-        }));
-        
-        localStorage.removeItem('selectedUniversityCourses');
-        localStorage.removeItem('selectedCourseDetails');
-        localStorage.removeItem('selectedCourseNames');
-        localStorage.removeItem('selectedPackage');
-        localStorage.removeItem('applicationSummary');
-        
-        sessionStorage.removeItem('paymentTrackingNumber');
-        sessionStorage.removeItem('uploadedDocuments');
-        sessionStorage.removeItem('pendingApplicationSummary');
-        
-        if (!paymentResult.showCredentials) {
-          setTimeout(() => {
-            navigate('/profile');
-          }, 500);
-        }
-      } catch (error) {
-        console.error('Application save error:', error);
-        showNotificationMessage('Failed to save application. Please contact support.', 'error');
+      // REMOVED: The /api/applications/create call - Money.js already handles this
+      console.log('✅ Application already saved in Money.js with tracking:', userData.transactionId);
+      
+      // Store data locally only
+      localStorage.setItem('userProfile', JSON.stringify({
+        ...userData,
+        trackingNumber: userData.transactionId,
+        status: 'Processing',
+        orderDate: new Date().toISOString(),
+        documents: existingDocuments
+      }));
+      
+      const existingProfile = localStorage.getItem('userProfileData');
+      const profileData = existingProfile ? JSON.parse(existingProfile) : {};
+      localStorage.setItem('userProfileData', JSON.stringify({
+        ...profileData,
+        ...userData,
+        documents: existingDocuments
+      }));
+      
+      localStorage.removeItem('selectedUniversityCourses');
+      localStorage.removeItem('selectedCourseDetails');
+      localStorage.removeItem('selectedCourseNames');
+      localStorage.removeItem('selectedPackage');
+      localStorage.removeItem('applicationSummary');
+      
+      sessionStorage.removeItem('paymentTrackingNumber');
+      sessionStorage.removeItem('uploadedDocuments');
+      sessionStorage.removeItem('pendingApplicationSummary');
+      
+      if (!paymentResult.showCredentials) {
+        setTimeout(() => {
+          navigate('/profile');
+        }, 500);
       }
     }
+  } catch (error) {
+    console.error('Error in payment completion:', error);
+    showNotificationMessage('Something went wrong. Please contact support.', 'error');
   } finally {
     setTimeout(() => {
       setIsProcessingComplete(false);
