@@ -15,8 +15,8 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const [hasCompletedPaymentBefore, setHasCompletedPaymentBefore] = useState(false);
   const [isFirstTimeApplicant, setIsFirstTimeApplicant] = useState(true);
   const [isLoadingCheck, setIsLoadingCheck] = useState(true);
-  
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -350,16 +350,24 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
-  const handleCardPayment = async (e) => {
-    console.log('🔥 handleCardPayment FIRED!');
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsProcessing(true);
-    setError('');
+ const handleCardPayment = async (e) => {
+  console.log('🔥 handleCardPayment FIRED!');
+  e.preventDefault();
+  
+  // Prevent duplicate submissions
+  if (isSubmitting) {
+    console.log('⚠️ Already submitting, ignoring duplicate click');
+    return;
+  }
+  
+  setIsSubmitting(true);
+  
+  if (!validateForm()) {
+    return;
+  }
+  
+  setIsProcessing(true);
+  setError('');
     
     try {
       let trackingNumber = null;
@@ -504,12 +512,14 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       
       onClose();
       
-    } catch (error) {
-      console.error('Payment error:', error);
-      setError('Payment failed. Please try again.');
-      setIsProcessing(false);
-    }
-  };
+   } catch (error) {
+  console.error('Payment error:', error);
+  setError('Payment failed. Please try again.');
+  setIsProcessing(false);
+} finally {
+  setIsSubmitting(false);
+}
+};
 
   const handleEFTPayment = async (e) => {
     e.preventDefault();
