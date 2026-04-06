@@ -370,7 +370,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   setError('');
     
     try {
-      let trackingNumber = null;
+   
       
       const filePaths = {
   id: documents.id.path || null,  // ← Use path, not file.name
@@ -417,18 +417,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       
       const token = localStorage.getItem('authToken');
       
-      // Save application to database
-      const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(applicationData)
-      });
-      
-      const saveResult = await saveResponse.json();
-      console.log('Application save result:', saveResult);
       
       // Save payment selection
       if (applicationData.package) {
@@ -532,7 +520,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      let trackingNumber = null;
+      
       
       const filePaths = {
   id: documents.id.path || null,  // ← Use path, not file.name
@@ -579,18 +567,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       
       const token = localStorage.getItem('authToken');
       
-      // Save application to database
-      const saveResponse = await fetch(`${API_URL}/api/applications/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(applicationData)
-      });
-      
-      const saveResult = await saveResponse.json();
-      console.log('Application save result:', saveResult);
       
       // Save payment selection
       if (applicationData.package) {

@@ -1491,7 +1491,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         amount: totalCost,
         universities: selectedUnis,
         courses: selectedCourses,
-        transactionId: paymentResult.transactionId,
+        transactionId: paymentResult.transactionId, // This is the tracking number from order
         province: paymentResult.province || '',
         city: paymentResult.city || '',
         homeLanguage: paymentResult.homeLanguage || '',
@@ -1503,7 +1503,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
       try {
         const token = localStorage.getItem('authToken');
         
-        // Save application
+        // ONLY save application here (NOT in Money.js anymore)
         const appResponse = await fetch(`${API_URL}/api/applications/create`, {
           method: 'POST',
           headers: {
@@ -1525,7 +1525,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
             kinPhone: userData.kinPhone,
             idNumber: userData.idNumber,
             dateOfBirth: userData.dateOfBirth,
-            trackingNumber: userData.trackingNumber,
+            trackingNumber: userData.transactionId, // Use the tracking number from order
             documents: existingDocuments
           })
         });
@@ -1536,63 +1536,46 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
           console.log('✅ Application saved with tracking:', appResult.trackingNumber);
         }
 
-        // Submit order
-        const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-          },
-          body: JSON.stringify(userData)
-        });
+        // Order was already submitted in Money.js, so don't submit again
+        // Just store the data locally
         
-        const orderResult = await orderResponse.json();
+        localStorage.setItem('userProfile', JSON.stringify({
+          ...userData,
+          trackingNumber: userData.transactionId,
+          status: 'Processing',
+          orderDate: new Date().toISOString(),
+          documents: existingDocuments
+        }));
         
-        if (orderResult.success) {
-          const trackingNumber = orderResult.trackingNumber;
-           console.log('✅ Tracking number from backend:', trackingNumber);
-          
-          localStorage.setItem('userProfile', JSON.stringify({
-            ...userData,
-            trackingNumber: trackingNumber,
-            status: 'Processing',
-            orderDate: new Date().toISOString(),
-            documents: existingDocuments
-          }));
-          
-          const existingProfile = localStorage.getItem('userProfileData');
-          const profileData = existingProfile ? JSON.parse(existingProfile) : {};
-          localStorage.setItem('userProfileData', JSON.stringify({
-            ...profileData,
-            ...userData,
-            documents: existingDocuments
-          }));
-          
-          localStorage.removeItem('selectedUniversityCourses');
-          localStorage.removeItem('selectedCourseDetails');
-          localStorage.removeItem('selectedCourseNames');
-          localStorage.removeItem('selectedPackage');
-          localStorage.removeItem('applicationSummary');
-          
-          sessionStorage.removeItem('paymentTrackingNumber');
-          sessionStorage.removeItem('uploadedDocuments');
-          sessionStorage.removeItem('pendingApplicationSummary');
-          
-          if (!paymentResult.showCredentials) {
-            setTimeout(() => {
-              navigate('/profile');
-            }, 500);
-          }
-        } else {
-          showNotificationMessage('Error submitting order: ' + orderResult.error, 'error');
+        const existingProfile = localStorage.getItem('userProfileData');
+        const profileData = existingProfile ? JSON.parse(existingProfile) : {};
+        localStorage.setItem('userProfileData', JSON.stringify({
+          ...profileData,
+          ...userData,
+          documents: existingDocuments
+        }));
+        
+        localStorage.removeItem('selectedUniversityCourses');
+        localStorage.removeItem('selectedCourseDetails');
+        localStorage.removeItem('selectedCourseNames');
+        localStorage.removeItem('selectedPackage');
+        localStorage.removeItem('applicationSummary');
+        
+        sessionStorage.removeItem('paymentTrackingNumber');
+        sessionStorage.removeItem('uploadedDocuments');
+        sessionStorage.removeItem('pendingApplicationSummary');
+        
+        if (!paymentResult.showCredentials) {
+          setTimeout(() => {
+            navigate('/profile');
+          }, 500);
         }
       } catch (error) {
-        console.error('Order submission error:', error);
-        showNotificationMessage('Failed to submit order. Please contact support.', 'error');
+        console.error('Application save error:', error);
+        showNotificationMessage('Failed to save application. Please contact support.', 'error');
       }
     }
   } finally {
-    // Reset after 2 seconds to prevent rapid re-submissions
     setTimeout(() => {
       setIsProcessingComplete(false);
     }, 2000);
