@@ -7,6 +7,7 @@ import {
   FaInfoCircle, FaUniversity, FaSpinner
 } from 'react-icons/fa';
 import API_URL from './config';
+import YocoPayment from './YocoPayment';  // ✅ ADD THIS IMPORT
 
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
   
-  // Card payment fields
+  // Card payment fields - KEPT but hidden when using Yoco
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     cardName: '',
@@ -57,8 +58,8 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   });
   
   const [documents, setDocuments] = useState({
-    id: { name: null, uploaded: false, file: null },
-    results: { name: null, uploaded: false, file: null }
+    id: { name: null, uploaded: false, file: null, path: null },
+    results: { name: null, uploaded: false, file: null, path: null }
   });
 
   // Check if user has successfully completed payment before
@@ -190,79 +191,60 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   };
 
   const handleFileUpload = async (type, e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  setIsUploading(true);
-  setError('');
-  setFieldErrors(prev => ({ ...prev, [type]: '' }));
-  
-  const formDataFile = new FormData();
-  formDataFile.append(type, file);
-  
-  try {
-    const response = await fetch(`${API_URL}/api/upload-documents`, {
-      method: 'POST',
-      body: formDataFile
-    });
+    const file = e.target.files[0];
+    if (!file) return;
     
-    const result = await response.json();
+    setIsUploading(true);
+    setError('');
+    setFieldErrors(prev => ({ ...prev, [type]: '' }));
     
-    if (!response.ok) {
-      const errorMsg = result.error || 'Upload failed';
-      setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
-      throw new Error(errorMsg);
-    }
+    const formDataFile = new FormData();
+    formDataFile.append(type, file);
     
-    if (result.success) {
-      // ✅ FIX: Save the S3 path from the server
-      const s3Path = result.paths[type]; // This is the S3 file path/key
-      console.log(`✅ File uploaded to S3: ${s3Path}`);
-      
-      setDocuments({
-        ...documents,
-        [type]: { 
-          name: file.name, 
-          uploaded: true, 
-          file: file,
-          path: s3Path  // ← ADD THIS LINE
-        }
+    try {
+      const response = await fetch(`${API_URL}/api/upload-documents`, {
+        method: 'POST',
+        body: formDataFile
       });
-      setFieldErrors(prev => ({ ...prev, [type]: '' }));
-    } else {
-      const errorMsg = result.error || 'Upload failed';
-      setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
-      throw new Error(errorMsg);
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorMsg = result.error || 'Upload failed';
+        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+        throw new Error(errorMsg);
+      }
+      
+      if (result.success) {
+        const s3Path = result.paths[type];
+        console.log(`✅ File uploaded to S3: ${s3Path}`);
+        
+        setDocuments({
+          ...documents,
+          [type]: { 
+            name: file.name, 
+            uploaded: true, 
+            file: file,
+            path: s3Path
+          }
+        });
+        setFieldErrors(prev => ({ ...prev, [type]: '' }));
+      } else {
+        const errorMsg = result.error || 'Upload failed';
+        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      e.target.value = '';
+    } finally {
+      setIsUploading(false);
     }
-  } catch (error) {
-    console.error('Upload error:', error);
-    e.target.value = '';
-  } finally {
-    setIsUploading(false);
-  }
-};
+  };
 
   const validateForm = () => {
     // For returning users who completed payment before
     if (hasCompletedPaymentBefore) {
-      if (paymentMethod === 'card') {
-        if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
-          setError('Please enter a valid card number');
-          return false;
-        }
-        if (!cardDetails.cardName || cardDetails.cardName.trim().length < 3) {
-          setError('Please enter the name on card');
-          return false;
-        }
-        if (!cardDetails.expiryDate || cardDetails.expiryDate.length < 5) {
-          setError('Please enter a valid expiry date (MM/YY)');
-          return false;
-        }
-        if (!cardDetails.cvc || cardDetails.cvc.length < 3) {
-          setError('Please enter a valid CVC code');
-          return false;
-        }
-      }
       return true;
     }
     
@@ -299,6 +281,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       return true;
     }
 
+    // For card payment - only validate personal info and documents (Yoco handles card)
     if (paymentMethod === 'card') {
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
@@ -320,22 +303,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         setError('Please enter a valid phone number');
         return false;
       }
-      if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
-        setError('Please enter a valid card number');
-        return false;
-      }
-      if (!cardDetails.cardName || cardDetails.cardName.trim().length < 3) {
-        setError('Please enter the name on card');
-        return false;
-      }
-      if (!cardDetails.expiryDate || cardDetails.expiryDate.length < 5) {
-        setError('Please enter a valid expiry date (MM/YY)');
-        return false;
-      }
-      if (!cardDetails.cvc || cardDetails.cvc.length < 3) {
-        setError('Please enter a valid CVC code');
-        return false;
-      }
       if (!documents.id.uploaded) {
         setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
         return false;
@@ -350,33 +317,9 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
-const handleCardPayment = async (e) => {
-  console.log('🔥 handleCardPayment FIRED!');
-  e.preventDefault();
-  
-  // Prevent duplicate submissions
-  if (isSubmitting) {
-    console.log('⚠️ Already submitting, ignoring duplicate click');
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  if (!validateForm()) {
-    setIsSubmitting(false);
-    return;
-  }
-  
-  setIsProcessing(true);
-  setError('');
-    
-  try {
-    const filePaths = {
-      id: documents.id.path || null,
-      results: documents.results.path || null
-    };
-    
-    // Get the pending application summary from sessionStorage
+  // ✅ NEW: Save application data after successful payment (called by YocoPayment onSuccess)
+  const saveApplicationData = async (transactionId) => {
+    const token = localStorage.getItem('authToken');
     const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
     let applicationData = {};
     
@@ -403,229 +346,10 @@ const handleCardPayment = async (e) => {
         kinRelationship: formData.kinRelationship,
         kinPhone: formData.kinPhone,
         kinEmail: formData.kinEmail,
-        documents: filePaths,
-        package: summary.package,
-        universities: summary.universities,
-        totalCourses: summary.totalCourses,
-        totalUniversities: summary.totalUniversities,
-        totalCost: summary.totalCost,
-        courseDetails: summary.courseDetails
-      };
-    }
-    
-    const token = localStorage.getItem('authToken');
-    
-    // STEP 1: Submit order FIRST to get tracking number from backend
-    const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone,
-        package: applicationData.package,
-        amount: totalAmount,
-        universities: applicationData.universities,
-        courses: applicationData.courses
-      })
-    });
-    
-    // ✅ CHECK: Did the order submission succeed?
-    if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      throw new Error(`Order submission failed: ${errorData.error || errorData.message || orderResponse.statusText}`);
-    }
-    
-    const orderResult = await orderResponse.json();
-    let trackingNumber = orderResult.trackingNumber;
-    
-    // ✅ CHECK: Did we get a tracking number?
-    if (!trackingNumber) {
-      console.error('❌ No tracking number in response:', orderResult);
-      throw new Error('No tracking number received from server. Please try again.');
-    }
-    
-    console.log('✅ Got tracking number from backend:', trackingNumber);
-    
-    // ✅ STORE tracking number immediately (for debugging/fallback)
-    sessionStorage.setItem('currentTrackingNumber', trackingNumber);
-    
-    // STEP 2: Save payment selection with the tracking number
-    if (applicationData.package) {
-      const selectionResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+        documents: {
+          id: documents.id.path || null,
+          results: documents.results.path || null
         },
-        body: JSON.stringify({
-          selectedPackage: applicationData.package,
-          universities: applicationData.universities,
-          totalCourses: applicationData.totalCourses,
-          totalUniversities: applicationData.totalUniversities,
-          totalCost: applicationData.totalCost,
-          courseDetails: applicationData.courseDetails,
-          trackingNumber: trackingNumber
-        })
-      });
-      
-      if (!selectionResponse.ok) {
-        console.warn('⚠️ Payment selection save failed, but continuing:', await selectionResponse.text());
-      }
-    }
-    
-    // STEP 3: Save application with the SAME tracking number
-    const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone,
-        trackingNumber: trackingNumber,
-        documents: filePaths
-      })
-    });
-    
-    // ✅ CHECK: Did the application save succeed?
-    if (!appResponse.ok) {
-      const errorData = await appResponse.json();
-      console.error('❌ Application save failed:', errorData);
-      throw new Error(`Application save failed: ${errorData.error || errorData.message || 'Unknown error'}`);
-    }
-    
-    const appResult = await appResponse.json();
-    console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
-    
-    // ✅ VERIFY: The tracking number matches
-    const savedTrackingNumber = appResult.trackingNumber || trackingNumber;
-    if (savedTrackingNumber !== trackingNumber) {
-      console.warn('⚠️ Tracking number mismatch! Expected:', trackingNumber, 'Got:', savedTrackingNumber);
-      // Use the one from the server response if available
-      if (appResult.trackingNumber) {
-        trackingNumber = appResult.trackingNumber;
-      }
-    }
-    
-    // Store all relevant data
-    localStorage.setItem('paymentTrackingNumber', trackingNumber);
-    localStorage.setItem('hasCompletedPayment', 'true');
-    localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
-    
-    // Clear session data
-    sessionStorage.removeItem('pendingApplicationSummary');
-    sessionStorage.removeItem('currentTrackingNumber');
-    
-    setIsProcessing(false);
-    
-    // Call the completion callback with the tracking number
-    if (onPaymentComplete) {
-      onPaymentComplete({
-        success: true,
-        transactionId: trackingNumber,
-        trackingNumber: trackingNumber,  // Include both for compatibility
-        amount: totalAmount,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone
-      });
-    }
-    
-    onClose();
-    
-  } catch (error) {
-    console.error('❌ Payment error:', error);
-    setError(error.message || 'Payment failed. Please try again.');
-    setIsProcessing(false);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
-const handleEFTPayment = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) {
-    return;
-  }
-  
-  setIsProcessing(true);
-  setError('');
-  
-  try {
-    const filePaths = {
-      id: documents.id.path || null,
-      results: documents.results.path || null
-    };
-    
-    // Get the pending application summary from sessionStorage
-    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
-    let applicationData = {};
-    
-    if (pendingSummary) {
-      const summary = JSON.parse(pendingSummary);
-      applicationData = {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth || null,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        homeLanguage: formData.homeLanguage,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        address: formData.address,
-        suburb: formData.suburb,
-        city: formData.city,
-        province: formData.province,
-        postalCode: formData.postalCode,
-        kinName: formData.kinName,
-        kinRelationship: formData.kinRelationship,
-        kinPhone: formData.kinPhone,
-        kinEmail: formData.kinEmail,
-        documents: filePaths,
         package: summary.package,
         universities: summary.universities,
         totalCourses: summary.totalCourses,
@@ -635,9 +359,7 @@ const handleEFTPayment = async (e) => {
       };
     }
     
-    const token = localStorage.getItem('authToken');
-    
-    // STEP 1: Submit order FIRST to get tracking number from backend
+    // STEP 1: Submit order with transaction ID
     const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
       method: 'POST',
       headers: {
@@ -662,31 +384,26 @@ const handleEFTPayment = async (e) => {
         package: applicationData.package,
         amount: totalAmount,
         universities: applicationData.universities,
-        courses: applicationData.courses
+        courses: applicationData.courses,
+        transactionId: transactionId
       })
     });
     
-    // ✅ CHECK: Did the order submission succeed?
     if (!orderResponse.ok) {
       const errorData = await orderResponse.json();
-      throw new Error(`Order submission failed: ${errorData.error || errorData.message || orderResponse.statusText}`);
+      throw new Error(`Order submission failed: ${errorData.error || errorData.message}`);
     }
     
     const orderResult = await orderResponse.json();
     let trackingNumber = orderResult.trackingNumber;
     
-    // ✅ CHECK: Did we get a tracking number?
     if (!trackingNumber) {
-      console.error('❌ No tracking number in response:', orderResult);
-      throw new Error('No tracking number received from server. Please try again.');
+      throw new Error('No tracking number received from server');
     }
     
     console.log('✅ Got tracking number from backend:', trackingNumber);
     
-    // ✅ STORE tracking number immediately
-    sessionStorage.setItem('currentTrackingNumber', trackingNumber);
-    
-    // STEP 2: Save payment selection with the tracking number
+    // STEP 2: Save payment selection
     if (applicationData.package) {
       await fetch(`${API_URL}/api/payment/save-selection`, {
         method: 'POST',
@@ -706,7 +423,7 @@ const handleEFTPayment = async (e) => {
       });
     }
     
-    // STEP 3: Save application with the SAME tracking number
+    // STEP 3: Save application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
       method: 'POST',
       headers: {
@@ -729,11 +446,13 @@ const handleEFTPayment = async (e) => {
         kinName: formData.kinName,
         kinPhone: formData.kinPhone,
         trackingNumber: trackingNumber,
-        documents: filePaths
+        documents: {
+          id: documents.id.path || null,
+          results: documents.results.path || null
+        }
       })
     });
     
-    // ✅ CHECK: Did the application save succeed?
     if (!appResponse.ok) {
       const errorData = await appResponse.json();
       throw new Error(`Application save failed: ${errorData.error || errorData.message}`);
@@ -742,50 +461,112 @@ const handleEFTPayment = async (e) => {
     const appResult = await appResponse.json();
     console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
     
-    // Store all relevant data
+    // Store tracking number
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
     localStorage.setItem('hasCompletedPayment', 'true');
     localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
     
     sessionStorage.removeItem('pendingApplicationSummary');
-    sessionStorage.removeItem('currentTrackingNumber');
     
-    // Show EFT instructions with tracking number
-    alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
+    return trackingNumber;
+  };
+
+  // ✅ UPDATED: Handle EFT payment (unchanged - works as before)
+  const handleEFTPayment = async (e) => {
+    e.preventDefault();
     
-    setIsProcessing(false);
-    
-    if (onPaymentComplete) {
-      onPaymentComplete({
-        success: true,
-        transactionId: trackingNumber,
-        trackingNumber: trackingNumber,
-        amount: totalAmount,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone
-      });
+    if (!validateForm()) {
+      return;
     }
     
-    onClose();
+    setIsProcessing(true);
+    setError('');
     
-  } catch (error) {
-    console.error('❌ Payment error:', error);
-    setError(error.message || 'Failed to process. Please try again.');
+    try {
+      const trackingNumber = await saveApplicationData('EFT-' + Date.now());
+      
+      // Show EFT instructions
+      alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
+      
+      setIsProcessing(false);
+      
+      if (onPaymentComplete) {
+        onPaymentComplete({
+          success: true,
+          transactionId: trackingNumber,
+          trackingNumber: trackingNumber,
+          amount: totalAmount,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          gender: formData.gender,
+          province: formData.province,
+          city: formData.city,
+          homeLanguage: formData.homeLanguage,
+          nationality: formData.nationality,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          kinName: formData.kinName,
+          kinPhone: formData.kinPhone
+        });
+      }
+      
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Payment error:', error);
+      setError(error.message || 'Failed to process. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
+  // ✅ NEW: Handle successful card payment from Yoco
+  const handleYocoSuccess = async (transactionId) => {
+    setIsProcessing(true);
+    
+    try {
+      const trackingNumber = await saveApplicationData(transactionId);
+      
+      setIsProcessing(false);
+      
+      if (onPaymentComplete) {
+        onPaymentComplete({
+          success: true,
+          transactionId: transactionId,
+          trackingNumber: trackingNumber,
+          amount: totalAmount,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          gender: formData.gender,
+          province: formData.province,
+          city: formData.city,
+          homeLanguage: formData.homeLanguage,
+          nationality: formData.nationality,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          kinName: formData.kinName,
+          kinPhone: formData.kinPhone
+        });
+      }
+      
+      onClose();
+      
+    } catch (error) {
+      console.error('❌ Error after payment:', error);
+      setError(error.message || 'Payment succeeded but failed to save application. Please contact support.');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleYocoError = (errorMsg) => {
+    setError(errorMsg);
     setIsProcessing(false);
-  }
-};
+  };
 
   if (!isOpen) return null;
 
@@ -837,7 +618,7 @@ const handleEFTPayment = async (e) => {
           </div>
         )}
 
-        <form onSubmit={paymentMethod === 'card' ? handleCardPayment : handleEFTPayment} className="money-form">
+        <form onSubmit={(e) => e.preventDefault()} className="money-form">
           {/* Show FULL FORM for first-time applicants ONLY */}
           {!hasCompletedPaymentBefore && (
             <>
@@ -1171,7 +952,7 @@ const handleEFTPayment = async (e) => {
                         <button 
                           type="button"
                           className="change-file-btn"
-                          onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null }})}
+                          onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null, path: null }})}
                         >
                           Change
                         </button>
@@ -1212,7 +993,7 @@ const handleEFTPayment = async (e) => {
                         <button 
                           type="button"
                           className="change-file-btn"
-                          onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null }})}
+                          onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null, path: null }})}
                         >
                           Change
                         </button>
@@ -1282,65 +1063,20 @@ const handleEFTPayment = async (e) => {
             </div>
           </div>
 
-          {/* Card Payment Fields */}
+          {/* ✅ REPLACED: Card Payment Fields with YocoPayment component */}
           {paymentMethod === 'card' && (
             <div className="card-payment-section">
-              <div className="money-group">
-                <label><FaCreditCard /> Card Number *</label>
-                <input
-                  type="text"
-                  name="cardNumber"
-                  placeholder="1234 5678 9012 3456"
-                  value={cardDetails.cardNumber}
-                  onChange={handleCardInputChange}
-                  maxLength="19"
-                  required
-                />
-              </div>
-
-              <div className="money-group">
-                <label>Name on Card *</label>
-                <input
-                  type="text"
-                  name="cardName"
-                  placeholder="JOHN DOE"
-                  value={cardDetails.cardName}
-                  onChange={handleCardInputChange}
-                  required
-                />
-              </div>
-
-              <div className="money-row">
-                <div className="money-group">
-                  <label>Expiry Date *</label>
-                  <input
-                    type="text"
-                    name="expiryDate"
-                    placeholder="MM/YY"
-                    value={cardDetails.expiryDate}
-                    onChange={handleCardInputChange}
-                    maxLength="5"
-                    required
-                  />
-                </div>
-
-                <div className="money-group">
-                  <label>CVC *</label>
-                  <input
-                    type="text"
-                    name="cvc"
-                    placeholder="123"
-                    value={cardDetails.cvc}
-                    onChange={handleCardInputChange}
-                    maxLength="4"
-                    required
-                  />
-                </div>
-              </div>
+              <YocoPayment
+                amount={totalAmount}
+                trackingNumber={`TXN-${Date.now()}`}
+                paymentMethod="card"
+                onSuccess={handleYocoSuccess}
+                onError={handleYocoError}
+              />
             </div>
           )}
 
-          {/* EFT Payment Instructions */}
+          {/* EFT Payment Instructions - UNCHANGED */}
           {paymentMethod === 'eft' && (
             <div className="eft-payment-section">
               <div className="eft-instructions">
@@ -1369,19 +1105,23 @@ const handleEFTPayment = async (e) => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className="pay-now-btn"
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <FaSpinner className="spinner-icon" /> Processing...
-              </>
-            ) : (
-              `Pay R${totalAmount}`
-            )}
-          </button>
+          {/* ✅ UPDATED: Submit button for EFT only (Yoco has its own button) */}
+          {paymentMethod === 'eft' && (
+            <button 
+              type="button"
+              onClick={handleEFTPayment}
+              className="pay-now-btn"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <FaSpinner className="spinner-icon" /> Processing...
+                </>
+              ) : (
+                `Pay R${totalAmount} via EFT`
+              )}
+            </button>
+          )}
 
           <p className="secure-payment">
             🔒 All information is encrypted and secure
