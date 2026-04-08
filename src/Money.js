@@ -7,7 +7,7 @@ import {
   FaInfoCircle, FaUniversity, FaSpinner
 } from 'react-icons/fa';
 import API_URL from './config';
-import YocoPayment from './YocoPayment';  // ✅ ADD THIS IMPORT
+import YocoPayment from './YocoPayment';
 
 const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const navigate = useNavigate();
@@ -25,14 +25,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
-  
-  // Card payment fields - KEPT but hidden when using Yoco
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvc: ''
-  });
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -73,7 +65,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       }
       
       try {
-        // Check for COMPLETED payments only (not just selections)
         const response = await fetch(`${API_URL}/api/user/completed-payments`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -85,12 +76,10 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
         if (data.success && data.hasCompletedPayments === true) {
           setHasCompletedPaymentBefore(true);
           setIsFirstTimeApplicant(false);
-          // Load profile for returning user
           await fetchUserProfile(true);
         } else {
           setHasCompletedPaymentBefore(false);
           setIsFirstTimeApplicant(true);
-          // Do NOT load profile - keep form empty
         }
       } catch (error) {
         console.error('Error checking payment history:', error);
@@ -160,36 +149,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCardInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (name === 'cardNumber') {
-      const cleaned = value.replace(/\s/g, '');
-      if (cleaned.length <= 16) {
-        const formatted = cleaned.replace(/(\d{4})/g, '$1 ').trim();
-        setCardDetails(prev => ({ ...prev, [name]: formatted }));
-      }
-    } 
-    else if (name === 'expiryDate') {
-      const cleaned = value.replace(/\D/g, '');
-      if (cleaned.length <= 4) {
-        let formatted = cleaned;
-        if (cleaned.length > 2) {
-          formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
-        }
-        setCardDetails(prev => ({ ...prev, [name]: formatted }));
-      }
-    }
-    else if (name === 'cvc') {
-      if (value.length <= 4) {
-        setCardDetails(prev => ({ ...prev, [name]: value.replace(/\D/g, '') }));
-      }
-    }
-    else {
-      setCardDetails(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
   const handleFileUpload = async (type, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -243,12 +202,10 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
   };
 
   const validateForm = () => {
-    // For returning users who completed payment before
     if (hasCompletedPaymentBefore) {
       return true;
     }
     
-    // For first-time users - FULL VALIDATION
     if (paymentMethod === 'eft') {
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
@@ -281,7 +238,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       return true;
     }
 
-    // For card payment - only validate personal info and documents (Yoco handles card)
     if (paymentMethod === 'card') {
       if (!formData.firstName || formData.firstName.trim().length < 2) {
         setError('Please enter your first name');
@@ -317,7 +273,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return true;
   };
 
-  // ✅ NEW: Save application data after successful payment (called by YocoPayment onSuccess)
   const saveApplicationData = async (transactionId) => {
     const token = localStorage.getItem('authToken');
     const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
@@ -359,7 +314,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       };
     }
     
-    // STEP 1: Submit order with transaction ID
     const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
       method: 'POST',
       headers: {
@@ -403,7 +357,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     
     console.log('✅ Got tracking number from backend:', trackingNumber);
     
-    // STEP 2: Save payment selection
     if (applicationData.package) {
       await fetch(`${API_URL}/api/payment/save-selection`, {
         method: 'POST',
@@ -423,7 +376,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       });
     }
     
-    // STEP 3: Save application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
       method: 'POST',
       headers: {
@@ -461,7 +413,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     const appResult = await appResponse.json();
     console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
     
-    // Store tracking number
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
     localStorage.setItem('hasCompletedPayment', 'true');
     localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
@@ -471,7 +422,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return trackingNumber;
   };
 
-  // ✅ UPDATED: Handle EFT payment (unchanged - works as before)
   const handleEFTPayment = async (e) => {
     e.preventDefault();
     
@@ -485,7 +435,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     try {
       const trackingNumber = await saveApplicationData('EFT-' + Date.now());
       
-      // Show EFT instructions
       alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
       
       setIsProcessing(false);
@@ -522,7 +471,6 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     }
   };
 
-  // ✅ NEW: Handle successful card payment from Yoco
   const handleYocoSuccess = async (transactionId) => {
     setIsProcessing(true);
     
@@ -1063,20 +1011,22 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
             </div>
           </div>
 
-          {/* ✅ REPLACED: Card Payment Fields with YocoPayment component */}
+          {/* Card Payment with Yoco Payment Links */}
           {paymentMethod === 'card' && (
             <div className="card-payment-section">
               <YocoPayment
                 amount={totalAmount}
                 trackingNumber={`TXN-${Date.now()}`}
-                paymentMethod="card"
+                description={`Skolify Application - ${Date.now()}`}
+                customerEmail={formData.email}
+                customerName={`${formData.firstName} ${formData.lastName}`}
                 onSuccess={handleYocoSuccess}
                 onError={handleYocoError}
               />
             </div>
           )}
 
-          {/* EFT Payment Instructions - UNCHANGED */}
+          {/* EFT Payment Instructions */}
           {paymentMethod === 'eft' && (
             <div className="eft-payment-section">
               <div className="eft-instructions">
@@ -1105,7 +1055,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
             </div>
           </div>
 
-          {/* ✅ UPDATED: Submit button for EFT only (Yoco has its own button) */}
+          {/* EFT Submit Button */}
           {paymentMethod === 'eft' && (
             <button 
               type="button"
