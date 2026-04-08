@@ -2,25 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Money.css';
 import { 
-  FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, FaCreditCard, 
+  FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
-  FaInfoCircle, FaUniversity, FaSpinner
+  FaInfoCircle, FaSpinner
 } from 'react-icons/fa';
 import API_URL from './config';
-import YocoPayment from './YocoPayment';
 
-const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
+const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplete }) => {
   const navigate = useNavigate();
   
-  // Track if user has successfully completed payment before (from database)
   const [hasCompletedPaymentBefore, setHasCompletedPaymentBefore] = useState(false);
-  const [isFirstTimeApplicant, setIsFirstTimeApplicant] = useState(true);
   const [isLoadingCheck, setIsLoadingCheck] = useState(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
@@ -54,7 +47,12 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
-  // Check if user has successfully completed payment before
+  const packageLinks = {
+    basic: 'https://pay.yoco.com/r/70bDzD',
+    standard: 'https://pay.yoco.com/r/mdEdkr',
+    premium: 'https://pay.yoco.com/r/7XbGAB'
+  };
+
   useEffect(() => {
     const checkPaymentHistory = async () => {
       const token = localStorage.getItem('authToken');
@@ -66,25 +64,20 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       
       try {
         const response = await fetch(`${API_URL}/api/user/completed-payments`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         const data = await response.json();
         
         if (data.success && data.hasCompletedPayments === true) {
           setHasCompletedPaymentBefore(true);
-          setIsFirstTimeApplicant(false);
           await fetchUserProfile(true);
         } else {
           setHasCompletedPaymentBefore(false);
-          setIsFirstTimeApplicant(true);
         }
       } catch (error) {
         console.error('Error checking payment history:', error);
         setHasCompletedPaymentBefore(false);
-        setIsFirstTimeApplicant(true);
       } finally {
         setIsLoadingCheck(false);
       }
@@ -100,9 +93,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       
       try {
         const response = await fetch(`${API_URL}/api/user/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         const data = await response.json();
@@ -206,70 +197,34 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
       return true;
     }
     
-    if (paymentMethod === 'eft') {
-      if (!formData.firstName || formData.firstName.trim().length < 2) {
-        setError('Please enter your first name');
-        return false;
-      }
-      if (!formData.lastName || formData.lastName.trim().length < 2) {
-        setError('Please enter your last name');
-        return false;
-      }
-      if (!formData.idNumber || formData.idNumber.trim().length < 6) {
-        setError('Please enter a valid ID/Passport number');
-        return false;
-      }
-      if (!formData.email || !formData.email.includes('@')) {
-        setError('Please enter a valid email address');
-        return false;
-      }
-      if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
-        setError('Please enter a valid phone number');
-        return false;
-      }
-      if (!documents.id.uploaded) {
-        setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
-        return false;
-      }
-      if (!documents.results.uploaded) {
-        setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
-        return false;
-      }
-      return true;
+    if (!formData.firstName || formData.firstName.trim().length < 2) {
+      setError('Please enter your first name');
+      return false;
     }
-
-    if (paymentMethod === 'card') {
-      if (!formData.firstName || formData.firstName.trim().length < 2) {
-        setError('Please enter your first name');
-        return false;
-      }
-      if (!formData.lastName || formData.lastName.trim().length < 2) {
-        setError('Please enter your last name');
-        return false;
-      }
-      if (!formData.idNumber || formData.idNumber.trim().length < 6) {
-        setError('Please enter a valid ID/Passport number');
-        return false;
-      }
-      if (!formData.email || !formData.email.includes('@')) {
-        setError('Please enter a valid email address');
-        return false;
-      }
-      if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
-        setError('Please enter a valid phone number');
-        return false;
-      }
-      if (!documents.id.uploaded) {
-        setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
-        return false;
-      }
-      if (!documents.results.uploaded) {
-        setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
-        return false;
-      }
-      return true;
+    if (!formData.lastName || formData.lastName.trim().length < 2) {
+      setError('Please enter your last name');
+      return false;
     }
-
+    if (!formData.idNumber || formData.idNumber.trim().length < 6) {
+      setError('Please enter a valid ID/Passport number');
+      return false;
+    }
+    if (!formData.email || !formData.email.includes('@')) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
+      setError('Please enter a valid phone number');
+      return false;
+    }
+    if (!documents.id.uploaded) {
+      setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
+      return false;
+    }
+    if (!documents.results.uploaded) {
+      setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
+      return false;
+    }
     return true;
   };
 
@@ -422,9 +377,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     return trackingNumber;
   };
 
-  const handleEFTPayment = async (e) => {
-    e.preventDefault();
-    
+  const handlePayment = async () => {
     if (!validateForm()) {
       return;
     }
@@ -433,87 +386,28 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
     setError('');
     
     try {
-      const trackingNumber = await saveApplicationData('EFT-' + Date.now());
+      const tempTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const trackingNumber = await saveApplicationData(tempTransactionId);
       
-      alert(`EFT Payment Instructions:\n\nBank: Skolify Banking\nAccount Name: Skolify (Pty) Ltd\nAccount Number: 1234567890\nBranch Code: 123456\nReference: ${trackingNumber}\n\nAmount: R${totalAmount}\n\nUse the reference number when making payment.`);
+      sessionStorage.setItem('pendingPayment', JSON.stringify({
+        trackingNumber,
+        selectedPackage,
+        totalAmount,
+        timestamp: Date.now()
+      }));
       
-      setIsProcessing(false);
-      
-      if (onPaymentComplete) {
-        onPaymentComplete({
-          success: true,
-          transactionId: trackingNumber,
-          trackingNumber: trackingNumber,
-          amount: totalAmount,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          gender: formData.gender,
-          province: formData.province,
-          city: formData.city,
-          homeLanguage: formData.homeLanguage,
-          nationality: formData.nationality,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          kinName: formData.kinName,
-          kinPhone: formData.kinPhone
-        });
+      const paymentLink = packageLinks[selectedPackage];
+      if (!paymentLink) {
+        throw new Error('Invalid package selected');
       }
       
-      onClose();
+      window.location.href = paymentLink;
       
     } catch (error) {
       console.error('❌ Payment error:', error);
       setError(error.message || 'Failed to process. Please try again.');
       setIsProcessing(false);
     }
-  };
-
-  const handleYocoSuccess = async (transactionId) => {
-    setIsProcessing(true);
-    
-    try {
-      const trackingNumber = await saveApplicationData(transactionId);
-      
-      setIsProcessing(false);
-      
-      if (onPaymentComplete) {
-        onPaymentComplete({
-          success: true,
-          transactionId: transactionId,
-          trackingNumber: trackingNumber,
-          amount: totalAmount,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          gender: formData.gender,
-          province: formData.province,
-          city: formData.city,
-          homeLanguage: formData.homeLanguage,
-          nationality: formData.nationality,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          kinName: formData.kinName,
-          kinPhone: formData.kinPhone
-        });
-      }
-      
-      onClose();
-      
-    } catch (error) {
-      console.error('❌ Error after payment:', error);
-      setError(error.message || 'Payment succeeded but failed to save application. Please contact support.');
-      setIsProcessing(false);
-    }
-  };
-
-  const handleYocoError = (errorMsg) => {
-    setError(errorMsg);
-    setIsProcessing(false);
   };
 
   if (!isOpen) return null;
@@ -990,64 +884,7 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
             </div>
           )}
 
-          {/* Payment Method Selection */}
-          <div className="payment-method-section">
-            <h3>Select Payment Method</h3>
-            <div className="payment-methods">
-              <button
-                type="button"
-                className={`payment-method-btn ${paymentMethod === 'card' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('card')}
-              >
-                <FaCreditCard /> Card
-              </button>
-              <button
-                type="button"
-                className={`payment-method-btn ${paymentMethod === 'eft' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('eft')}
-              >
-                <FaUniversity /> EFT
-              </button>
-            </div>
-          </div>
-
-          {/* Card Payment with Yoco Payment Links */}
-          {paymentMethod === 'card' && (
-            <div className="card-payment-section">
-              <YocoPayment
-                amount={totalAmount}
-                trackingNumber={`TXN-${Date.now()}`}
-                description={`Skolify Application - ${Date.now()}`}
-                customerEmail={formData.email}
-                customerName={`${formData.firstName} ${formData.lastName}`}
-                onSuccess={handleYocoSuccess}
-                onError={handleYocoError}
-              />
-            </div>
-          )}
-
-          {/* EFT Payment Instructions */}
-          {paymentMethod === 'eft' && (
-            <div className="eft-payment-section">
-              <div className="eft-instructions">
-                <FaUniversity className="eft-icon" />
-                <h4>EFT Bank Transfer</h4>
-                <p>Please use the following bank details to make your payment:</p>
-                <div className="bank-details">
-                  <p><strong>Bank:</strong> Skolify Banking</p>
-                  <p><strong>Account Name:</strong> Skolify (Pty) Ltd</p>
-                  <p><strong>Account Number:</strong> 1234567890</p>
-                  <p><strong>Branch Code:</strong> 123456</p>
-                  <p><strong>Reference:</strong> Will be generated after submission</p>
-                  <p><strong>Amount:</strong> R{totalAmount}</p>
-                </div>
-                <p className="eft-note">
-                  After completing the payment, your application will be processed within 24-48 hours.
-                </p>
-              </div>
-            </div>
-          )}
-
+          {/* Total Amount and Pay Button - SIMPLIFIED */}
           <div className="money-summary">
             <div className="summary-left">
               <span>Total Amount:</span>
@@ -1055,23 +892,20 @@ const Money = ({ isOpen, onClose, totalAmount, onPaymentComplete }) => {
             </div>
           </div>
 
-          {/* EFT Submit Button */}
-          {paymentMethod === 'eft' && (
-            <button 
-              type="button"
-              onClick={handleEFTPayment}
-              className="pay-now-btn"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <FaSpinner className="spinner-icon" /> Processing...
-                </>
-              ) : (
-                `Pay R${totalAmount} via EFT`
-              )}
-            </button>
-          )}
+          <button 
+            type="button"
+            onClick={handlePayment}
+            className="pay-now-btn"
+            disabled={isProcessing}
+          >
+            {isProcessing ? (
+              <>
+                <FaSpinner className="spinner-icon" /> Processing...
+              </>
+            ) : (
+              `Pay R${totalAmount}`
+            )}
+          </button>
 
           <p className="secure-payment">
             🔒 All information is encrypted and secure

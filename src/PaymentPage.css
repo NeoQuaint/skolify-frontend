@@ -4189,7 +4189,7 @@
 
 .packages-inline {
   display: flex;
-  gap: 20px;  /* Add this line */
+  gap: 35px;  /* Add this line */
   justify-content: center;
   flex-wrap: wrap;
 }
