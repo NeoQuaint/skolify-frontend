@@ -305,15 +305,11 @@ const PaymentPage = () => {
   const profileMenuRef = useRef(null);
   const profileIconRef = useRef(null);
   
-  const [customOptions, setCustomOptions] = useState({
-    universityApps: 0
-  });
-
+  // Package limits - Custom removed
   const packageLimits = useMemo(() => ({
     basic: { universities: 2 },
     standard: { universities: 4 },
-    premium: { universities: 6 },
-    custom: { universities: Infinity }
+    premium: { universities: 6 }
   }), []);
 
   const packagePrices = {
@@ -426,7 +422,7 @@ const PaymentPage = () => {
     
     return {
       universities: { current: universitiesCount, limit: limits.universities },
-      isWithinLimits: selectedPackage === 'custom' ? true : universitiesCount <= limits.universities
+      isWithinLimits: universitiesCount <= limits.universities
     };
   }, [selectedCourses, selectedPackage, packageLimits]);
 
@@ -753,7 +749,7 @@ const PaymentPage = () => {
     const newTotalUniversities = Object.keys(selectedCourses).length + (isNewUniversity ? 1 : 0);
     const limit = packageLimits[selectedPackage].universities;
     
-    if (selectedPackage !== 'custom' && isNewUniversity && newTotalUniversities > limit) {
+    if (isNewUniversity && newTotalUniversities > limit) {
       setPendingSelection({
         university,
         tempSelectedCourses,
@@ -794,7 +790,7 @@ const PaymentPage = () => {
     const newTotalUniversities = Object.keys(selectedCourses).length + (isNewUniversity ? 1 : 0);
     const limit = packageLimits[selectedPackage].universities;
     
-    if (selectedPackage !== 'custom' && isNewUniversity && newTotalUniversities > limit) {
+    if (isNewUniversity && newTotalUniversities > limit) {
       setPendingSelection({
         university,
         coursesToAdd,
@@ -1168,7 +1164,7 @@ const PaymentPage = () => {
     const currentUniversities = Object.keys(selectedCourses).length;
     const limit = packageLimits[selectedPackage].universities;
     
-    if (selectedPackage !== 'custom' && currentUniversities >= limit && !selectedCourses[university.code]?.length > 0) {
+    if (currentUniversities >= limit && !selectedCourses[university.code]?.length > 0) {
       setExceededItem({
         type: 'university',
         current: currentUniversities,
@@ -1311,19 +1307,11 @@ const PaymentPage = () => {
     setSelectedPackage(packageType);
     localStorage.setItem('selectedPackage', packageType);
     setShowPaymentPopup(false);
-    
-    if (packageType !== 'custom') {
-      setCustomOptions({
-        universityApps: 0
-      });
-    }
   }, []);
 
   const handleSwitchToCustom = useCallback(() => {
-    setSelectedPackage('custom');
-    localStorage.setItem('selectedPackage', 'custom');
+    // Custom package removed - this function is kept but not used
     setShowSwitchToCustomPopup(false);
-    
     if (pendingSelection) {
       if (pendingSelection.coursesToAdd) {
         completeAddSuggestion(
@@ -1351,13 +1339,6 @@ const PaymentPage = () => {
     }
   }, [pendingSelection, completeAddSelection, completeAddSuggestion]);
 
-  const handleCustomOptionChange = useCallback((option, value) => {
-    setCustomOptions(prev => ({
-      ...prev,
-      [option]: value
-    }));
-  }, []);
-
   const handleNewOrder = useCallback(() => {
     setSelectedCourses({});
     setSelectedCourseNames([]);
@@ -1373,12 +1354,8 @@ const PaymentPage = () => {
   const totalApplications = useMemo(() => calculateTotalApplications(), [calculateTotalApplications]);
 
   const totalCost = useMemo(() => {
-    if (selectedPackage === 'custom') {
-      return 25 + (Object.keys(selectedCourses).length * 80);
-    } else {
-      return packagePrices[selectedPackage];
-    }
-  }, [selectedPackage, selectedCourses]);
+    return packagePrices[selectedPackage];
+  }, [selectedPackage]);
 
   const universityCourses = useMemo(() => {
     if (!selectedUniversity) return { availableCourses: [], unavailableCourses: [] };
@@ -1397,7 +1374,7 @@ const PaymentPage = () => {
 
   const limits = packageLimits[selectedPackage];
   
-  if (selectedPackage !== 'custom' && totalUniversities > limits.universities) {
+  if (totalUniversities > limits.universities) {
     setExceededItem({
       type: 'university',
       current: totalUniversities,
@@ -1433,7 +1410,6 @@ const PaymentPage = () => {
 }, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage]);
   
 
-
 const handlePaymentComplete = useCallback(async (paymentResult) => {
   // Prevent duplicate processing
   if (isProcessingComplete) {
@@ -1454,17 +1430,6 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
     }
     
     if (paymentResult.success) {
-      // ✅ Get the tracking number from payment result (prioritize trackingNumber over transactionId)
-      const trackingNumber = paymentResult.trackingNumber || paymentResult.transactionId;
-      
-      if (!trackingNumber) {
-        console.error('❌ No tracking number in payment result!', paymentResult);
-        showNotificationMessage('Payment succeeded but tracking number missing. Please contact support.', 'error');
-        return;
-      }
-      
-      console.log('✅ Payment complete with tracking number:', trackingNumber);
-      
       const selectedUnis = getSelectedUniversities().map(u => ({
         code: u.code,
         name: u.name,
@@ -1501,8 +1466,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         amount: totalCost,
         universities: selectedUnis,
         courses: selectedCourses,
-        transactionId: trackingNumber,
-        trackingNumber: trackingNumber,  // ✅ Store both for compatibility
+        transactionId: paymentResult.transactionId,
         province: paymentResult.province || '',
         city: paymentResult.city || '',
         homeLanguage: paymentResult.homeLanguage || '',
@@ -1511,23 +1475,16 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         dateOfBirth: paymentResult.dateOfBirth || '',
       };
 
-      console.log('✅ Application data prepared with tracking:', userData.trackingNumber);
+      console.log('✅ Application data prepared with tracking:', userData.transactionId);
       
-      // ✅ Verify the application was saved in Money.js by checking localStorage
       const savedTrackingNumber = localStorage.getItem('paymentTrackingNumber');
-      if (savedTrackingNumber && savedTrackingNumber !== trackingNumber) {
-        console.warn('⚠️ Tracking number mismatch! Money.js saved:', savedTrackingNumber, 'Payment result:', trackingNumber);
-        // Use the one from localStorage if it exists (it's the source of truth)
-        if (savedTrackingNumber) {
-          userData.trackingNumber = savedTrackingNumber;
-          userData.transactionId = savedTrackingNumber;
-        }
+      if (savedTrackingNumber && savedTrackingNumber !== userData.transactionId) {
+        console.warn('⚠️ Tracking number mismatch!');
       }
       
-      // ✅ Store data with the tracking number prominently displayed
       const userProfileData = {
         ...userData,
-        trackingNumber: userData.trackingNumber,
+        trackingNumber: userData.transactionId,
         status: 'Processing',
         orderDate: new Date().toISOString(),
         documents: existingDocuments
@@ -1540,15 +1497,13 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
       localStorage.setItem('userProfileData', JSON.stringify({
         ...profileData,
         ...userData,
-        trackingNumber: userData.trackingNumber,  // ✅ Ensure tracking number is saved
+        trackingNumber: userData.transactionId,
         documents: existingDocuments
       }));
       
-      // ✅ Store tracking number in multiple places for redundancy
-      localStorage.setItem('lastTrackingNumber', userData.trackingNumber);
-      sessionStorage.setItem('lastTrackingNumber', userData.trackingNumber);
+      localStorage.setItem('lastTrackingNumber', userData.transactionId);
+      sessionStorage.setItem('lastTrackingNumber', userData.transactionId);
       
-      // ✅ Clear only the data that should be cleared
       localStorage.removeItem('selectedUniversityCourses');
       localStorage.removeItem('selectedCourseDetails');
       localStorage.removeItem('selectedCourseNames');
@@ -1558,16 +1513,12 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
       sessionStorage.removeItem('uploadedDocuments');
       sessionStorage.removeItem('pendingApplicationSummary');
       
-      // ✅ DON'T remove paymentTrackingNumber immediately - keep it for verification
-      // sessionStorage.removeItem('paymentTrackingNumber'); // Commented out - keep for now
-      
-      // ✅ Show success message with tracking number
-      showNotificationMessage(`Payment successful! Your order number is ${userData.trackingNumber}. You'll receive a confirmation email shortly.`, 'success');
+      showNotificationMessage(`Payment successful! Your order number is ${userData.transactionId}. You'll receive a confirmation email shortly.`, 'success');
       
       if (!paymentResult.showCredentials) {
         setTimeout(() => {
           navigate('/profile');
-        }, 1500); // Increased delay to show success message
+        }, 1500);
       }
     }
   } catch (error) {
@@ -1626,20 +1577,16 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         </div>
 
         {/* Maximise Options Banner */}
-        {selectedUniversities.length > 0 && (selectedPackage !== 'custom' ? selectedUniversities.length < packageLimits[selectedPackage].universities : true) && (
+        {selectedUniversities.length > 0 && selectedUniversities.length < packageLimits[selectedPackage].universities && (
           <div className="maximise-options-banner">
             <div className="maximise-banner-content">
               <FaLightbulb className="maximise-icon" />
               <div className="maximise-text">
                 <h3>
-                  {selectedPackage === 'custom' 
-                    ? `You've selected ${selectedUniversities.length} universities` 
-                    : `You've selected ${selectedUniversities.length} out of ${packageLimits[selectedPackage].universities} universities`}
+                  You've selected {selectedUniversities.length} out of {packageLimits[selectedPackage].universities} universities
                 </h3>
                 <p>
-                  {selectedPackage === 'custom'
-                    ? 'Add more universities to build your perfect package!'
-                    : `You have ${packageLimits[selectedPackage].universities - selectedUniversities.length} slot(s) left. Add more universities to maximize your chances!`}
+                  You have {packageLimits[selectedPackage].universities - selectedUniversities.length} slot(s) left. Add more universities to maximize your chances!
                 </p>
               </div>
               <button 
@@ -1686,12 +1633,8 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
             <div className="usage-limits-simple">
               <div className="limit-item-simple">
                 <span className="limit-label-simple">Universities:</span>
-                <span className={`limit-value-simple ${selectedPackage !== 'custom' && usageStats.universities.current > usageStats.universities.limit ? 'exceeded' : ''}`}>
-                  {selectedPackage === 'custom' ? (
-                    <span>{usageStats.universities.current} / ∞</span>
-                  ) : (
-                    <span>{usageStats.universities.current} / {usageStats.universities.limit}</span>
-                  )}
+                <span className={`limit-value-simple ${usageStats.universities.current > usageStats.universities.limit ? 'exceeded' : ''}`}>
+                  {usageStats.universities.current} / {usageStats.universities.limit}
                 </span>
               </div>
             </div>
@@ -1718,7 +1661,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                         {groupAUniversities.map(university => {
                           const courseCount = selectedCourses[university.code]?.length || 0;
                           const isSelected = courseCount > 0;
-                          const isDisabled = selectedPackage !== 'custom' && !isSelected && 
+                          const isDisabled = !isSelected && 
                                         (usageStats.universities.current >= usageStats.universities.limit);
                           const institutionLimit = getInstitutionCourseLimit(university.name);
                           const isPreviousOrder = isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name);
@@ -1793,7 +1736,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                         {groupBUniversities.map(university => {
                           const courseCount = selectedCourses[university.code]?.length || 0;
                           const isSelected = courseCount > 0;
-                          const isDisabled = selectedPackage !== 'custom' && !isSelected && 
+                          const isDisabled = !isSelected && 
                                         usageStats.universities.current >= usageStats.universities.limit;
                           const institutionLimit = getInstitutionCourseLimit(university.name);
                           const isPreviousOrder = isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name);
@@ -1990,71 +1933,6 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                     </div>
                   </div>
                 </div>
-                
-                {/* Custom Package */}
-                <div 
-                  className={`package-inline ${selectedPackage === 'custom' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPackage('custom')}
-                >
-                  <div className="package-inline-header">
-                    <h4>Custom</h4>
-                    <div className="package-price-inline">Build</div>
-                  </div>
-                  
-                  {selectedPackage === 'custom' ? (
-                    <div className="custom-options-inline">
-                      <div className="custom-option-row-inline">
-                        <span>Base Fee:</span>
-                        <span className="custom-price-inline">R25</span>
-                      </div>
-                      <div className="custom-option-row-inline">
-                        <div className="custom-counter-inline">
-                          <button 
-                            className="counter-btn-inline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCustomOptionChange('universityApps', Math.max(0, Object.keys(selectedCourses).length - 1));
-                            }}
-                          >
-                            -
-                          </button>
-                          <span className="counter-value-inline">{Object.keys(selectedCourses).length} {Object.keys(selectedCourses).length === 1 ? 'University' : 'Universities'}</span>
-                          <button 
-                            className="counter-btn-inline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCustomOptionChange('universityApps', Object.keys(selectedCourses).length + 1);
-                            }}
-                          >
-                            +
-                          </button>
-                          <span className="price-per-item-inline">R80 each</span>
-                        </div>
-                      </div>
-                      <div className="custom-total-inline accent-total">
-                        <span>Total:</span>
-                        <span className="total-amount-inline">
-                          R{25 + (Object.keys(selectedCourses).length * 80)}
-                        </span>
-                      </div>
-                      <div className="custom-note-inline">
-                        <small>Build your own package • No university limit</small>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="custom-features-inline">
-                      <div className="feature-inline">
-                        <span className="feature-label-inline">Build Your Own</span>
-                      </div>
-                      <div className="feature-inline">
-                        <span className="feature-label-inline">No University Limit</span>
-                      </div>
-                      <div className="feature-inline">
-                        <span className="feature-label-inline">R25 base + R80 per uni</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -2076,19 +1954,18 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                   </div>
                 </div>
 
-                {/* FIXED BUTTON - THIS IS THE ONLY CHANGE */}
                 <button 
                   className="apply-now-btn"
                   onClick={handleApply}
-                  disabled={totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving}
+                  disabled={totalApplications === 0 || !usageStats.isWithinLimits || isSaving}
                   style={{
-                    opacity: (totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving) ? 0.6 : 1,
-                    cursor: (totalApplications === 0 || (selectedPackage !== 'custom' && !usageStats.isWithinLimits) || isSaving) ? 'not-allowed' : 'pointer'
+                    opacity: (totalApplications === 0 || !usageStats.isWithinLimits || isSaving) ? 0.6 : 1,
+                    cursor: (totalApplications === 0 || !usageStats.isWithinLimits || isSaving) ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {isSaving ? 'Saving...' : 
                    (totalApplications === 0 ? 'Select Courses First' :
-                    (selectedPackage !== 'custom' && !usageStats.isWithinLimits) ? `Limit: ${packageLimits[selectedPackage].universities} Universities Max` : 
+                    (!usageStats.isWithinLimits) ? `Limit: ${packageLimits[selectedPackage].universities} Universities Max` : 
                     'Apply Now')}
                 </button>
               </div>
@@ -2594,7 +2471,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         </div>
       )}
 
-      {/* Package Upgrade Popup */}
+      {/* Package Upgrade Popup - Updated for 3 packages only */}
       {showSwitchToCustomPopup && (
         <div className="switch-custom-popup-modal">
           <div className="switch-custom-popup-overlay" onClick={() => setShowSwitchToCustomPopup(false)}></div>
@@ -2614,24 +2491,57 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
               )}
               
               <div className="switch-options">
-                <p className="upgrade-title">Switch to Custom Package to add more:</p>
+                <p className="upgrade-title">Upgrade to a higher package to add more:</p>
                 
-                <div className="upgrade-option">
-                  <h4>Custom Package</h4>
-                  <p className="upgrade-price">Build Your Own</p>
-                  <p className="upgrade-features">
-                    R25 base + R80 per university<br />
-                    {exceededItem?.newTotal && (
-                      <strong>New total: R{25 + (exceededItem.newTotal * 80)}</strong>
-                    )}
-                  </p>
-                  <button 
-                    className="upgrade-btn custom-btn"
-                    onClick={handleSwitchToCustom}
-                  >
-                    Switch to Custom Package
-                  </button>
-                </div>
+                {exceededItem?.current >= 2 && exceededItem?.package !== 'standard' && (
+                  <div className="upgrade-option">
+                    <h4>Standard Package</h4>
+                    <p className="upgrade-price">R329</p>
+                    <p className="upgrade-features">4 Universities • Faster Processing</p>
+                    <button 
+                      className="upgrade-btn"
+                      onClick={() => {
+                        handlePackageSelect('standard');
+                        setShowSwitchToCustomPopup(false);
+                        if (pendingSelection) {
+                          if (pendingSelection.coursesToAdd) {
+                            completeAddSuggestion(pendingSelection.university, pendingSelection.coursesToAdd, pendingSelection.isNewUniversity);
+                          } else if (pendingSelection.tempSelectedCourses) {
+                            completeAddSelection(pendingSelection.university, pendingSelection.university.code, pendingSelection.tempSelectedCourses, pendingSelection.isNewUniversity);
+                          }
+                          setPendingSelection(null);
+                        }
+                      }}
+                    >
+                      Switch to Standard
+                    </button>
+                  </div>
+                )}
+                
+                {exceededItem?.current >= 4 && (
+                  <div className="upgrade-option">
+                    <h4>Premium Package</h4>
+                    <p className="upgrade-price">R499</p>
+                    <p className="upgrade-features">6 Universities • Priority Processing</p>
+                    <button 
+                      className="upgrade-btn premium-btn"
+                      onClick={() => {
+                        handlePackageSelect('premium');
+                        setShowSwitchToCustomPopup(false);
+                        if (pendingSelection) {
+                          if (pendingSelection.coursesToAdd) {
+                            completeAddSuggestion(pendingSelection.university, pendingSelection.coursesToAdd, pendingSelection.isNewUniversity);
+                          } else if (pendingSelection.tempSelectedCourses) {
+                            completeAddSelection(pendingSelection.university, pendingSelection.university.code, pendingSelection.tempSelectedCourses, pendingSelection.isNewUniversity);
+                          }
+                          setPendingSelection(null);
+                        }
+                      }}
+                    >
+                      Switch to Premium
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -2754,6 +2664,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
         isOpen={showPaymentPopup}
         onClose={() => setShowPaymentPopup(false)}
         totalAmount={totalCost}
+        selectedPackage={selectedPackage}
         onPaymentComplete={handlePaymentComplete}
       />
       {/* Footer */}
