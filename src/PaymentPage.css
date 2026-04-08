@@ -4186,3 +4186,14 @@
 }
 
 
+
+.packages-inline {
+  display: flex;
+  gap: 20px;  /* Add this line */
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.package-inline {
+  margin: 0;  /* Ensure no conflicting margins */
+}
