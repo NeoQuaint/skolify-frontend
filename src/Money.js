@@ -884,14 +884,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             </div>
           )}
 
-          {/* Total Amount and Pay Button - SIMPLIFIED */}
-          <div className="money-summary">
-            <div className="summary-left">
-              <span>Total Amount:</span>
-              <span className="total-amount">R{totalAmount}</span>
-            </div>
-          </div>
-
+          {/* Pay Button Only - Removed Total Amount label */}
           <button 
             type="button"
             onClick={handlePayment}
