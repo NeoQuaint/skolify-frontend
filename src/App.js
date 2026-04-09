@@ -1,6 +1,6 @@
 import API_URL from './config';
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import Background from './Background';
 import Dashboard from './Dashboard';
@@ -11,7 +11,6 @@ import Bursary from './Bursary';
 import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
-
 
 function Header({ showProfile = true }) {
   const navigate = useNavigate();
@@ -57,12 +56,250 @@ function Header({ showProfile = true }) {
           />
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
-
       </div>
     </header>
   );
 }
 
+// Forgot Password Modal Component
+function ForgotPasswordModal({ isOpen, onClose }) {
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage(data.message || 'Password reset link sent to your email!');
+        setEmail('');
+        setTimeout(() => {
+          onClose();
+          setMessage('');
+        }, 3000);
+      } else {
+        setError(data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="forgot-password-modal">
+      <div className="forgot-password-overlay" onClick={onClose}></div>
+      <div className="forgot-password-content">
+        <div className="forgot-password-header">
+          <h3>Reset Your Password</h3>
+          <button className="close-forgot-password" onClick={onClose}>×</button>
+        </div>
+        <div className="forgot-password-body">
+          <p>Enter your email address and we'll send you a link to reset your password.</p>
+          {message && <div className="success-message">{message}</div>}
+          {error && <div className="error-message">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="signin-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            <button type="submit" className="signin-submit-btn" disabled={loading}>
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Reset Password Component (for the reset link page)
+function ResetPasswordPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [token, setToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [validToken, setValidToken] = useState(false);
+  const [verifying, setVerifying] = useState(true);
+
+  useEffect(() => {
+    // Get token from URL query parameter
+    const params = new URLSearchParams(location.search);
+    const resetToken = params.get('token');
+    
+    if (resetToken) {
+      setToken(resetToken);
+      verifyToken(resetToken);
+    } else {
+      setVerifying(false);
+      setError('No reset token provided. Please request a new password reset link.');
+    }
+  }, [location]);
+
+  const verifyToken = async (resetToken) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/verify-reset-token?token=${resetToken}`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setValidToken(true);
+        setError('');
+      } else {
+        setError(data.error || 'Invalid or expired reset link. Please request a new one.');
+        setValidToken(false);
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      setValidToken(false);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters long');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          newPassword,
+          confirmPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage(data.message);
+        setTimeout(() => {
+          navigate('/');
+        }, 3000);
+      } else {
+        setError(data.error || 'Failed to reset password. Please try again.');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (verifying) {
+    return (
+      <div className="app">
+        <Header />
+        <main className="app-main">
+          <div className="app-container">
+            <div className="reset-password-container">
+              <div className="loading-spinner">Verifying reset link...</div>
+            </div>
+          </div>
+        </main>
+        <Background />
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <Header />
+      <main className="app-main">
+        <div className="app-container">
+          <div className="reset-password-container">
+            <div className="reset-password-card">
+              <h2>Create New Password</h2>
+              
+              {message && <div className="success-message">{message}</div>}
+              {error && <div className="error-message">{error}</div>}
+              
+              {validToken && !message ? (
+                <form onSubmit={handleSubmit}>
+                  <div className="signin-group">
+                    <label>New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="signin-group">
+                    <label>Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                    />
+                  </div>
+                  
+                  <button type="submit" className="signin-submit-btn" disabled={loading}>
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </form>
+              ) : !validToken && !message ? (
+                <div className="error-container">
+                  <p>{error}</p>
+                  <button className="back-to-login-btn" onClick={() => navigate('/')}>
+                    Back to Login
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </main>
+      <Background />
+    </div>
+  );
+}
 
 function WelcomeScreen() {
   const navigate = useNavigate();
@@ -145,15 +382,10 @@ function WelcomeScreen() {
     setShowSignIn(!showSignIn);
     setSignInError('');
     setSignInData({ email: '', password: '' });
-    setShowForgotPassword(false);
   };
 
   const handleForgotPassword = () => {
     setShowForgotPassword(true);
-  };
-
-  const closeForgotPassword = () => {
-    setShowForgotPassword(false);
   };
 
   return (
@@ -294,38 +526,10 @@ function WelcomeScreen() {
         </div>
       </main>
 
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div className="forgot-password-modal">
-          <div className="forgot-password-overlay" onClick={closeForgotPassword}></div>
-          <div className="forgot-password-content">
-            <div className="forgot-password-header">
-              <h3>Reset Your Password</h3>
-              <button 
-                className="close-forgot-password"
-                onClick={closeForgotPassword}
-              >
-                ×
-              </button>
-            </div>
-            <div className="forgot-password-body">
-              <p>Please contact our support team to reset your password:</p>
-              <p className="support-email">
-                <a href="mailto:skolifyteam@gmail.com">skolifyteam@gmail.com</a>
-              </p>
-              <p className="support-note">Include your email address in the message.</p>
-            </div>
-            <div className="forgot-password-footer">
-              <button 
-                className="close-modal-btn"
-                onClick={closeForgotPassword}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
 
       <Background />
     </div>
@@ -677,6 +881,7 @@ function App() {
         <Route path="/bursary" element={<Bursary />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<Dashboard />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
