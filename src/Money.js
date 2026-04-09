@@ -47,11 +47,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
-  const packageLinks = {
-    basic: 'https://pay.yoco.com/r/70bDzD',
-    standard: 'https://pay.yoco.com/r/mdEdkr',
-    premium: 'https://pay.yoco.com/r/7XbGAB'
-  };
+ const packageLinks = {
+  basic: 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage',
+  standard: 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage',
+  premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
+};
 
   useEffect(() => {
     const checkPaymentHistory = async () => {
