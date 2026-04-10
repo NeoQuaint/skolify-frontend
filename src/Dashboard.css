@@ -2692,37 +2692,110 @@
   }
 }
 
-/* Responsive faculty grid for mobile */
+/* Horizontal scroll faculty cards - NO GRID, just flexbox */
+.faculties-slider-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.faculties-slider-container::-webkit-scrollbar {
+  display: none;
+}
+
+.faculties-grid {
+  display: flex !important;
+  gap: 16px;
+  width: max-content;
+  padding: 10px 5px;
+}
+
+.faculty-card {
+  width: 140px;
+  flex: 0 0 auto;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.faculty-card.selected {
+  border: 2px solid #007bff;
+}
+
+.faculty-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.faculty-nav-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.faculty-nav-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.faculty-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Mobile - smaller cards */
 @media (max-width: 768px) {
-  .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-    gap: 12px !important;
-  }
-  
   .faculty-card {
-    padding: 12px !important;
+    width: 120px;
+    padding: 12px;
   }
   
   .faculty-name {
-    font-size: 12px !important;
+    font-size: 12px;
   }
   
   .faculty-category {
-    font-size: 10px !important;
+    font-size: 10px;
+  }
+  
+  .faculties-grid {
+    gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
-    gap: 10px !important;
-  }
-  
   .faculty-card {
-    padding: 10px !important;
+    width: 110px;
+    padding: 10px;
   }
   
   .faculty-name {
-    font-size: 11px !important;
+    font-size: 11px;
+  }
+  
+  .faculty-category {
+    font-size: 9px;
+  }
+  
+  .faculties-grid {
+    gap: 10px;
   }
 }
