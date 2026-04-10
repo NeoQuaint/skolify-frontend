@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUniversity } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
@@ -166,9 +166,9 @@ function DashboardHeader({ showProfile = true}) {
 
 
 // ==================== AUTH POPUP COMPONENT (Sign In + Create Account) ====================
-// CHANGE #3: Create Account (Sign Up) shown first, Sign In second
+// Create Account (Sign Up) shown first, Sign In second
 function AuthPopup({ isOpen, onClose, onSuccess }) {
-  const [isLogin, setIsLogin] = useState(false); // CHANGED: default to false (Create Account first)
+  const [isLogin, setIsLogin] = useState(false); // default to false (Create Account first)
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -434,7 +434,6 @@ const Dashboard = () => {
 
   const [showChatbot, setShowChatbot] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentFacultyIndex, setCurrentFacultyIndex] = useState(0);
   const [showCoursesForFaculty, setShowCoursesForFaculty] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -453,12 +452,6 @@ const Dashboard = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  
-  // SMOOTH FACULTY SLIDING STATES
-  const [isSliding, setIsSliding] = useState(false);
-  const [slideDirection, setSlideDirection] = useState(null);
-  
-  const facultiesPerView = 5;
 
   // Refs for click outside detection and smooth scrolling
   const profileMenuRef = useRef(null);
@@ -967,8 +960,6 @@ const Dashboard = () => {
         setEligibleFaculties(eligibleFacultiesData);
         saveState('eligibleFaculties', eligibleFacultiesData);
         
-        setCurrentFacultyIndex(0);
-        
         const updatedSelectedFaculties = selectedFaculties.filter(facultyId => 
           eligibleFacultiesData.some(f => f.id === facultyId)
         );
@@ -1213,45 +1204,6 @@ const Dashboard = () => {
     return calculateAPS(numMark);
   };
 
-  // ============================================
-  // SMOOTH FACULTY SLIDING NAVIGATION
-  // ============================================
-  
-  const nextFaculties = () => {
-    if (currentFacultyIndex < eligibleFaculties.length - facultiesPerView && !isSliding) {
-      setSlideDirection('right');
-      setIsSliding(true);
-      
-      setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev + 1);
-        setTimeout(() => {
-          setIsSliding(false);
-          setSlideDirection(null);
-        }, 50);
-      }, 350);
-    }
-  };
-
-  const prevFaculties = () => {
-    if (currentFacultyIndex > 0 && !isSliding) {
-      setSlideDirection('left');
-      setIsSliding(true);
-      
-      setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev - 1);
-        setTimeout(() => {
-          setIsSliding(false);
-          setSlideDirection(null);
-        }, 50);
-      }, 350);
-    }
-  };
-
-  // Get visible faculties
-  const getVisibleFaculties = () => {
-    return eligibleFaculties.slice(currentFacultyIndex, currentFacultyIndex + facultiesPerView);
-  };
-
   // Handle subject updates
   const handleSubjectChange = (index, field, value) => {
     const newSubjects = [...subjects];
@@ -1311,7 +1263,6 @@ const Dashboard = () => {
     setEligibleCourses([]);
     setEligibleFaculties([]);
     setShowFaculties(false);
-    setCurrentFacultyIndex(0);
     setShowCoursesForFaculty(null);
   };
 
@@ -1332,8 +1283,6 @@ const Dashboard = () => {
     );
     return filterCoursesByType(courses, courseTypeFilter);
   };
-
-  const visibleFaculties = getVisibleFaculties();
 
   return (
     <div className={`dashboard-app ${isNavigating ? 'page-exit' : ''}`}>
@@ -1660,10 +1609,6 @@ const Dashboard = () => {
               {/* Faculty Navigation Info with Search */}
               {eligibleFaculties.length > 0 && (
                 <div className="faculty-navigation-info">
-                  <p>
-                    Showing {Math.min(facultiesPerView, visibleFaculties.length)} of {eligibleFaculties.length} faculties
-                  </p>
-                  
                   {/* Search Bar for Courses */}
                   <div className="faculty-search-container">
                     <div className="faculty-search-input-group">
@@ -1686,118 +1631,118 @@ const Dashboard = () => {
                 </div>
               )}
 
-  {/* Faculty Cards Grid - EXACTLY MATCHING PAYMENT PAGE UNIVERSITY STYLES */}
-<div className="faculties-section" style={{ width: '100%', marginBottom: '40px' }}>
-  <div className="university-groups-container">
-    <div className="university-group-card">
-      <div className="group-header">
-        <span className="group-name">Your Eligible Faculties</span>
-        <span className="group-count">{eligibleFaculties.length}</span>
-      </div>
-      <div className="universities-grid" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-        gap: '16px',
-        width: '100%'
-      }}>
-        {eligibleFaculties.map((faculty) => (
-          <div 
-            key={faculty.id} 
-            className={`university-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
-            onClick={() => toggleFacultySelection(faculty.id)}
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '16px',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              position: 'relative'
-            }}
-          >
-            <div className="university-logo-container" style={{
-              width: '60px',
-              height: '60px',
-              margin: '0 auto 12px auto',
-              borderRadius: '50%',
-              background: '#f0f0f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div className="university-logo-fallback" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%',
-                borderRadius: '50%',
-                background: '#e8f0fe',
-                color: '#007bff'
-              }}>
-                <FaUniversity size={28} />
-              </div>
-            </div>
-            <div className="university-info" style={{ textAlign: 'center' }}>
-              <h3 className="university-name" style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                margin: '0 0 8px 0',
-                color: '#333',
-                lineHeight: '1.3'
-              }}>
-                {faculty.name}
-              </h3>
-              {selectedFaculties.includes(faculty.id) && (
-                <div className="courses-selected-badge" style={{
-                  display: 'inline-block',
-                  background: '#007bff',
-                  color: 'white',
-                  fontSize: '11px',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  marginTop: '4px'
-                }}>
-                  Selected
+              {/* Faculty Cards Grid - EXACTLY MATCHING PAYMENT PAGE UNIVERSITY STYLES */}
+              <div className="faculties-section" style={{ width: '100%', marginBottom: '40px' }}>
+                <div className="university-groups-container">
+                  <div className="university-group-card">
+                    <div className="group-header">
+                      <span className="group-name">Your Eligible Faculties</span>
+                      <span className="group-count">{eligibleFaculties.length}</span>
+                    </div>
+                    <div className="universities-grid" style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                      gap: '16px',
+                      width: '100%'
+                    }}>
+                      {eligibleFaculties.map((faculty) => (
+                        <div 
+                          key={faculty.id} 
+                          className={`university-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
+                          onClick={() => toggleFacultySelection(faculty.id)}
+                          style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                            position: 'relative'
+                          }}
+                        >
+                          <div className="university-logo-container" style={{
+                            width: '60px',
+                            height: '60px',
+                            margin: '0 auto 12px auto',
+                            borderRadius: '50%',
+                            background: '#f0f0f0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <div className="university-logo-fallback" style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: '50%',
+                              background: '#e8f0fe',
+                              color: '#007bff'
+                            }}>
+                              <FaUniversity size={28} />
+                            </div>
+                          </div>
+                          <div className="university-info" style={{ textAlign: 'center' }}>
+                            <h3 className="university-name" style={{
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              margin: '0 0 8px 0',
+                              color: '#333',
+                              lineHeight: '1.3'
+                            }}>
+                              {faculty.name}
+                            </h3>
+                            {selectedFaculties.includes(faculty.id) && (
+                              <div className="courses-selected-badge" style={{
+                                display: 'inline-block',
+                                background: '#007bff',
+                                color: 'white',
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                marginTop: '4px'
+                              }}>
+                                Selected
+                              </div>
+                            )}
+                          </div>
+                          {selectedFaculties.includes(faculty.id) && (
+                            <div 
+                              className="selected-check"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFacultySelection(faculty.id);
+                              }}
+                              style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                background: '#007bff',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                              title="Deselect faculty"
+                            >
+                              <FaTimes size={12} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-            {selectedFaculties.includes(faculty.id) && (
-              <div 
-                className="selected-check"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFacultySelection(faculty.id);
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: '#007bff',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}
-                title="Deselect faculty"
-              >
-                <FaTimes size={12} />
               </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</div>
 
-              {/* CHANGE #1: Black text for modal header */}
+              {/* Courses Selection Modal */}
               {showCoursesForFaculty && (
                 <div className="courses-modal">
                   <div className="courses-modal-content">
