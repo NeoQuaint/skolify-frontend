@@ -2703,8 +2703,8 @@
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   width: 100%;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* Hide scrollbar for Chrome, Safari, Opera */
@@ -2720,11 +2720,13 @@
   padding: 10px 5px;
 }
 
-/* Faculty card hover effect */
+/* Faculty card */
 .faculty-card {
-  transition: all 0.3s ease;
+  width: 140px;
+  flex: 0 0 auto;
   background: white;
   border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid #e0e0e0;
@@ -2740,7 +2742,20 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Make sure the arrows are visible and clickable */
+.faculty-name {
+  color: black;
+  font-size: 14px;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.faculty-category {
+  color: #666;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* Arrow buttons */
 .faculty-nav-btn {
   background: white;
   border: 1px solid #ddd;
@@ -2767,63 +2782,11 @@
   cursor: not-allowed;
 }
 
-/* Desktop */
-@media (min-width: 769px) {
-  .faculty-card {
-    width: 120px;
-    padding: 14px;
-  }
-  
-  .faculty-name {
-    font-size: 13px;
-  }
-  
-  .faculty-category {
-    font-size: 10px;
-  }
+/* Selected badge */
+.selected-badge {
+  color: #007bff;
+  font-weight: bold;
+  text-align: center;
 }
 
-/* Tablet */
-@media (max-width: 768px) {
-  .faculties-grid {
-    gap: 10px !important;
-  }
-  
-  .faculty-card {
-    width: 110px !important;
-    padding: 10px !important;
-  }
-  
-  .faculty-name {
-    font-size: 11px !important;
-    margin: 0 0 6px 0 !important;
-  }
-  
-  .faculty-category {
-    font-size: 9px !important;
-  }
-}
-
-/* Mobile */
-@media (max-width: 480px) {
-  .faculties-grid {
-    gap: 8px !important;
-  }
-  
-  .faculty-card {
-    width: 95px !important;
-    padding: 8px !important;
-  }
-  
-  .faculty-name {
-    font-size: 10px !important;
-    margin: 0 0 5px 0 !important;
-  }
-  
-  .faculty-category {
-    font-size: 8px !important;
-  }
-}
-
-/* Your existing styles below - keep everything else you had before */
-/* Add any other existing CSS you had here */
+/* Keep all your other existing CSS styles below */
