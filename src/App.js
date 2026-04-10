@@ -312,6 +312,7 @@ function WelcomeScreen() {
   });
   const [signInError, setSignInError] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const handleGetStarted = () => {
     if (termsAccepted) {
@@ -382,6 +383,7 @@ function WelcomeScreen() {
     setShowSignIn(!showSignIn);
     setSignInError('');
     setSignInData({ email: '', password: '' });
+    setShowPassword(false);
   };
 
   const handleForgotPassword = () => {
@@ -483,14 +485,33 @@ function WelcomeScreen() {
 
                   <div className="signin-group">
                     <label>Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Your password"
-                      value={signInData.password}
-                      onChange={handleSignInChange}
-                      required
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        placeholder="Your password"
+                        value={signInData.password}
+                        onChange={handleSignInChange}
+                        required
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          background: 'none',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          color: '#666',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {showPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                   </div>
 
                   <button 
