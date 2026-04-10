@@ -2692,37 +2692,55 @@
   }
 }
 
-/* Responsive faculty grid for mobile */
-@media (max-width: 768px) {
+/* Horizontal scroll for faculty cards on mobile */
+.faculties-slider-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+.faculties-slider-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.faculties-slider-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.faculties-slider-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.faculties-slider-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Desktop: show 5 columns without scroll */
+@media (min-width: 768px) {
+  .faculties-slider-container {
+    overflow-x: visible;
+  }
+  
   .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
-    gap: 12px !important;
-  }
-  
-  .faculty-card {
-    padding: 12px !important;
-  }
-  
-  .faculty-name {
-    font-size: 12px !important;
-  }
-  
-  .faculty-category {
-    font-size: 10px !important;
+    width: 100% !important;
   }
 }
 
-@media (max-width: 480px) {
+/* Mobile: allow horizontal scroll */
+@media (max-width: 767px) {
   .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
-    gap: 10px !important;
+    display: flex !important;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
   }
   
   .faculty-card {
-    padding: 10px !important;
-  }
-  
-  .faculty-name {
-    font-size: 11px !important;
+    min-width: 140px;
+    flex-shrink: 0;
   }
 }
