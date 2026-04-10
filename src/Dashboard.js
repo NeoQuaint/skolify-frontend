@@ -1686,64 +1686,115 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* Faculty Cards Grid - SMOOTH SLIDING with responsive grid */}
-<div className="faculties-section">
-  {eligibleFaculties.length > facultiesPerView && (
-    <button 
-      className={`faculty-nav-btn prev-btn ${isSliding ? 'disabled' : ''}`}
-      onClick={prevFaculties}
-      disabled={currentFacultyIndex === 0 || isSliding}
-    >
-      <FaChevronLeft />
-    </button>
-  )}
-
-  <div className="faculties-slider-container">
-    <div 
-      className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
-      style={{
+  {/* Faculty Cards Grid - EXACTLY MATCHING PAYMENT PAGE UNIVERSITY STYLES */}
+<div className="faculties-section" style={{ width: '100%', marginBottom: '40px' }}>
+  <div className="university-groups-container">
+    <div className="university-group-card">
+      <div className="group-header">
+        <span className="group-name">Your Eligible Faculties</span>
+        <span className="group-count">{eligibleFaculties.length}</span>
+      </div>
+      <div className="universities-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '12px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        gap: '16px',
         width: '100%'
-      }}
-    >
-      {visibleFaculties.map((faculty) => (
-        <div 
-          key={faculty.id} 
-          className={`faculty-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
-          onClick={() => toggleFacultySelection(faculty.id)}
-          style={{
-            background: 'white',
-            borderRadius: '10px',
-            padding: '12px',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
-          }}
-        >
-          <div className="faculty-card-header">
-            <h3 className="faculty-name" style={{ color: 'black', fontSize: '14px', margin: '0 0 6px 0', fontWeight: '600' }}>{faculty.name}</h3>
+      }}>
+        {eligibleFaculties.map((faculty) => (
+          <div 
+            key={faculty.id} 
+            className={`university-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
+            onClick={() => toggleFacultySelection(faculty.id)}
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '16px',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              position: 'relative'
+            }}
+          >
+            <div className="university-logo-container" style={{
+              width: '60px',
+              height: '60px',
+              margin: '0 auto 12px auto',
+              borderRadius: '50%',
+              background: '#f0f0f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div className="university-logo-fallback" style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                background: '#e8f0fe',
+                color: '#007bff'
+              }}>
+                <FaUniversity size={28} />
+              </div>
+            </div>
+            <div className="university-info" style={{ textAlign: 'center' }}>
+              <h3 className="university-name" style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                margin: '0 0 8px 0',
+                color: '#333',
+                lineHeight: '1.3'
+              }}>
+                {faculty.name}
+              </h3>
+              {selectedFaculties.includes(faculty.id) && (
+                <div className="courses-selected-badge" style={{
+                  display: 'inline-block',
+                  background: '#007bff',
+                  color: 'white',
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  marginTop: '4px'
+                }}>
+                  Selected
+                </div>
+              )}
+            </div>
             {selectedFaculties.includes(faculty.id) && (
-              <div className="selected-badge" style={{ color: '#007bff', fontWeight: 'bold', fontSize: '14px' }}>✓</div>
+              <div 
+                className="selected-check"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleFacultySelection(faculty.id);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: '#007bff',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+                title="Deselect faculty"
+              >
+                <FaTimes size={12} />
+              </div>
             )}
           </div>
-          <div className="faculty-category" style={{ color: '#666', fontSize: '11px' }}>{faculty.category}</div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   </div>
-
-  {eligibleFaculties.length > facultiesPerView && (
-    <button 
-      className={`faculty-nav-btn next-btn ${isSliding ? 'disabled' : ''}`}
-      onClick={nextFaculties}
-      disabled={currentFacultyIndex >= eligibleFaculties.length - facultiesPerView || isSliding}
-    >
-      <FaChevronRight />
-    </button>
-  )}
 </div>
 
               {/* CHANGE #1: Black text for modal header */}
