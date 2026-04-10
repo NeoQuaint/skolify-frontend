@@ -2692,57 +2692,37 @@
   }
 }
 
-/* Horizontal scroll for faculty cards - NO SCROLLBAR, ONLY ARROWS */
-
-/* Container for horizontal scrolling - hide scrollbar */
-.faculties-slider-container {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  width: 100%;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+/* Responsive faculty grid for mobile */
+@media (max-width: 768px) {
+  .faculties-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 12px !important;
+  }
+  
+  .faculty-card {
+    padding: 12px !important;
+  }
+  
+  .faculty-name {
+    font-size: 12px !important;
+  }
+  
+  .faculty-category {
+    font-size: 10px !important;
+  }
 }
 
-/* Hide scrollbar for Chrome, Safari, Opera */
-.faculties-slider-container::-webkit-scrollbar {
-  display: none;
-}
-
-/* Faculty card hover effect */
-.faculty-card {
-  transition: all 0.3s ease;
-}
-
-.faculty-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* Make sure the arrows are visible and clickable */
-.faculty-nav-btn {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-  z-index: 10;
-}
-
-.faculty-nav-btn:hover:not(:disabled) {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.faculty-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+@media (max-width: 480px) {
+  .faculties-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    gap: 10px !important;
+  }
+  
+  .faculty-card {
+    padding: 10px !important;
+  }
+  
+  .faculty-name {
+    font-size: 11px !important;
+  }
 }
