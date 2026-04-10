@@ -461,11 +461,11 @@
   background: white;
   border: 2px solid #e8e8e8;
   border-radius: 12px;
-  padding: 18px 12px;
+  padding: 12px 8px;  /* Changed from 18px 12px */
   text-align: center;
   cursor: pointer;
   transition: all 0.4s ease;
-  min-height: 120px;
+  min-height: 100px;  /* Changed from 120px */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -502,19 +502,19 @@
 }
 
 .faculty-name {
-  font-size: 16px;
+  font-size: 13px;  /* Changed from 16px */
   font-weight: 700;
   color: #1a1a1a;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;  /* Changed from 8px */
   line-height: 1.2;
 }
 
 .faculty-category {
   background: #f8f9fa;
   color: #666;
-  font-size: 11px;
+  font-size: 10px;  /* Changed from 11px */
   font-weight: 600;
-  padding: 4px 8px;
+  padding: 3px 6px;  /* Changed from 4px 8px */
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
