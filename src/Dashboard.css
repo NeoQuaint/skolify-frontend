@@ -2692,55 +2692,57 @@
   }
 }
 
-/* Horizontal scroll for faculty cards on mobile */
+/* Horizontal scroll for faculty cards - NO SCROLLBAR, ONLY ARROWS */
+
+/* Container for horizontal scrolling - hide scrollbar */
 .faculties-slider-container {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   width: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* Hide scrollbar for Chrome, Safari, Opera */
 .faculties-slider-container::-webkit-scrollbar {
-  height: 6px;
+  display: none;
 }
 
-.faculties-slider-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+/* Faculty card hover effect */
+.faculty-card {
+  transition: all 0.3s ease;
 }
 
-.faculties-slider-container::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
+.faculty-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-.faculties-slider-container::-webkit-scrollbar-thumb:hover {
-  background: #555;
+/* Make sure the arrows are visible and clickable */
+.faculty-nav-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  z-index: 10;
 }
 
-/* Desktop: show 5 columns without scroll */
-@media (min-width: 768px) {
-  .faculties-slider-container {
-    overflow-x: visible;
-  }
-  
-  .faculties-grid {
-    width: 100% !important;
-  }
+.faculty-nav-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
 }
 
-/* Mobile: allow horizontal scroll */
-@media (max-width: 767px) {
-  .faculties-grid {
-    display: flex !important;
-    gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 10px;
-  }
-  
-  .faculty-card {
-    min-width: 140px;
-    flex-shrink: 0;
-  }
+.faculty-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
