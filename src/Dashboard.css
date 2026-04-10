@@ -2692,21 +2692,27 @@
   }
 }
 
-/* Horizontal scroll faculty cards - NO GRID, just flexbox */
+/* Dashboard.css - Full file */
+
+/* Horizontal scroll for faculty cards - NO SCROLLBAR, ONLY ARROWS */
+
+/* Container for horizontal scrolling - hide scrollbar */
 .faculties-slider-container {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   width: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* Hide scrollbar for Chrome, Safari, Opera */
 .faculties-slider-container::-webkit-scrollbar {
   display: none;
 }
 
+/* Faculty grid - flexbox for horizontal scroll */
 .faculties-grid {
   display: flex !important;
   gap: 16px;
@@ -2714,12 +2720,11 @@
   padding: 10px 5px;
 }
 
+/* Faculty card hover effect */
 .faculty-card {
-  width: 140px;
-  flex: 0 0 auto;
+  transition: all 0.3s ease;
   background: white;
   border-radius: 12px;
-  padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   border: 1px solid #e0e0e0;
@@ -2735,6 +2740,7 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+/* Make sure the arrows are visible and clickable */
 .faculty-nav-btn {
   background: white;
   border: 1px solid #ddd;
@@ -2761,41 +2767,63 @@
   cursor: not-allowed;
 }
 
-/* Mobile - smaller cards */
-@media (max-width: 768px) {
+/* Desktop */
+@media (min-width: 769px) {
   .faculty-card {
     width: 120px;
-    padding: 12px;
+    padding: 14px;
   }
   
   .faculty-name {
-    font-size: 12px;
+    font-size: 13px;
   }
   
   .faculty-category {
     font-size: 10px;
   }
-  
-  .faculties-grid {
-    gap: 12px;
-  }
 }
 
-@media (max-width: 480px) {
+/* Tablet */
+@media (max-width: 768px) {
+  .faculties-grid {
+    gap: 10px !important;
+  }
+  
   .faculty-card {
-    width: 110px;
-    padding: 10px;
+    width: 110px !important;
+    padding: 10px !important;
   }
   
   .faculty-name {
-    font-size: 11px;
+    font-size: 11px !important;
+    margin: 0 0 6px 0 !important;
   }
   
   .faculty-category {
-    font-size: 9px;
-  }
-  
-  .faculties-grid {
-    gap: 10px;
+    font-size: 9px !important;
   }
 }
+
+/* Mobile */
+@media (max-width: 480px) {
+  .faculties-grid {
+    gap: 8px !important;
+  }
+  
+  .faculty-card {
+    width: 95px !important;
+    padding: 8px !important;
+  }
+  
+  .faculty-name {
+    font-size: 10px !important;
+    margin: 0 0 5px 0 !important;
+  }
+  
+  .faculty-category {
+    font-size: 8px !important;
+  }
+}
+
+/* Your existing styles below - keep everything else you had before */
+/* Add any other existing CSS you had here */
