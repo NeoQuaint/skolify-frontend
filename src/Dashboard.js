@@ -1733,7 +1733,7 @@ const Dashboard = () => {
                           transition: 'all 0.3s ease',
                           border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                          width: '120px',
+                          width: '100px',
                           flex: '0 0 auto'
                         }}
                       >
