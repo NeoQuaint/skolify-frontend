@@ -458,8 +458,8 @@ const Dashboard = () => {
   const [isSliding, setIsSliding] = useState(false);
   const [slideDirection, setSlideDirection] = useState(null);
   
-  // CHANGED: facultiesPerView from 5 to 10 for 2 rows x 5 columns
-  const facultiesPerView = 10;
+  // CHANGED: facultiesPerView from 10 to 6 (3 rows x 2 columns)
+  const facultiesPerView = 6;
 
   // Refs for click outside detection and smooth scrolling
   const profileMenuRef = useRef(null);
@@ -1215,7 +1215,7 @@ const Dashboard = () => {
   };
 
   // ============================================
-  // SMOOTH FACULTY SLIDING NAVIGATION - UPDATED FOR 10 FACULTIES
+  // SMOOTH FACULTY SLIDING NAVIGATION - UPDATED FOR 6 FACULTIES (3x2)
   // ============================================
   
   const nextFaculties = () => {
@@ -1224,7 +1224,7 @@ const Dashboard = () => {
       setIsSliding(true);
       
       setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev + 10);
+        setCurrentFacultyIndex(prev => prev + 6);
         setTimeout(() => {
           setIsSliding(false);
           setSlideDirection(null);
@@ -1239,7 +1239,7 @@ const Dashboard = () => {
       setIsSliding(true);
       
       setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev - 10);
+        setCurrentFacultyIndex(prev => prev - 6);
         setTimeout(() => {
           setIsSliding(false);
           setSlideDirection(null);
@@ -1687,9 +1687,9 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* Faculty Cards Grid - RESPONSIVE: auto-fits on mobile, flexible columns */}
+              {/* Faculty Cards Grid - 3 ROWS x 2 COLUMNS (6 visible at once) */}
               <div className="faculties-section">
-                {eligibleFaculties.length > facultiesPerView && (
+                {eligibleFaculties.length > 6 && (
                   <button 
                     className={`faculty-nav-btn prev-btn ${isSliding ? 'disabled' : ''}`}
                     onClick={prevFaculties}
@@ -1699,14 +1699,25 @@ const Dashboard = () => {
                   </button>
                 )}
 
-                <div className="faculties-slider-container">
+                <div 
+                  className="faculties-slider-container"
+                  style={{
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    scrollBehavior: 'smooth',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
+                  }}
+                >
                   <div 
                     className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
                       gap: '16px',
-                      width: '100%'
+                      width: 'max-content',
+                      padding: '10px 5px'
                     }}
                   >
                     {visibleFaculties.map((faculty) => (
@@ -1721,7 +1732,9 @@ const Dashboard = () => {
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          width: '180px',
+                          flex: '0 0 auto'
                         }}
                       >
                         <div className="faculty-card-header">
@@ -1736,11 +1749,11 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {eligibleFaculties.length > facultiesPerView && (
+                {eligibleFaculties.length > 6 && (
                   <button 
                     className={`faculty-nav-btn next-btn ${isSliding ? 'disabled' : ''}`}
                     onClick={nextFaculties}
-                    disabled={currentFacultyIndex >= eligibleFaculties.length - facultiesPerView || isSliding}
+                    disabled={currentFacultyIndex >= eligibleFaculties.length - 6 || isSliding}
                   >
                     <FaChevronRight />
                   </button>
