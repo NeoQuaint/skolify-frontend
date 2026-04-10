@@ -2691,3 +2691,38 @@
     transform: translateY(0);
   }
 }
+
+/* Responsive faculty grid for mobile */
+@media (max-width: 768px) {
+  .faculties-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 12px !important;
+  }
+  
+  .faculty-card {
+    padding: 12px !important;
+  }
+  
+  .faculty-name {
+    font-size: 12px !important;
+  }
+  
+  .faculty-category {
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .faculties-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
+    gap: 10px !important;
+  }
+  
+  .faculty-card {
+    padding: 10px !important;
+  }
+  
+  .faculty-name {
+    font-size: 11px !important;
+  }
+}

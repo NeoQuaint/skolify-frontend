@@ -1687,55 +1687,65 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* Faculty Cards Grid - 2 ROWS x 5 COLUMNS with sliding */}
-              <div className="faculties-section">
-                {eligibleFaculties.length > facultiesPerView && (
-                  <button 
-                    className={`faculty-nav-btn prev-btn ${isSliding ? 'disabled' : ''}`}
-                    onClick={prevFaculties}
-                    disabled={currentFacultyIndex === 0 || isSliding}
-                  >
-                    <FaChevronLeft />
-                  </button>
-                )}
+              {/* Faculty Cards Grid - RESPONSIVE: auto-fits on mobile, 5 columns on desktop */}
+<div className="faculties-section">
+  {eligibleFaculties.length > facultiesPerView && (
+    <button 
+      className={`faculty-nav-btn prev-btn ${isSliding ? 'disabled' : ''}`}
+      onClick={prevFaculties}
+      disabled={currentFacultyIndex === 0 || isSliding}
+    >
+      <FaChevronLeft />
+    </button>
+  )}
 
-                <div className="faculties-slider-container">
-                  <div 
-                    className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
-                      gap: '20px',
-                      width: '100%'
-                    }}
-                  >
-                    {visibleFaculties.map((faculty) => (
-                      <div 
-                        key={faculty.id} 
-                        className={`faculty-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
-                        onClick={() => toggleFacultySelection(faculty.id)}
-                        style={{
-                          background: 'white',
-                          borderRadius: '12px',
-                          padding: '20px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                        }}
-                      >
-                        <div className="faculty-card-header">
-                          <h3 className="faculty-name" style={{ color: 'black', fontSize: '16px', margin: '0 0 8px 0' }}>{faculty.name}</h3>
-                          {selectedFaculties.includes(faculty.id) && (
-                            <div className="selected-badge" style={{ color: '#007bff', fontWeight: 'bold' }}>✓</div>
-                          )}
-                        </div>
-                        <div className="faculty-category" style={{ color: '#666', fontSize: '13px' }}>{faculty.category}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+  <div className="faculties-slider-container">
+    <div 
+      className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: '16px',
+        width: '100%'
+      }}
+    >
+      {visibleFaculties.map((faculty) => (
+        <div 
+          key={faculty.id} 
+          className={`faculty-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
+          onClick={() => toggleFacultySelection(faculty.id)}
+          style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <div className="faculty-card-header">
+            <h3 className="faculty-name" style={{ color: 'black', fontSize: '14px', margin: '0 0 8px 0', textAlign: 'center' }}>{faculty.name}</h3>
+            {selectedFaculties.includes(faculty.id) && (
+              <div className="selected-badge" style={{ color: '#007bff', fontWeight: 'bold', textAlign: 'center' }}>✓</div>
+            )}
+          </div>
+          <div className="faculty-category" style={{ color: '#666', fontSize: '11px', textAlign: 'center' }}>{faculty.category}</div>
+        </div>
+      ))}
+    </div>
+  </div>
 
+  {eligibleFaculties.length > facultiesPerView && (
+    <button 
+      className={`faculty-nav-btn next-btn ${isSliding ? 'disabled' : ''}`}
+      onClick={nextFaculties}
+      disabled={currentFacultyIndex >= eligibleFaculties.length - facultiesPerView || isSliding}
+    >
+      <FaChevronRight />
+    </button>
+  )}
+</div>
                 {eligibleFaculties.length > facultiesPerView && (
                   <button 
                     className={`faculty-nav-btn next-btn ${isSliding ? 'disabled' : ''}`}
