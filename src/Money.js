@@ -883,6 +883,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
               </p>
             </div>
           )}
+                
+         <div className="payment-info-note">
+         <FaSpinner className="info-spinner" />
+         <span>Payment may take up to 60 seconds to load. Please wait and don't refresh.</span>
+          </div>
 
           {/* Pay Button Only - Removed Total Amount label */}
           <button 
