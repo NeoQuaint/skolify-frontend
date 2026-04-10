@@ -166,8 +166,9 @@ function DashboardHeader({ showProfile = true}) {
 
 
 // ==================== AUTH POPUP COMPONENT (Sign In + Create Account) ====================
+// CHANGE #3: Create Account (Sign Up) shown first, Sign In second
 function AuthPopup({ isOpen, onClose, onSuccess }) {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(false); // CHANGED: default to false (Create Account first)
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -255,7 +256,6 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
       console.log("SIGNUP RESPONSE:", data);
 
       if (data.success && data.newUser) {
-        // ✅ USE TOKEN DIRECTLY (FIXED)
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -375,6 +375,7 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
     </div>
   );
 }
+
 // ==================== MAIN DASHBOARD COMPONENT ====================
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -1176,8 +1177,8 @@ const Dashboard = () => {
   };
 
   const handleAuthSuccess = (user) => {
-  proceedToPayment();
-};
+    proceedToPayment();
+  };
 
   // Apply to selected courses - shows create account popup if not logged in
   const handleApply = () => {
@@ -1190,8 +1191,8 @@ const Dashboard = () => {
     const token = localStorage.getItem('authToken');
     
     if (!token) {
-  setShowAuthPopup(true);
-}else {
+      setShowAuthPopup(true);
+    } else {
       proceedToPayment();
     }
   };
@@ -1339,10 +1340,10 @@ const Dashboard = () => {
       <DashboardHeader showProfile={true} />
 
       <AuthPopup 
-  isOpen={showAuthPopup} 
-  onClose={() => setShowAuthPopup(false)} 
-  onSuccess={handleAuthSuccess}
-/>
+        isOpen={showAuthPopup} 
+        onClose={() => setShowAuthPopup(false)} 
+        onSuccess={handleAuthSuccess}
+      />
 
       {/* Navigation Loading Overlay */}
       {isNavigating && (
@@ -1685,7 +1686,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* Faculty Cards Grid - SMOOTH SLIDING */}
+              {/* Faculty Cards Grid - SMOOTH SLIDING with responsive grid */}
               <div className="faculties-section">
                 {eligibleFaculties.length > facultiesPerView && (
                   <button 
@@ -1700,21 +1701,35 @@ const Dashboard = () => {
                 <div className="faculties-slider-container">
                   <div 
                     className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '20px',
+                      width: '100%'
+                    }}
                   >
                     {visibleFaculties.map((faculty) => (
                       <div 
                         key={faculty.id} 
                         className={`faculty-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
                         onClick={() => toggleFacultySelection(faculty.id)}
+                        style={{
+                          background: 'white',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}
                       >
                         <div className="faculty-card-header">
-                          <h3 className="faculty-name">{faculty.name}</h3>
+                          <h3 className="faculty-name" style={{ color: 'black', fontSize: '16px', margin: '0 0 8px 0' }}>{faculty.name}</h3>
                           {selectedFaculties.includes(faculty.id) && (
-                            <div className="selected-badge">✓</div>
+                            <div className="selected-badge" style={{ color: '#007bff', fontWeight: 'bold' }}>✓</div>
                           )}
                         </div>
-                        <div className="faculty-category">{faculty.category}</div>
-                        
+                        <div className="faculty-category" style={{ color: '#666', fontSize: '13px' }}>{faculty.category}</div>
                       </div>
                     ))}
                   </div>
@@ -1731,12 +1746,12 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Courses Selection Modal */}
+              {/* CHANGE #1: Black text for modal header */}
               {showCoursesForFaculty && (
                 <div className="courses-modal">
                   <div className="courses-modal-content">
                     <div className="courses-modal-header">
-                      <h3>Select Courses from {showCoursesForFaculty.name}</h3>
+                      <h3 style={{ color: 'black' }}>Select Courses from {showCoursesForFaculty.name}</h3>
                       <button 
                         className="close-courses-modal"
                         onClick={handleCloseCoursesModal}
