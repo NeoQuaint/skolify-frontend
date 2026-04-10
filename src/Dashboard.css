@@ -2692,41 +2692,91 @@
   }
 }
 
-/* Responsive faculty grid for mobile */
-@media (max-width: 768px) {
-  .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
-    gap: 10px !important;
-  }
-  
-  .faculty-card {
-    padding: 10px !important;
-  }
-  
-  .faculty-name {
-    font-size: 11px !important;
-  }
-  
-  .faculty-category {
-    font-size: 9px !important;
-  }
+/* Horizontal scroll faculty cards - FLEXBOX (matches your JSX) */
+
+.faculties-slider-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-@media (max-width: 480px) {
-  .faculties-grid {
-    grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)) !important;
-    gap: 8px !important;
-  }
-  
-  .faculty-card {
-    padding: 8px !important;
-  }
-  
-  .faculty-name {
-    font-size: 10px !important;
-  }
-  
-  .faculty-category {
-    font-size: 8px !important;
-  }
+.faculties-slider-container::-webkit-scrollbar {
+  display: none;
+}
+
+.faculties-grid {
+  display: flex !important;
+  gap: 16px !important;
+  width: max-content;
+  padding: 10px 5px;
+}
+
+.faculty-card {
+  width: 120px;
+  flex: 0 0 auto;
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.faculty-card.selected {
+  border: 2px solid #007bff;
+}
+
+.faculty-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.faculty-name {
+  color: black;
+  font-size: 13px;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.faculty-category {
+  color: #666;
+  font-size: 10px;
+  text-align: center;
+}
+
+.faculty-nav-btn {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.faculty-nav-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.faculty-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.selected-badge {
+  color: #007bff;
+  font-weight: bold;
+  text-align: center;
 }
