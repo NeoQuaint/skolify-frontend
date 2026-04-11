@@ -1362,175 +1362,213 @@ const PaymentPage = () => {
     return getCoursesForUniversity(selectedUniversity);
   }, [selectedUniversity, getCoursesForUniversity]);
 
- const handleApply = useCallback(async () => {
-  const selectedUnis = getSelectedUniversities();
-  const totalCourses = calculateTotalApplications();
-  const totalUniversities = Object.keys(selectedCourses).length;
-  
-  if (totalCourses === 0) {
-    showNotificationMessage('Please select at least one course from any university', 'warning');
-    return;
-  }
+  // NEW FUNCTION: Check if university has maximum courses selected
+  const hasUniversityReachedMaxCourses = useCallback((university) => {
+    const currentCount = selectedCourses[university.code]?.length || 0;
+    const maxLimit = getInstitutionCourseLimit(university.name);
+    return currentCount === maxLimit;
+  }, [selectedCourses, getInstitutionCourseLimit]);
 
-  const limits = packageLimits[selectedPackage];
-  
-  if (totalUniversities > limits.universities) {
-    setExceededItem({
-      type: 'university',
-      current: totalUniversities,
-      limit: limits.universities,
-      package: selectedPackage
-    });
-    setShowSwitchToCustomPopup(true);
-    return;
-  }
+  // NEW FUNCTION: Check if user has selected maximum universities for their package
+  const hasReachedMaxUniversities = useCallback(() => {
+    const currentUniversities = Object.keys(selectedCourses).length;
+    const maxUniversities = packageLimits[selectedPackage].universities;
+    return currentUniversities === maxUniversities;
+  }, [selectedCourses, selectedPackage, packageLimits]);
 
-  const selectedUniversitiesList = selectedUnis.map(u => ({
-    code: u.code,
-    name: u.name,
-    courses: selectedCourses[u.code] || []
-  }));
-
-  const applicationSummary = {
-    package: selectedPackage,
-    universities: selectedUniversitiesList,
-    totalCourses: totalCourses,
-    totalUniversities: totalUniversities,
-    timestamp: new Date().toISOString(),
-    courseDetails: selectedCourseDetails,
-    totalCost: totalCost
-  };
-  
-  // Store in sessionStorage temporarily (not localStorage)
-  sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
-  
-  // Open payment popup - NO DATABASE SAVE HERE
-  setShowPaymentPopup(true);
-  
-}, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage]);
-  
-
-const handlePaymentComplete = useCallback(async (paymentResult) => {
-  // Prevent duplicate processing
-  if (isProcessingComplete) {
-    console.log('⚠️ Already processing payment completion, ignoring duplicate call');
-    return;
-  }
-  
-  setIsProcessingComplete(true);
-  
-  try {
-    setPaymentStatus(paymentResult);
-    setShowPaymentPopup(false);
+  // MODIFIED: handleApply with enforcement
+  const handleApply = useCallback(async () => {
+    const selectedUnis = getSelectedUniversities();
+    const totalCourses = calculateTotalApplications();
+    const totalUniversities = Object.keys(selectedCourses).length;
     
-    if (paymentResult.showCredentials) {
-      setAccountUsername(paymentResult.username);
-      setAccountPassword(paymentResult.password);
-      setShowCredentialsModal(true);
+    // ENFORCEMENT 1: Check if any courses are selected
+    if (totalCourses === 0) {
+      showNotificationMessage('Please select at least one course from any university', 'warning');
+      return;
+    }
+
+    const limits = packageLimits[selectedPackage];
+    
+    // ENFORCEMENT 2: Check if user has selected EXACT maximum universities for their package
+    if (totalUniversities !== limits.universities) {
+      const remaining = limits.universities - totalUniversities;
+      if (remaining > 0) {
+        showNotificationMessage(`You have selected ${totalUniversities} out of ${limits.universities} universities for your ${selectedPackage} package. Please select ${remaining} more universit${remaining > 1 ? 'ies' : 'y'} to maximize your application.`, 'warning');
+      } else {
+        showNotificationMessage(`You have exceeded your ${selectedPackage} package limit of ${limits.universities} universities. Please upgrade your package.`, 'warning');
+      }
+      return;
     }
     
-    if (paymentResult.success) {
-      const selectedUnis = getSelectedUniversities().map(u => ({
-        code: u.code,
-        name: u.name,
-        courses: selectedCourses[u.code]
-      }));
+    // ENFORCEMENT 3: Check each selected university has maximum courses
+    const incompleteUniversities = [];
+    for (const uni of selectedUnis) {
+      const currentCourses = selectedCourses[uni.code]?.length || 0;
+      const maxCourses = getInstitutionCourseLimit(uni.name);
+      if (currentCourses !== maxCourses) {
+        incompleteUniversities.push({
+          name: uni.code,
+          current: currentCourses,
+          max: maxCourses,
+          remaining: maxCourses - currentCourses
+        });
+      }
+    }
+    
+    if (incompleteUniversities.length > 0) {
+      let message = `Please maximize your course selections:\n`;
+      incompleteUniversities.forEach(uni => {
+        message += `\n• ${uni.name}: ${uni.current}/${uni.max} courses (add ${uni.remaining} more)`;
+      });
+      showNotificationMessage(message, 'warning');
+      return;
+    }
 
-      let existingDocuments = {};
-      try {
-        const savedProfile = localStorage.getItem('userProfileData');
-        if (savedProfile) {
-          const profile = JSON.parse(savedProfile);
-          existingDocuments = profile.documents || {};
+    const selectedUniversitiesList = selectedUnis.map(u => ({
+      code: u.code,
+      name: u.name,
+      courses: selectedCourses[u.code] || []
+    }));
+
+    const applicationSummary = {
+      package: selectedPackage,
+      universities: selectedUniversitiesList,
+      totalCourses: totalCourses,
+      totalUniversities: totalUniversities,
+      timestamp: new Date().toISOString(),
+      courseDetails: selectedCourseDetails,
+      totalCost: totalCost
+    };
+    
+    // Store in sessionStorage temporarily (not localStorage)
+    sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
+    
+    // Open payment popup - NO DATABASE SAVE HERE
+    setShowPaymentPopup(true);
+    
+  }, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage, getInstitutionCourseLimit]);
+  
+  const handlePaymentComplete = useCallback(async (paymentResult) => {
+    // Prevent duplicate processing
+    if (isProcessingComplete) {
+      console.log('⚠️ Already processing payment completion, ignoring duplicate call');
+      return;
+    }
+    
+    setIsProcessingComplete(true);
+    
+    try {
+      setPaymentStatus(paymentResult);
+      setShowPaymentPopup(false);
+      
+      if (paymentResult.showCredentials) {
+        setAccountUsername(paymentResult.username);
+        setAccountPassword(paymentResult.password);
+        setShowCredentialsModal(true);
+      }
+      
+      if (paymentResult.success) {
+        const selectedUnis = getSelectedUniversities().map(u => ({
+          code: u.code,
+          name: u.name,
+          courses: selectedCourses[u.code]
+        }));
+
+        let existingDocuments = {};
+        try {
+          const savedProfile = localStorage.getItem('userProfileData');
+          if (savedProfile) {
+            const profile = JSON.parse(savedProfile);
+            existingDocuments = profile.documents || {};
+          }
+          
+          const sessionDocs = sessionStorage.getItem('uploadedDocuments');
+          if (sessionDocs) {
+            const docs = JSON.parse(sessionDocs);
+            existingDocuments = { ...existingDocuments, ...docs };
+          }
+        } catch (error) {
+          console.error('Error getting existing documents:', error);
+        }
+
+        const userData = {
+          firstName: paymentResult.firstName || '',
+          lastName: paymentResult.lastName || '',
+          gender: paymentResult.gender || '',
+          email: paymentResult.email || '',
+          kinName: paymentResult.kinName || '',
+          kinPhone: paymentResult.kinPhone || '',
+          phoneNumber: paymentResult.phoneNumber || paymentResult.phone || '',
+          whatsappNumber: paymentResult.whatsappNumber || '',
+          package: selectedPackage,
+          amount: totalCost,
+          universities: selectedUnis,
+          courses: selectedCourses,
+          transactionId: paymentResult.transactionId,
+          province: paymentResult.province || '',
+          city: paymentResult.city || '',
+          homeLanguage: paymentResult.homeLanguage || '',
+          nationality: paymentResult.nationality || '',
+          idNumber: paymentResult.idNumber || '',
+          dateOfBirth: paymentResult.dateOfBirth || '',
+        };
+
+        console.log('✅ Application data prepared with tracking:', userData.transactionId);
+        
+        const savedTrackingNumber = localStorage.getItem('paymentTrackingNumber');
+        if (savedTrackingNumber && savedTrackingNumber !== userData.transactionId) {
+          console.warn('⚠️ Tracking number mismatch!');
         }
         
-        const sessionDocs = sessionStorage.getItem('uploadedDocuments');
-        if (sessionDocs) {
-          const docs = JSON.parse(sessionDocs);
-          existingDocuments = { ...existingDocuments, ...docs };
+        const userProfileData = {
+          ...userData,
+          trackingNumber: userData.transactionId,
+          status: 'Processing',
+          orderDate: new Date().toISOString(),
+          documents: existingDocuments
+        };
+        
+        localStorage.setItem('userProfile', JSON.stringify(userProfileData));
+        
+        const existingProfile = localStorage.getItem('userProfileData');
+        const profileData = existingProfile ? JSON.parse(existingProfile) : {};
+        localStorage.setItem('userProfileData', JSON.stringify({
+          ...profileData,
+          ...userData,
+          trackingNumber: userData.transactionId,
+          documents: existingDocuments
+        }));
+        
+        localStorage.setItem('lastTrackingNumber', userData.transactionId);
+        sessionStorage.setItem('lastTrackingNumber', userData.transactionId);
+        
+        localStorage.removeItem('selectedUniversityCourses');
+        localStorage.removeItem('selectedCourseDetails');
+        localStorage.removeItem('selectedCourseNames');
+        localStorage.removeItem('selectedPackage');
+        localStorage.removeItem('applicationSummary');
+        
+        sessionStorage.removeItem('uploadedDocuments');
+        sessionStorage.removeItem('pendingApplicationSummary');
+        
+        showNotificationMessage(`Payment successful! Your order number is ${userData.transactionId}. You'll receive a confirmation email shortly.`, 'success');
+        
+        if (!paymentResult.showCredentials) {
+          setTimeout(() => {
+            navigate('/profile');
+          }, 1500);
         }
-      } catch (error) {
-        console.error('Error getting existing documents:', error);
       }
-
-      const userData = {
-        firstName: paymentResult.firstName || '',
-        lastName: paymentResult.lastName || '',
-        gender: paymentResult.gender || '',
-        email: paymentResult.email || '',
-        kinName: paymentResult.kinName || '',
-        kinPhone: paymentResult.kinPhone || '',
-        phoneNumber: paymentResult.phoneNumber || paymentResult.phone || '',
-        whatsappNumber: paymentResult.whatsappNumber || '',
-        package: selectedPackage,
-        amount: totalCost,
-        universities: selectedUnis,
-        courses: selectedCourses,
-        transactionId: paymentResult.transactionId,
-        province: paymentResult.province || '',
-        city: paymentResult.city || '',
-        homeLanguage: paymentResult.homeLanguage || '',
-        nationality: paymentResult.nationality || '',
-        idNumber: paymentResult.idNumber || '',
-        dateOfBirth: paymentResult.dateOfBirth || '',
-      };
-
-      console.log('✅ Application data prepared with tracking:', userData.transactionId);
-      
-      const savedTrackingNumber = localStorage.getItem('paymentTrackingNumber');
-      if (savedTrackingNumber && savedTrackingNumber !== userData.transactionId) {
-        console.warn('⚠️ Tracking number mismatch!');
-      }
-      
-      const userProfileData = {
-        ...userData,
-        trackingNumber: userData.transactionId,
-        status: 'Processing',
-        orderDate: new Date().toISOString(),
-        documents: existingDocuments
-      };
-      
-      localStorage.setItem('userProfile', JSON.stringify(userProfileData));
-      
-      const existingProfile = localStorage.getItem('userProfileData');
-      const profileData = existingProfile ? JSON.parse(existingProfile) : {};
-      localStorage.setItem('userProfileData', JSON.stringify({
-        ...profileData,
-        ...userData,
-        trackingNumber: userData.transactionId,
-        documents: existingDocuments
-      }));
-      
-      localStorage.setItem('lastTrackingNumber', userData.transactionId);
-      sessionStorage.setItem('lastTrackingNumber', userData.transactionId);
-      
-      localStorage.removeItem('selectedUniversityCourses');
-      localStorage.removeItem('selectedCourseDetails');
-      localStorage.removeItem('selectedCourseNames');
-      localStorage.removeItem('selectedPackage');
-      localStorage.removeItem('applicationSummary');
-      
-      sessionStorage.removeItem('uploadedDocuments');
-      sessionStorage.removeItem('pendingApplicationSummary');
-      
-      showNotificationMessage(`Payment successful! Your order number is ${userData.transactionId}. You'll receive a confirmation email shortly.`, 'success');
-      
-      if (!paymentResult.showCredentials) {
-        setTimeout(() => {
-          navigate('/profile');
-        }, 1500);
-      }
+    } catch (error) {
+      console.error('Error in payment completion:', error);
+      showNotificationMessage('Something went wrong. Please contact support.', 'error');
+    } finally {
+      setTimeout(() => {
+        setIsProcessingComplete(false);
+      }, 2000);
     }
-  } catch (error) {
-    console.error('Error in payment completion:', error);
-    showNotificationMessage('Something went wrong. Please contact support.', 'error');
-  } finally {
-    setTimeout(() => {
-      setIsProcessingComplete(false);
-    }, 2000);
-  }
-}, [selectedPackage, totalCost, getSelectedUniversities, selectedCourses, navigate, showNotificationMessage]);
-
+  }, [selectedPackage, totalCost, getSelectedUniversities, selectedCourses, navigate, showNotificationMessage]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('authToken');
@@ -1548,7 +1586,53 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
     navigate('/');
   }, [navigate]);
 
-  console.log('🔵 PaymentPage rendering - Apply button enabled:', totalApplications > 0 && usageStats.isWithinLimits);
+  // NEW: Check if apply button should be disabled based on new enforcement rules
+  const isApplyDisabled = useMemo(() => {
+    const totalUniversities = Object.keys(selectedCourses).length;
+    const maxUniversities = packageLimits[selectedPackage].universities;
+    
+    // Check if any university doesn't have max courses
+    let allUniversitiesHaveMaxCourses = true;
+    for (const uni of getSelectedUniversities()) {
+      const currentCourses = selectedCourses[uni.code]?.length || 0;
+      const maxCourses = getInstitutionCourseLimit(uni.name);
+      if (currentCourses !== maxCourses) {
+        allUniversitiesHaveMaxCourses = false;
+        break;
+      }
+    }
+    
+    return totalUniversities !== maxUniversities || !allUniversitiesHaveMaxCourses;
+  }, [selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, getInstitutionCourseLimit]);
+
+  // NEW: Get apply button tooltip text
+  const getApplyButtonTooltip = useMemo(() => {
+    const totalUniversities = Object.keys(selectedCourses).length;
+    const maxUniversities = packageLimits[selectedPackage].universities;
+    
+    if (totalUniversities === 0) {
+      return "Please select at least one university first";
+    }
+    
+    if (totalUniversities !== maxUniversities) {
+      const remaining = maxUniversities - totalUniversities;
+      return `Please select ${remaining} more universit${remaining > 1 ? 'ies' : 'y'} to reach your ${selectedPackage} package limit of ${maxUniversities} universities`;
+    }
+    
+    // Check which universities are missing courses
+    for (const uni of getSelectedUniversities()) {
+      const currentCourses = selectedCourses[uni.code]?.length || 0;
+      const maxCourses = getInstitutionCourseLimit(uni.name);
+      if (currentCourses !== maxCourses) {
+        const remaining = maxCourses - currentCourses;
+        return `${uni.code}: Please select ${remaining} more course${remaining > 1 ? 's' : ''} (${currentCourses}/${maxCourses} selected)`;
+      }
+    }
+    
+    return "Proceed to payment";
+  }, [selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, getInstitutionCourseLimit]);
+
+  console.log('🔵 PaymentPage rendering - Apply button enabled:', !isApplyDisabled);
 
   return (
    <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
@@ -1821,6 +1905,7 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                   {selectedUniversities.map(university => {
                     const institutionLimit = getInstitutionCourseLimit(university.name);
                     const currentCount = selectedCourses[university.code]?.length || 0;
+                    const isComplete = currentCount === institutionLimit;
                     
                     return (
                       <div key={university.id} className="minimal-university">
@@ -1841,8 +1926,9 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                           </div>
                           <div className="minimal-university-info">
                             <h3>{university.code}</h3>
-                            <span className="minimal-courses-count">
+                            <span className={`minimal-courses-count ${!isComplete ? 'incomplete' : 'complete'}`}>
                               {currentCount}/{institutionLimit} courses selected
+                              {!isComplete && ` (${institutionLimit - currentCount} more needed)`}
                             </span>
                           </div>
                           <button 
@@ -1957,16 +2043,18 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                 <button 
                   className="apply-now-btn"
                   onClick={handleApply}
-                  disabled={totalApplications === 0 || !usageStats.isWithinLimits || isSaving}
+                  disabled={isApplyDisabled}
+                  title={getApplyButtonTooltip}
                   style={{
-                    opacity: (totalApplications === 0 || !usageStats.isWithinLimits || isSaving) ? 0.6 : 1,
-                    cursor: (totalApplications === 0 || !usageStats.isWithinLimits || isSaving) ? 'not-allowed' : 'pointer'
+                    opacity: isApplyDisabled ? 0.6 : 1,
+                    cursor: isApplyDisabled ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {isSaving ? 'Saving...' : 
                    (totalApplications === 0 ? 'Select Courses First' :
-                    (!usageStats.isWithinLimits) ? `Limit: ${packageLimits[selectedPackage].universities} Universities Max` : 
-                    'Apply Now')}
+                    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
+                      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
+                      'Apply Now'))}
                 </button>
               </div>
             </div>
@@ -2160,14 +2248,31 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
               </div>
               <div className="available-slots">
                 <span className="slots-available">
-                  {getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} slots available
+                  {getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} slots remaining
                 </span>
               </div>
+              {/* MODIFIED: Only enable Done button when at max courses for this university */}
               <button 
                 className="done-selecting-btn"
                 onClick={handleCloseCoursesModal}
+                disabled={
+                  (selectedCourses[selectedUniversity.code]?.length || 0) !== 
+                  getInstitutionCourseLimit(selectedUniversity.name)
+                }
+                style={{
+                  opacity: (selectedCourses[selectedUniversity.code]?.length || 0) !== 
+                           getInstitutionCourseLimit(selectedUniversity.name) ? 0.5 : 1,
+                  cursor: (selectedCourses[selectedUniversity.code]?.length || 0) !== 
+                           getInstitutionCourseLimit(selectedUniversity.name) ? 'not-allowed' : 'pointer'
+                }}
+                title={
+                  (selectedCourses[selectedUniversity.code]?.length || 0) !== 
+                  getInstitutionCourseLimit(selectedUniversity.name)
+                    ? `Please select ${getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} more course(s) to continue`
+                    : "Done"
+                }
               >
-                Done
+                {`Select ${getInstitutionCourseLimit(selectedUniversity.name)}/${getInstitutionCourseLimit(selectedUniversity.name)} Courses to Continue`}
               </button>
             </div>
           </div>
@@ -2382,11 +2487,20 @@ const handlePaymentComplete = useCallback(async (paymentResult) => {
                     <div className="selected-courses-count">
                       Selected: {tempSelections[expandedUniversity.university.code]?.length || 0}/{getInstitutionCourseLimit(expandedUniversity.university.name)}
                     </div>
+                    {/* MODIFIED: Only enable Done button when at max courses in maximise modal */}
                     <button 
                       className="done-selecting-btn"
                       onClick={saveTempSelections}
+                      disabled={
+                        (tempSelections[expandedUniversity.university.code]?.length || 0) !== 
+                        getInstitutionCourseLimit(expandedUniversity.university.name)
+                      }
+                      style={{
+                        opacity: (tempSelections[expandedUniversity.university.code]?.length || 0) !== 
+                                 getInstitutionCourseLimit(expandedUniversity.university.name) ? 0.5 : 1
+                      }}
                     >
-                      Done
+                      {`Select ${getInstitutionCourseLimit(expandedUniversity.university.name)}/${getInstitutionCourseLimit(expandedUniversity.university.name)} Courses to Continue`}
                     </button>
                   </div>
                 </>
