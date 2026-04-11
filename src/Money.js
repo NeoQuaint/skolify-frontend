@@ -998,7 +998,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         </div>
       </div>
 
-      {/* Payment Options Modal */}
+            {/* Payment Options Modal - MINIMALISTIC */}
       {showPaymentModal && (
         <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
@@ -1007,96 +1007,68 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             </button>
             
             <div className="payment-modal-header">
-              <h2>Select Payment Method</h2>
-              <p>Choose how you'd like to complete your payment of <strong>R{totalAmount}</strong></p>
+              <h2>Complete Payment</h2>
+              <p className="payment-amount">R{totalAmount}</p>
             </div>
 
-            <div className="payment-options">
-              {/* Bank Transfer - Recommended Option */}
-              <div className="payment-option recommended">
-                <div className="recommended-badge">
-                  <FaCheck /> Recommended
+            <div className="payment-options-simple">
+              {/* Skolify Direct Payment - Recommended */}
+              <button 
+                className="payment-option-simple primary"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  // Store payment completion
+                  localStorage.setItem('hasCompletedPayment', 'true');
+                  localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData?.trackingNumber);
+                  
+                  if (onPaymentComplete) {
+                    onPaymentComplete(pendingTransactionData?.trackingNumber);
+                  }
+                  
+                  // Show success message
+                  alert(`✅ Payment Successful!\n\nTracking Number: ${pendingTransactionData?.trackingNumber}\n\nYour application has been submitted. You will receive a confirmation email shortly.`);
+                  
+                  onClose();
+                  navigate('/profile');
+                }}
+              >
+                <div className="payment-option-icon">💰</div>
+                <div className="payment-option-content">
+                  <span className="payment-option-title">Skolify Direct Payment</span>
+                  <span className="payment-option-desc">Recommended • Instant confirmation</span>
                 </div>
-                <div className="payment-option-header">
-                  <FaUniversity className="payment-icon bank-icon" />
-                  <div>
-                    <h3>Bank Transfer</h3>
-                    <p>Direct EFT / Bank Deposit</p>
-                  </div>
-                </div>
-                
-                <div className="bank-details">
-                  <div className="bank-detail-row">
-                    <span className="bank-label">Bank:</span>
-                    <span className="bank-value">{bankDetails.bankName}</span>
-                  </div>
-                  <div className="bank-detail-row">
-                    <span className="bank-label">Account Name:</span>
-                    <span className="bank-value">{bankDetails.accountName}</span>
-                  </div>
-                  <div className="bank-detail-row copyable" onClick={() => copyToClipboard(bankDetails.accountNumber, 'bank')}>
-                    <span className="bank-label">Account Number:</span>
-                    <span className="bank-value">{bankDetails.accountNumber}</span>
-                    <FaCopy className="copy-icon" />
-                  </div>
-                  <div className="bank-detail-row">
-                    <span className="bank-label">Account Type:</span>
-                    <span className="bank-value">{bankDetails.accountType}</span>
-                  </div>
-                  <div className="bank-detail-row copyable" onClick={() => copyToClipboard(bankDetails.branchCode, 'bank')}>
-                    <span className="bank-label">Branch Code:</span>
-                    <span className="bank-value">{bankDetails.branchCode}</span>
-                    <FaCopy className="copy-icon" />
-                  </div>
-                </div>
+                <div className="payment-option-check">→</div>
+              </button>
 
-                <div className="bank-reference-note">
-                  <FaInfoCircle className="note-icon" />
-                  <div>
-                    <strong>Important:</strong> Please use your <strong>ID Number ({formData.idNumber || 'YOUR ID NUMBER'})</strong> as the payment reference.
-                    <br />
-                    <small>Your application will be processed once payment is confirmed (1-2 business days).</small>
-                  </div>
+              {/* Bank Transfer Option */}
+              <button 
+                className="payment-option-simple"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  // Copy bank details to clipboard
+                  const bankDetailsText = `Bank: First National Bank (FNB)\nAccount Name: K2026084461 (South Africa) (pty) Ltd\nAccount Number: 63199178419\nBranch Code: 250655\nReference: ${formData.idNumber || 'YOUR ID NUMBER'}\nAmount: R${totalAmount}`;
+                  navigator.clipboard.writeText(bankDetailsText);
+                  
+                  alert(`💰 Bank Transfer Details Copied!\n\nBank: FNB\nAccount: 63199178419\nRef: ${formData.idNumber || 'YOUR ID NUMBER'}\nAmount: R${totalAmount}\n\nUse your ID number as reference. We'll confirm payment within 24 hours.`);
+                  
+                  if (onPaymentComplete) {
+                    onPaymentComplete(pendingTransactionData?.trackingNumber);
+                  }
+                  onClose();
+                  navigate('/profile');
+                }}
+              >
+                <div className="payment-option-icon">🏦</div>
+                <div className="payment-option-content">
+                  <span className="payment-option-title">Bank Transfer</span>
+                  <span className="payment-option-desc">EFT / Direct Deposit</span>
                 </div>
-
-                {copiedBank && (
-                  <div className="copy-success">
-                    <FaCheck /> Copied to clipboard!
-                  </div>
-                )}
-
-                <button onClick={handleBankTransfer} className="payment-btn bank-payment-btn">
-                  <FaUniversity /> Pay via Bank Transfer
-                </button>
-              </div>
-
-              {/* Yoco Card Payment - Secondary Option */}
-              <div className="payment-option secondary">
-                <div className="payment-option-header">
-                  <FaCreditCard className="payment-icon card-icon" />
-                  <div>
-                    <h3>Card Payment</h3>
-                    <p>Visa / Mastercard / Amex</p>
-                  </div>
-                </div>
-                
-                <div className="yoco-info">
-                  <p>Pay securely with your credit or debit card via Yoco.</p>
-                  <ul className="yoco-features">
-                    <li><FaCheck /> Instant payment confirmation</li>
-                    <li><FaCheck /> Secure encrypted transaction</li>
-                    <li><FaCheck /> All major cards accepted</li>
-                  </ul>
-                </div>
-
-                <button onClick={handleYocoPayment} className="payment-btn yoco-payment-btn">
-                  <FaCreditCard /> Pay with Card (Yoco)
-                </button>
-              </div>
+                <div className="payment-option-check">→</div>
+              </button>
             </div>
 
-            <p className="payment-modal-footer">
-              <FaInfoCircle /> Your application has been saved. You can complete payment now or later from your dashboard.
+            <p className="payment-modal-footer-simple">
+              Your ID: <strong>{formData.idNumber || 'Not provided'}</strong> • Payment reference
             </p>
           </div>
         </div>
