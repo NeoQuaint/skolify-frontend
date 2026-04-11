@@ -4,7 +4,7 @@ import './Money.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
-  FaInfoCircle, FaSpinner
+  FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -18,6 +18,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [copiedBank, setCopiedBank] = useState(false);
+  const [pendingTransactionData, setPendingTransactionData] = useState(null);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -47,11 +50,21 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
- const packageLinks = {
-  basic: 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage',
-  standard: 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage',
-  premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
-};
+  const packageLinks = {
+    basic: 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage',
+    standard: 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage',
+    premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
+  };
+
+  // Bank account details
+  const bankDetails = {
+    accountNumber: '63199178419',
+    accountName: 'K2026084461 (South Africa) (pty) Ltd',
+    bankName: 'First National Bank (FNB)',
+    accountType: 'Business Cheque Account',
+    branchCode: '250655',
+    reference: 'ID Number'
+  };
 
   useEffect(() => {
     const checkPaymentHistory = async () => {
@@ -228,7 +241,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     return true;
   };
 
-  const saveApplicationData = async (transactionId) => {
+  const saveApplicationData = async (transactionId, paymentMethod = 'bank_transfer') => {
     const token = localStorage.getItem('authToken');
     const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
     let applicationData = {};
@@ -294,7 +307,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         amount: totalAmount,
         universities: applicationData.universities,
         courses: applicationData.courses,
-        transactionId: transactionId
+        transactionId: transactionId,
+        paymentMethod: paymentMethod
       })
     });
     
@@ -369,15 +383,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
     
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
-    localStorage.setItem('hasCompletedPayment', 'true');
-    localStorage.setItem('lastPaymentTrackingNumber', trackingNumber);
     
     sessionStorage.removeItem('pendingApplicationSummary');
     
     return trackingNumber;
   };
 
-  const handlePayment = async () => {
+  const handleProceedToPayment = async () => {
     if (!validateForm()) {
       return;
     }
@@ -387,26 +399,77 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     try {
       const tempTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-      const trackingNumber = await saveApplicationData(tempTransactionId);
+      const trackingNumber = await saveApplicationData(tempTransactionId, 'pending');
       
-      sessionStorage.setItem('pendingPayment', JSON.stringify({
+      setPendingTransactionData({
         trackingNumber,
-        selectedPackage,
-        totalAmount,
-        timestamp: Date.now()
-      }));
+        tempTransactionId,
+        amount: totalAmount,
+        package: selectedPackage
+      });
       
-      const paymentLink = packageLinks[selectedPackage];
-      if (!paymentLink) {
-        throw new Error('Invalid package selected');
-      }
-      
-      window.location.href = paymentLink;
+      setShowPaymentModal(true);
+      setIsProcessing(false);
       
     } catch (error) {
-      console.error('❌ Payment error:', error);
+      console.error('❌ Error creating application:', error);
       setError(error.message || 'Failed to process. Please try again.');
       setIsProcessing(false);
+    }
+  };
+
+  const handleBankTransfer = () => {
+    if (!pendingTransactionData) return;
+    
+    // Store payment pending info
+    localStorage.setItem('hasCompletedPayment', 'false');
+    localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData.trackingNumber);
+    localStorage.setItem('pendingBankTransfer', JSON.stringify({
+      trackingNumber: pendingTransactionData.trackingNumber,
+      amount: pendingTransactionData.amount,
+      package: pendingTransactionData.package,
+      idNumber: formData.idNumber,
+      date: new Date().toISOString()
+    }));
+    
+    setShowPaymentModal(false);
+    
+    // Show success message with instructions
+    alert(`✅ Application Submitted Successfully!\n\nPlease complete your payment via bank transfer:\n\nBank: ${bankDetails.bankName}\nAccount Name: ${bankDetails.accountName}\nAccount Number: ${bankDetails.accountNumber}\nBranch Code: ${bankDetails.branchCode}\n\nReference: ${formData.idNumber}\n\nAmount: R${totalAmount}\n\nYour application will be processed once payment is confirmed. You will receive an email confirmation shortly.`);
+    
+    if (onPaymentComplete) {
+      onPaymentComplete(pendingTransactionData.trackingNumber);
+    }
+    
+    onClose();
+    navigate('/dashboard');
+  };
+
+  const handleYocoPayment = () => {
+    if (!pendingTransactionData) return;
+    
+    const paymentLink = packageLinks[selectedPackage];
+    if (!paymentLink) {
+      setError('Invalid package selected');
+      setShowPaymentModal(false);
+      return;
+    }
+    
+    sessionStorage.setItem('pendingPayment', JSON.stringify({
+      trackingNumber: pendingTransactionData.trackingNumber,
+      selectedPackage,
+      totalAmount,
+      timestamp: Date.now()
+    }));
+    
+    window.location.href = paymentLink;
+  };
+
+  const copyToClipboard = (text, type) => {
+    navigator.clipboard.writeText(text);
+    if (type === 'bank') {
+      setCopiedBank(true);
+      setTimeout(() => setCopiedBank(false), 2000);
     }
   };
 
@@ -423,494 +486,600 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   }
 
   return (
-    <div className="money-overlay">
-      <div className="money-container narrow" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-        <button className="money-close" onClick={onClose}>
-          <FaTimes />
-        </button>
-
-        <div className="money-header">
-          <h2>Complete Your Payment</h2>
-          <p>
-            {hasCompletedPaymentBefore 
-              ? 'Welcome back! Your information is already saved. Complete your payment below.' 
-              : 'Please provide all your details for the university applications'}
-          </p>
-        </div>
-
-        {hasCompletedPaymentBefore && (
-          <div className="welcome-back-banner">
-            <FaUser className="welcome-icon" />
-            <div className="welcome-text">
-              <span className="welcome-greeting">Welcome back, {formData.firstName || 'Valued Customer'}!</span>
-              <span className="welcome-message">Your details are already saved. Just complete your payment below.</span>
-            </div>
-          </div>
-        )}
-
-        {isLoadingProfile && (
-          <div className="loading-profile">
-            <FaSpinner className="spinner-icon" /> Loading...
-          </div>
-        )}
-
-        {error && (
-          <div className="money-error">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={(e) => e.preventDefault()} className="money-form">
-          {/* Show FULL FORM for first-time applicants ONLY */}
-          {!hasCompletedPaymentBefore && (
-            <>
-              {/* Personal Information Section */}
-              <div className="money-section-card">
-                <div className="section-title">
-                  <span className="section-number">1</span>
-                  <h3>Personal Information</h3>
-                </div>
-                
-                <div className="money-row">
-                  <div className="money-group">
-                    <label><FaUser /> First Name *</label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="John"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label>Middle Name</label>
-                    <input
-                      type="text"
-                      name="middleName"
-                      placeholder="Michael (optional)"
-                      value={formData.middleName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="money-group">
-                  <label><FaUser /> Last Name *</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    placeholder="Doe"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="money-group">
-                  <label><FaIdCard /> ID / Passport Number *</label>
-                  <input
-                    type="text"
-                    name="idNumber"
-                    placeholder="000101 5084 089"
-                    value={formData.idNumber}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <small className="field-note">This will be used for verification</small>
-                </div>
-
-                <div className="money-row">
-                  <div className="money-group">
-                    <label>Date of Birth *</label>
-                    <input
-                      type="date"
-                      name="dateOfBirth"
-                      value={formData.dateOfBirth}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label>Gender *</label>
-                    <select
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleInputChange}
-                      required
-                      className="money-select"
-                    >
-                      <option value="">Select</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="money-row">
-                  <div className="money-group">
-                    <label>Nationality *</label>
-                    <input
-                      type="text"
-                      name="nationality"
-                      placeholder="South African"
-                      value={formData.nationality}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label>Home Language</label>
-                    <input
-                      type="text"
-                      name="homeLanguage"
-                      placeholder="English / IsiZulu etc."
-                      value={formData.homeLanguage}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information Section */}
-              <div className="money-section-card">
-                <div className="section-title">
-                  <span className="section-number">2</span>
-                  <h3>Contact Information</h3>
-                </div>
-                
-                <div className="money-group">
-                  <label><FaEnvelope /> Email Address *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="john.doe@example.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <small className="field-note">We'll send application updates here</small>
-                </div>
-
-                <div className="money-row">
-                  <div className="money-group">
-                    <label><FaPhone /> Phone Number *</label>
-                    <input
-                      type="tel"
-                      name="phoneNumber"
-                      placeholder="+27 11 123 4567"
-                      value={formData.phoneNumber}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label><FaWhatsapp /> WhatsApp Number *</label>
-                    <input
-                      type="tel"
-                      name="whatsappNumber"
-                      placeholder="+27 11 123 4567"
-                      value={formData.whatsappNumber}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Address Section */}
-              <div className="money-section-card">
-                <div className="section-title">
-                  <span className="section-number">3</span>
-                  <h3>Residential Address</h3>
-                </div>
-                
-                <div className="money-group">
-                  <label><FaHome /> Street Address *</label>
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="123 Main Street"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="money-group">
-                  <label>Suburb</label>
-                  <input
-                    type="text"
-                    name="suburb"
-                    placeholder="Sandton"
-                    value={formData.suburb}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="money-row">
-                  <div className="money-group">
-                    <label>City *</label>
-                    <input
-                      type="text"
-                      name="city"
-                      placeholder="Johannesburg"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label>Province *</label>
-                    <select
-                      name="province"
-                      value={formData.province}
-                      onChange={handleInputChange}
-                      required
-                      className="money-select"
-                    >
-                      <option value="">Select Province</option>
-                      <option value="Gauteng">Gauteng</option>
-                      <option value="Western Cape">Western Cape</option>
-                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                      <option value="Eastern Cape">Eastern Cape</option>
-                      <option value="Free State">Free State</option>
-                      <option value="Limpopo">Limpopo</option>
-                      <option value="Mpumalanga">Mpumalanga</option>
-                      <option value="North West">North West</option>
-                      <option value="Northern Cape">Northern Cape</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="money-group">
-                  <label>Postal Code *</label>
-                  <input
-                    type="text"
-                    name="postalCode"
-                    placeholder="2000"
-                    value={formData.postalCode}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Next of Kin Section */}
-              <div className="money-section-card">
-                <div className="section-title">
-                  <span className="section-number">4</span>
-                  <h3>Next of Kin / Emergency Contact</h3>
-                </div>
-                
-                <div className="money-group">
-                  <label><FaUserTie /> Full Name *</label>
-                  <input
-                    type="text"
-                    name="kinName"
-                    placeholder="Jane Doe"
-                    value={formData.kinName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="money-group">
-                  <label>Relationship *</label>
-                  <input
-                    type="text"
-                    name="kinRelationship"
-                    placeholder="Mother / Father / Guardian / Spouse"
-                    value={formData.kinRelationship}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div className="money-row">
-                  <div className="money-group">
-                    <label><FaPhoneAlt /> Phone Number *</label>
-                    <input
-                      type="tel"
-                      name="kinPhone"
-                      placeholder="+27 11 123 4567"
-                      value={formData.kinPhone}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label><FaEnvelope /> Email</label>
-                    <input
-                      type="email"
-                      name="kinEmail"
-                      placeholder="jane.doe@example.com (optional)"
-                      value={formData.kinEmail}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Documents Section */}
-              <div className="money-section-card">
-                <div className="section-title">
-                  <span className="section-number">5</span>
-                  <h3>Required Documents</h3>
-                  <small className="section-hint">Max 5MB per file. PDF or images only.</small>
-                </div>
-                
-                <div className="document-upload-item">
-                  <div className="document-info">
-                    <FaIdCard className="document-icon" />
-                    <div>
-                      <span className="document-name">ID Document / Passport</span>
-                      <small className="document-hint">Certified copy (PDF or Image)</small>
-                    </div>
-                  </div>
-                  <div className="document-actions">
-                    {!documents.id.uploaded ? (
-                      <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                        <FaUpload />
-                        <input 
-                          type="file" 
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => handleFileUpload('id', e)}
-                          disabled={isUploading}
-                          hidden
-                        />
-                      </label>
-                    ) : (
-                      <div className="uploaded-file">
-                        <FaCheck className="uploaded-icon" />
-                        <span>{documents.id.name}</span>
-                        <button 
-                          type="button"
-                          className="change-file-btn"
-                          onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null, path: null }})}
-                        >
-                          Change
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {fieldErrors.id && (
-                    <div className="field-error">
-                      {fieldErrors.id}
-                    </div>
-                  )}
-                </div>
-
-                <div className="document-upload-item">
-                  <div className="document-info">
-                    <FaGraduationCap className="document-icon" />
-                    <div>
-                      <span className="document-name">Matric / Grade 11 Results</span>
-                      <small className="document-hint">Latest academic results</small>
-                    </div>
-                  </div>
-                  <div className="document-actions">
-                    {!documents.results.uploaded ? (
-                      <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                        <FaUpload />
-                        <input 
-                          type="file" 
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => handleFileUpload('results', e)}
-                          disabled={isUploading}
-                          hidden
-                        />
-                      </label>
-                    ) : (
-                      <div className="uploaded-file">
-                        <FaCheck className="uploaded-icon" />
-                        <span>{documents.results.name}</span>
-                        <button 
-                          type="button"
-                          className="change-file-btn"
-                          onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null, path: null }})}
-                        >
-                          Change
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {fieldErrors.results && (
-                    <div className="field-error">
-                      {fieldErrors.results}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Show saved info summary for returning users */}
-          {hasCompletedPaymentBefore && (
-            <div className="saved-info-summary">
-              <div className="summary-header">
-                <FaCheck className="summary-check-icon" />
-                <h3>Your information is saved</h3>
-              </div>
-              <div className="summary-grid">
-                <div className="summary-item">
-                  <span className="summary-label">Name:</span>
-                  <span className="summary-value">{formData.firstName} {formData.lastName}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="summary-label">Email:</span>
-                  <span className="summary-value">{formData.email}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="summary-label">Phone:</span>
-                  <span className="summary-value">{formData.phoneNumber}</span>
-                </div>
-                <div className="summary-item">
-                  <span className="summary-label">ID:</span>
-                  <span className="summary-value">••••{formData.idNumber?.slice(-4)}</span>
-                </div>
-              </div>
-              <p className="summary-note">
-                <FaInfoCircle /> Your personal details are already in our system. 
-                You can update them later in your profile.
-              </p>
-            </div>
-          )}
-                
-         <div className="payment-info-note">
-         <FaSpinner className="info-spinner" />
-         <span>Payment may take up to 60 seconds to load. Please wait and don't refresh.</span>
-          </div>
-
-          {/* Pay Button Only - Removed Total Amount label */}
-          <button 
-            type="button"
-            onClick={handlePayment}
-            className="pay-now-btn"
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <FaSpinner className="spinner-icon" /> Processing...
-              </>
-            ) : (
-              `Pay R${totalAmount}`
-            )}
+    <>
+      <div className="money-overlay">
+        <div className="money-container narrow" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          <button className="money-close" onClick={onClose}>
+            <FaTimes />
           </button>
 
-          <p className="secure-payment">
-            🔒 All information is encrypted and secure
-          </p>
-        </form>
+          <div className="money-header">
+            <h2>Complete Your Payment</h2>
+            <p>
+              {hasCompletedPaymentBefore 
+                ? 'Welcome back! Your information is already saved. Complete your payment below.' 
+                : 'Please provide all your details for the university applications'}
+            </p>
+          </div>
+
+          {hasCompletedPaymentBefore && (
+            <div className="welcome-back-banner">
+              <FaUser className="welcome-icon" />
+              <div className="welcome-text">
+                <span className="welcome-greeting">Welcome back, {formData.firstName || 'Valued Customer'}!</span>
+                <span className="welcome-message">Your details are already saved. Just complete your payment below.</span>
+              </div>
+            </div>
+          )}
+
+          {isLoadingProfile && (
+            <div className="loading-profile">
+              <FaSpinner className="spinner-icon" /> Loading...
+            </div>
+          )}
+
+          {error && (
+            <div className="money-error">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={(e) => e.preventDefault()} className="money-form">
+            {/* Show FULL FORM for first-time applicants ONLY */}
+            {!hasCompletedPaymentBefore && (
+              <>
+                {/* Personal Information Section */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">1</span>
+                    <h3>Personal Information</h3>
+                  </div>
+                  
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label><FaUser /> First Name *</label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label>Middle Name</label>
+                      <input
+                        type="text"
+                        name="middleName"
+                        placeholder="Michael (optional)"
+                        value={formData.middleName}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="money-group">
+                    <label><FaUser /> Last Name *</label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      placeholder="Doe"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label><FaIdCard /> ID / Passport Number *</label>
+                    <input
+                      type="text"
+                      name="idNumber"
+                      placeholder="000101 5084 089"
+                      value={formData.idNumber}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <small className="field-note">This will be used for verification and payment reference</small>
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label>Date of Birth *</label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label>Gender *</label>
+                      <select
+                        name="gender"
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        required
+                        className="money-select"
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label>Nationality *</label>
+                      <input
+                        type="text"
+                        name="nationality"
+                        placeholder="South African"
+                        value={formData.nationality}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label>Home Language</label>
+                      <input
+                        type="text"
+                        name="homeLanguage"
+                        placeholder="English / IsiZulu etc."
+                        value={formData.homeLanguage}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information Section */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">2</span>
+                    <h3>Contact Information</h3>
+                  </div>
+                  
+                  <div className="money-group">
+                    <label><FaEnvelope /> Email Address *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="john.doe@example.com"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <small className="field-note">We'll send application updates here</small>
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label><FaPhone /> Phone Number *</label>
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        placeholder="+27 11 123 4567"
+                        value={formData.phoneNumber}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label><FaWhatsapp /> WhatsApp Number *</label>
+                      <input
+                        type="tel"
+                        name="whatsappNumber"
+                        placeholder="+27 11 123 4567"
+                        value={formData.whatsappNumber}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Section */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">3</span>
+                    <h3>Residential Address</h3>
+                  </div>
+                  
+                  <div className="money-group">
+                    <label><FaHome /> Street Address *</label>
+                    <input
+                      type="text"
+                      name="address"
+                      placeholder="123 Main Street"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label>Suburb</label>
+                    <input
+                      type="text"
+                      name="suburb"
+                      placeholder="Sandton"
+                      value={formData.suburb}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label>City *</label>
+                      <input
+                        type="text"
+                        name="city"
+                        placeholder="Johannesburg"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label>Province *</label>
+                      <select
+                        name="province"
+                        value={formData.province}
+                        onChange={handleInputChange}
+                        required
+                        className="money-select"
+                      >
+                        <option value="">Select Province</option>
+                        <option value="Gauteng">Gauteng</option>
+                        <option value="Western Cape">Western Cape</option>
+                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                        <option value="Eastern Cape">Eastern Cape</option>
+                        <option value="Free State">Free State</option>
+                        <option value="Limpopo">Limpopo</option>
+                        <option value="Mpumalanga">Mpumalanga</option>
+                        <option value="North West">North West</option>
+                        <option value="Northern Cape">Northern Cape</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="money-group">
+                    <label>Postal Code *</label>
+                    <input
+                      type="text"
+                      name="postalCode"
+                      placeholder="2000"
+                      value={formData.postalCode}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Next of Kin Section */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">4</span>
+                    <h3>Next of Kin / Emergency Contact</h3>
+                  </div>
+                  
+                  <div className="money-group">
+                    <label><FaUserTie /> Full Name *</label>
+                    <input
+                      type="text"
+                      name="kinName"
+                      placeholder="Jane Doe"
+                      value={formData.kinName}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label>Relationship *</label>
+                    <input
+                      type="text"
+                      name="kinRelationship"
+                      placeholder="Mother / Father / Guardian / Spouse"
+                      value={formData.kinRelationship}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label><FaPhoneAlt /> Phone Number *</label>
+                      <input
+                        type="tel"
+                        name="kinPhone"
+                        placeholder="+27 11 123 4567"
+                        value={formData.kinPhone}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label><FaEnvelope /> Email</label>
+                      <input
+                        type="email"
+                        name="kinEmail"
+                        placeholder="jane.doe@example.com (optional)"
+                        value={formData.kinEmail}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents Section */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">5</span>
+                    <h3>Required Documents</h3>
+                    <small className="section-hint">Max 5MB per file. PDF or images only.</small>
+                  </div>
+                  
+                  <div className="document-upload-item">
+                    <div className="document-info">
+                      <FaIdCard className="document-icon" />
+                      <div>
+                        <span className="document-name">ID Document / Passport</span>
+                        <small className="document-hint">Certified copy (PDF or Image)</small>
+                      </div>
+                    </div>
+                    <div className="document-actions">
+                      {!documents.id.uploaded ? (
+                        <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                          <FaUpload />
+                          <input 
+                            type="file" 
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleFileUpload('id', e)}
+                            disabled={isUploading}
+                            hidden
+                          />
+                        </label>
+                      ) : (
+                        <div className="uploaded-file">
+                          <FaCheck className="uploaded-icon" />
+                          <span>{documents.id.name}</span>
+                          <button 
+                            type="button"
+                            className="change-file-btn"
+                            onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null, path: null }})}
+                          >
+                            Change
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {fieldErrors.id && (
+                      <div className="field-error">
+                        {fieldErrors.id}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="document-upload-item">
+                    <div className="document-info">
+                      <FaGraduationCap className="document-icon" />
+                      <div>
+                        <span className="document-name">Matric / Grade 11 Results</span>
+                        <small className="document-hint">Latest academic results</small>
+                      </div>
+                    </div>
+                    <div className="document-actions">
+                      {!documents.results.uploaded ? (
+                        <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                          <FaUpload />
+                          <input 
+                            type="file" 
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleFileUpload('results', e)}
+                            disabled={isUploading}
+                            hidden
+                          />
+                        </label>
+                      ) : (
+                        <div className="uploaded-file">
+                          <FaCheck className="uploaded-icon" />
+                          <span>{documents.results.name}</span>
+                          <button 
+                            type="button"
+                            className="change-file-btn"
+                            onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null, path: null }})}
+                          >
+                            Change
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {fieldErrors.results && (
+                      <div className="field-error">
+                        {fieldErrors.results}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Show saved info summary for returning users */}
+            {hasCompletedPaymentBefore && (
+              <div className="saved-info-summary">
+                <div className="summary-header">
+                  <FaCheck className="summary-check-icon" />
+                  <h3>Your information is saved</h3>
+                </div>
+                <div className="summary-grid">
+                  <div className="summary-item">
+                    <span className="summary-label">Name:</span>
+                    <span className="summary-value">{formData.firstName} {formData.lastName}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Email:</span>
+                    <span className="summary-value">{formData.email}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">Phone:</span>
+                    <span className="summary-value">{formData.phoneNumber}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="summary-label">ID:</span>
+                    <span className="summary-value">••••{formData.idNumber?.slice(-4)}</span>
+                  </div>
+                </div>
+                <p className="summary-note">
+                  <FaInfoCircle /> Your personal details are already in our system. 
+                  You can update them later in your profile.
+                </p>
+              </div>
+            )}
+                    
+            <div className="payment-info-note">
+              <FaSpinner className="info-spinner" />
+              <span>Payment may take up to 60 seconds to load. Please wait and don't refresh.</span>
+            </div>
+
+            {/* Pay Button - Shows Payment Options Modal */}
+            <button 
+              type="button"
+              onClick={handleProceedToPayment}
+              className="pay-now-btn"
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <FaSpinner className="spinner-icon" /> Processing...
+                </>
+              ) : (
+                `Proceed to Payment - R${totalAmount}`
+              )}
+            </button>
+
+            <p className="secure-payment">
+              🔒 All information is encrypted and secure
+            </p>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {/* Payment Options Modal */}
+      {showPaymentModal && (
+        <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="payment-modal-close" onClick={() => setShowPaymentModal(false)}>
+              <FaTimes />
+            </button>
+            
+            <div className="payment-modal-header">
+              <h2>Select Payment Method</h2>
+              <p>Choose how you'd like to complete your payment of <strong>R{totalAmount}</strong></p>
+            </div>
+
+            <div className="payment-options">
+              {/* Bank Transfer - Recommended Option */}
+              <div className="payment-option recommended">
+                <div className="recommended-badge">
+                  <FaCheck /> Recommended
+                </div>
+                <div className="payment-option-header">
+                  <FaUniversity className="payment-icon bank-icon" />
+                  <div>
+                    <h3>Bank Transfer</h3>
+                    <p>Direct EFT / Bank Deposit</p>
+                  </div>
+                </div>
+                
+                <div className="bank-details">
+                  <div className="bank-detail-row">
+                    <span className="bank-label">Bank:</span>
+                    <span className="bank-value">{bankDetails.bankName}</span>
+                  </div>
+                  <div className="bank-detail-row">
+                    <span className="bank-label">Account Name:</span>
+                    <span className="bank-value">{bankDetails.accountName}</span>
+                  </div>
+                  <div className="bank-detail-row copyable" onClick={() => copyToClipboard(bankDetails.accountNumber, 'bank')}>
+                    <span className="bank-label">Account Number:</span>
+                    <span className="bank-value">{bankDetails.accountNumber}</span>
+                    <FaCopy className="copy-icon" />
+                  </div>
+                  <div className="bank-detail-row">
+                    <span className="bank-label">Account Type:</span>
+                    <span className="bank-value">{bankDetails.accountType}</span>
+                  </div>
+                  <div className="bank-detail-row copyable" onClick={() => copyToClipboard(bankDetails.branchCode, 'bank')}>
+                    <span className="bank-label">Branch Code:</span>
+                    <span className="bank-value">{bankDetails.branchCode}</span>
+                    <FaCopy className="copy-icon" />
+                  </div>
+                </div>
+
+                <div className="bank-reference-note">
+                  <FaInfoCircle className="note-icon" />
+                  <div>
+                    <strong>Important:</strong> Please use your <strong>ID Number ({formData.idNumber || 'YOUR ID NUMBER'})</strong> as the payment reference.
+                    <br />
+                    <small>Your application will be processed once payment is confirmed (1-2 business days).</small>
+                  </div>
+                </div>
+
+                {copiedBank && (
+                  <div className="copy-success">
+                    <FaCheck /> Copied to clipboard!
+                  </div>
+                )}
+
+                <button onClick={handleBankTransfer} className="payment-btn bank-payment-btn">
+                  <FaUniversity /> Pay via Bank Transfer
+                </button>
+              </div>
+
+              {/* Yoco Card Payment - Secondary Option */}
+              <div className="payment-option secondary">
+                <div className="payment-option-header">
+                  <FaCreditCard className="payment-icon card-icon" />
+                  <div>
+                    <h3>Card Payment</h3>
+                    <p>Visa / Mastercard / Amex</p>
+                  </div>
+                </div>
+                
+                <div className="yoco-info">
+                  <p>Pay securely with your credit or debit card via Yoco.</p>
+                  <ul className="yoco-features">
+                    <li><FaCheck /> Instant payment confirmation</li>
+                    <li><FaCheck /> Secure encrypted transaction</li>
+                    <li><FaCheck /> All major cards accepted</li>
+                  </ul>
+                </div>
+
+                <button onClick={handleYocoPayment} className="payment-btn yoco-payment-btn">
+                  <FaCreditCard /> Pay with Card (Yoco)
+                </button>
+              </div>
+            </div>
+
+            <p className="payment-modal-footer">
+              <FaInfoCircle /> Your application has been saved. You can complete payment now or later from your dashboard.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
