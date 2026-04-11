@@ -432,7 +432,6 @@ const Dashboard = () => {
     return saved ? JSON.parse(saved) : false;
   });
 
-  const [showChatbot, setShowChatbot] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentFacultyIndex, setCurrentFacultyIndex] = useState(0);
   const [showCoursesForFaculty, setShowCoursesForFaculty] = useState(null);
@@ -449,11 +448,6 @@ const Dashboard = () => {
   const [selectedCourseDetails, setSelectedCourseDetails] = useState(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   
-  // Chatbot state
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  
   // SMOOTH FACULTY SLIDING STATES
   const [isSliding, setIsSliding] = useState(false);
   const [slideDirection, setSlideDirection] = useState(null);
@@ -469,7 +463,6 @@ const Dashboard = () => {
   const selectedCoursesSectionRef = useRef(null);
   const applySectionRef = useRef(null);
   const searchInputRef = useRef(null);
-  const chatMessagesRef = useRef(null);
 
   // Student name
   const studentName = "John";
@@ -636,55 +629,6 @@ const Dashboard = () => {
     }
   };
 
-  // Send message to AI chatbot
-  const sendChatMessage = async () => {
-    if (!chatInput.trim() || isChatLoading) return;
-    
-    const userMessage = chatInput;
-    setChatMessages(prev => [...prev, { role: 'user', text: userMessage }]);
-    setChatInput('');
-    setIsChatLoading(true);
-    
-    setTimeout(() => {
-      if (chatMessagesRef.current) {
-        chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-      }
-    }, 100);
-    
-    try {
-      const marks = getStudentMarks();
-      
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          studentMarks: marks,
-          studentAPS: userAPS,
-          selectedCourses: selectedCourses
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        setChatMessages(prev => [...prev, { role: 'bot', text: data.reply }]);
-      } else {
-        setChatMessages(prev => [...prev, { role: 'bot', text: 'Sorry, I had trouble understanding. Please try again!' }]);
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-      setChatMessages(prev => [...prev, { role: 'bot', text: 'Connection error. Please check your internet and try again.' }]);
-    } finally {
-      setIsChatLoading(false);
-      setTimeout(() => {
-        if (chatMessagesRef.current) {
-          chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-        }
-      }, 100);
-    }
-  };
-
   // Get student marks from all sources
   const getStudentMarks = useCallback(() => {
     try {
@@ -700,13 +644,6 @@ const Dashboard = () => {
       return [];
     }
   }, [subjects]);
-
-  // Initialize chat with welcome message
-  useEffect(() => {
-    setChatMessages([
-      { role: 'bot', text: `Hey, how can I help?` }
-    ]);
-  }, []);
 
   // Fetch data from backend
   useEffect(() => {
@@ -1357,6 +1294,25 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
+      {/* WhatsApp Floating Button - REPLACES CHATBOT */}
+      <a 
+        href="https://wa.me/27822589917" 
+        className="whatsapp-floating-btn"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Message Skolifyteam on WhatsApp"
+      >
+        <img 
+          src="/whatsapp-icon.png" 
+          alt="WhatsApp" 
+          className="whatsapp-icon"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            e.target.parentElement.textContent = '💬';
+          }}
+        />
+      </a>
+
       {/* Search Modal */}
       {showSearchModal && (
         <div className="search-modal">
@@ -1469,63 +1425,6 @@ const Dashboard = () => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Chatbot Floating Button */}
-      <button 
-        className="chatbot-floating-btn"
-        onClick={() => setShowChatbot(!showChatbot)}
-        title="Chat with our assistant"
-      >
-        <img 
-          src="/chatbot.jpeg" 
-          alt="Chat Assistant" 
-          className="chatbot-icon"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.parentElement.textContent = '💬';
-          }}
-        />
-      </button>
-
-      {/* Chatbot Modal */}
-      {showChatbot && (
-        <div className="chatbot-modal">
-          <div className="chatbot-header">
-            <h3>Skolify Assistant</h3>
-            <button 
-              className="close-chatbot"
-              onClick={() => setShowChatbot(false)}
-            >
-              ×
-            </button>
-          </div>
-          <div className="chatbot-messages" ref={chatMessagesRef}>
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`chatbot-message ${msg.role}`}>
-                <p>{msg.text}</p>
-              </div>
-            ))}
-            {isChatLoading && (
-              <div className="chatbot-message bot">
-                <p><FaSpinner className="spinner-icon" /> Thinking...</p>
-              </div>
-            )}
-          </div>
-          <div className="chatbot-input">
-            <input 
-              type="text" 
-              placeholder="Ask me about courses, careers, or applications..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              disabled={isChatLoading}
-            />
-            <button onClick={sendChatMessage} disabled={isChatLoading}>
-              {isChatLoading ? <FaSpinner className="spinner-icon" /> : 'Send'}
-            </button>
           </div>
         </div>
       )}
