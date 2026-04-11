@@ -1303,7 +1303,7 @@ const Dashboard = () => {
         title="Message Skolifyteam on WhatsApp"
       >
         <img 
-          src="/whatsapp-icon.png" 
+            src="/Skolify-Logo.jpeg" 
           alt="WhatsApp" 
           className="whatsapp-icon"
           onError={(e) => {
