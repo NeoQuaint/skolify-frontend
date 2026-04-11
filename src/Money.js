@@ -366,35 +366,45 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       }
     }
     
+
+    console.log('📤 SENDING APPLICATION DATA:', {
+  first_name: formData.firstName,
+  last_name: formData.lastName,
+  email: formData.email,
+  phone_number: formData.phoneNumber,
+  id_number: formData.idNumber,
+  tracking_number: trackingNumber
+});
+
     // Save application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        whatsappNumber: formData.whatsappNumber,
-        gender: formData.gender,
-        province: formData.province,
-        city: formData.city,
-        homeLanguage: formData.homeLanguage,
-        nationality: formData.nationality,
-        idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth,
-        kinName: formData.kinName,
-        kinPhone: formData.kinPhone,
-        trackingNumber: trackingNumber,
-        documents: {
-          id: documents.id.path || null,
-          results: documents.results.path || null
-        }
-      })
-    });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    first_name: formData.firstName,
+    last_name: formData.lastName,
+    email: formData.email,
+    phone_number: formData.phoneNumber,
+    whatsapp_number: formData.whatsappNumber,
+    gender: formData.gender,
+    province: formData.province,
+    city: formData.city,
+    home_language: formData.homeLanguage,
+    nationality: formData.nationality,
+    id_number: formData.idNumber,
+    date_of_birth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+    kin_name: formData.kinName,
+    kin_phone: formData.kinPhone,
+    tracking_number: trackingNumber,
+    documents: {
+      id: documents.id.path || null,
+      results: documents.results.path || null
+    }
+  })
+});
     
     if (!appResponse.ok) {
       const errorData = await appResponse.json();
