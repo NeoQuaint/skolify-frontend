@@ -998,7 +998,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         </div>
       </div>
 
-            {/* Payment Options Modal - MINIMALISTIC */}
+                       {/* Payment Options Modal - MINIMALISTIC */}
       {showPaymentModal && (
         <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
@@ -1012,58 +1012,96 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             </div>
 
             <div className="payment-options-simple">
-              {/* Skolify Direct Payment - Recommended */}
-              <button 
-                className="payment-option-simple primary"
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  // Store payment completion
-                  localStorage.setItem('hasCompletedPayment', 'true');
-                  localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData?.trackingNumber);
-                  
-                  if (onPaymentComplete) {
-                    onPaymentComplete(pendingTransactionData?.trackingNumber);
-                  }
-                  
-                  // Show success message
-                  alert(`✅ Payment Successful!\n\nTracking Number: ${pendingTransactionData?.trackingNumber}\n\nYour application has been submitted. You will receive a confirmation email shortly.`);
-                  
-                  onClose();
-                  navigate('/profile');
-                }}
-              >
-                <div className="payment-option-icon">💰</div>
-                <div className="payment-option-content">
+              {/* OPTION 1: Skolify Direct Payment - GREEN */}
+              <div className="payment-option-simple primary">
+                <div className="payment-option-header">
                   <span className="payment-option-title">Skolify Direct Payment</span>
-                  <span className="payment-option-desc">Recommended • Instant confirmation</span>
+                  <span className="recommended-badge">Recommended</span>
                 </div>
-                <div className="payment-option-check">→</div>
-              </button>
+                
+                <div className="bank-details-mini">
+                  <div className="bank-row">
+                    <span className="bank-label">Bank:</span>
+                    <span className="bank-value">FNB</span>
+                  </div>
+                  <div className="bank-row">
+                    <span className="bank-label">Account Name:</span>
+                    <span className="bank-value">K2026084461 (South Africa) (pty) Ltd</span>
+                  </div>
+                  <div className="bank-row copyable-row" onClick={() => {
+                    navigator.clipboard.writeText('63199178419');
+                    alert('Account number copied!');
+                  }}>
+                    <span className="bank-label">Account Number:</span>
+                    <span className="bank-value">63199178419</span>
+                    <FaCopy className="copy-icon" />
+                  </div>
+                  <div className="bank-row copyable-row" onClick={() => {
+                    navigator.clipboard.writeText('250655');
+                    alert('Branch code copied!');
+                  }}>
+                    <span className="bank-label">Branch Code:</span>
+                    <span className="bank-value">250655</span>
+                    <FaCopy className="copy-icon" />
+                  </div>
+                  <div className="bank-row copyable-row" onClick={() => {
+                    navigator.clipboard.writeText(formData.idNumber || 'YOUR ID NUMBER');
+                    alert('Reference copied!');
+                  }}>
+                    <span className="bank-label">Reference:</span>
+                    <span className="bank-value reference">{formData.idNumber || 'YOUR ID NUMBER'}</span>
+                    <FaCopy className="copy-icon" />
+                  </div>
+                </div>
 
-              {/* Bank Transfer Option */}
+                <button 
+                  className="payment-confirm-btn"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    localStorage.setItem('hasCompletedPayment', 'true');
+                    localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData?.trackingNumber);
+                    
+                    if (onPaymentComplete) {
+                      onPaymentComplete(pendingTransactionData?.trackingNumber);
+                    }
+                    
+                    alert(`✅ Payment Initiated!\n\nTracking Number: ${pendingTransactionData?.trackingNumber}\n\nPlease send R${totalAmount} to the bank account above using your ID as reference.\n\nWe will confirm your payment within 24 hours.`);
+                    
+                    onClose();
+                    navigate('/profile');
+                  }}
+                >
+                  Confirm Bank Transfer
+                </button>
+              </div>
+
+              {/* OPTION 2: Yoco Card Payment */}
               <button 
-                className="payment-option-simple"
+                className="payment-option-simple yoco"
                 onClick={() => {
                   setShowPaymentModal(false);
-                  // Copy bank details to clipboard
-                  const bankDetailsText = `Bank: First National Bank (FNB)\nAccount Name: K2026084461 (South Africa) (pty) Ltd\nAccount Number: 63199178419\nBranch Code: 250655\nReference: ${formData.idNumber || 'YOUR ID NUMBER'}\nAmount: R${totalAmount}`;
-                  navigator.clipboard.writeText(bankDetailsText);
+                  let paymentLink = '';
                   
-                  alert(`💰 Bank Transfer Details Copied!\n\nBank: FNB\nAccount: 63199178419\nRef: ${formData.idNumber || 'YOUR ID NUMBER'}\nAmount: R${totalAmount}\n\nUse your ID number as reference. We'll confirm payment within 24 hours.`);
-                  
-                  if (onPaymentComplete) {
-                    onPaymentComplete(pendingTransactionData?.trackingNumber);
+                  if (selectedPackage === 'basic') {
+                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage';
+                  } else if (selectedPackage === 'standard') {
+                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage';
+                  } else if (selectedPackage === 'premium') {
+                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage';
                   }
-                  onClose();
-                  navigate('/profile');
+                  
+                  if (paymentLink) {
+                    window.location.href = paymentLink;
+                  } else {
+                    alert('Payment link not available. Please try again.');
+                  }
                 }}
               >
-                <div className="payment-option-icon">🏦</div>
-                <div className="payment-option-content">
-                  <span className="payment-option-title">Bank Transfer</span>
-                  <span className="payment-option-desc">EFT / Direct Deposit</span>
+                <div className="payment-option-header">
+                  <span className="payment-option-title">Yoco Card Payment</span>
                 </div>
-                <div className="payment-option-check">→</div>
+                <span className="payment-option-desc">Pay instantly with credit/debit card</span>
+                <span className="payment-option-arrow">→</span>
               </button>
             </div>
 

@@ -1245,442 +1245,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   100% { transform: rotate(360deg); }
 }
 
-
-
-/* Payment Modal Styles */
-.payment-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  animation: fadeIn 0.3s ease;
-}
-
-.payment-modal-container {
-  background: white;
-  border-radius: 20px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  animation: slideUp 0.3s ease;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.payment-modal-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #f0f0f0;
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
-  z-index: 10;
-}
-
-.payment-modal-close:hover {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.payment-modal-header {
-  text-align: center;
-  padding: 30px 30px 20px;
-  border-bottom: 1px solid #eef2f6;
-}
-
-.payment-modal-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  color: #1a1a2e;
-}
-
-.payment-modal-header p {
-  margin: 0;
-  color: #666;
-  font-size: 14px;
-}
-
-.payment-options {
-  padding: 20px 30px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.payment-option {
-  border: 2px solid #eef2f6;
-  border-radius: 16px;
-  padding: 24px;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.payment-option.recommended {
-  border-color: #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
-}
-
-.payment-option.secondary {
-  border-color: #eef2f6;
-}
-
-.payment-option:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
-
-.recommended-badge {
-  position: absolute;
-  top: -12px;
-  right: 20px;
-  background: #10b981;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.recommended-badge svg {
-  font-size: 12px;
-}
-
-.payment-option-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.payment-icon {
-  font-size: 32px;
-}
-
-.bank-icon {
-  color: #10b981;
-}
-
-.card-icon {
-  color: #6366f1;
-}
-
-.payment-option-header h3 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  color: #1a1a2e;
-}
-
-.payment-option-header p {
-  margin: 0;
-  font-size: 13px;
-  color: #666;
-}
-
-/* Bank Details Styles */
-.bank-details {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.bank-detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.bank-detail-row:last-child {
-  border-bottom: none;
-}
-
-.bank-detail-row.copyable {
-  cursor: pointer;
-  transition: background 0.2s;
-  padding: 8px;
-  margin: -8px;
-  border-radius: 8px;
-}
-
-.bank-detail-row.copyable:hover {
-  background: #e2e8f0;
-}
-
-.bank-label {
-  font-weight: 600;
-  color: #475569;
-  font-size: 13px;
-}
-
-.bank-value {
-  color: #1e293b;
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.copy-icon {
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  transition: color 0.2s;
-  margin-left: 8px;
-}
-
-.copy-icon:hover {
-  color: #10b981;
-}
-
-.bank-reference-note {
-  background: #fef3c7;
-  border-left: 4px solid #f59e0b;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  display: flex;
-  gap: 12px;
-  font-size: 13px;
-}
-
-.note-icon {
-  color: #f59e0b;
-  font-size: 18px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.bank-reference-note strong {
-  color: #92400e;
-}
-
-.bank-reference-note small {
-  color: #b45309;
-  font-size: 11px;
-}
-
-.copy-success {
-  background: #10b981;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
-  text-align: center;
-  font-size: 13px;
-  margin-bottom: 16px;
-  animation: fadeInOut 2s ease;
-}
-
-/* Yoco Info Styles */
-.yoco-info {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-
-.yoco-info p {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  color: #475569;
-}
-
-.yoco-features {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.yoco-features li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.yoco-features li svg {
-  color: #10b981;
-  font-size: 12px;
-}
-
-/* Payment Buttons */
-.payment-btn {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.bank-payment-btn {
-  background: #10b981;
-  color: white;
-}
-
-.bank-payment-btn:hover {
-  background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.yoco-payment-btn {
-  background: #6366f1;
-  color: white;
-}
-
-.yoco-payment-btn:hover {
-  background: #4f46e5;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-.payment-modal-footer {
-  padding: 20px 30px;
-  border-top: 1px solid #eef2f6;
-  margin: 0;
-  font-size: 12px;
-  color: #666;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  15% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  85% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .payment-modal-container {
-    width: 95%;
-    margin: 16px;
-  }
-  
-  .payment-options {
-    padding: 16px 20px;
-  }
-  
-  .payment-option {
-    padding: 20px;
-  }
-  
-  .payment-modal-header {
-    padding: 24px 20px 16px;
-  }
-  
-  .payment-modal-header h2 {
-    font-size: 20px;
-  }
-  
-  .bank-detail-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .bank-detail-row.copyable {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-/* Ensure payment modal is on top */
-.payment-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000; /* Increase this - was probably too low */
-}
-
-.payment-modal-container {
-  background: white;
-  border-radius: 20px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  z-index: 10001;
-  position: relative;
-}
-
-/* Also ensure the main money modal has lower z-index */
-.money-overlay {
-  z-index: 9999; /* Lower than payment modal */
-}
 /* Minimalistic Payment Modal */
 .payment-modal-overlay {
   position: fixed;
@@ -1699,10 +1263,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: white;
   border-radius: 16px;
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
   padding: 24px;
   position: relative;
   animation: fadeIn 0.2s ease;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .payment-modal-close {
@@ -1711,115 +1277,192 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   right: 16px;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   color: #999;
+}
+
+.payment-modal-close:hover {
+  color: #333;
 }
 
 .payment-modal-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .payment-modal-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
   color: #1a1a1a;
 }
 
 .payment-amount {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  color: #007bff;
+  color: #28a745;
   margin: 0;
 }
 
-/* Payment Options */
 .payment-options-simple {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 20px;
 }
 
-.payment-option-simple {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
-  text-align: left;
-}
-
-.payment-option-simple:hover {
-  border-color: #007bff;
-  background: #f8f9fa;
-  transform: translateY(-1px);
-}
-
+/* Skolify Direct Payment - GREEN */
 .payment-option-simple.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  border-color: #007bff;
+  background: #d4edda;
+  border: 2px solid #28a745;
+  border-radius: 12px;
+  padding: 16px;
 }
 
-.payment-option-simple.primary .payment-option-title,
-.payment-option-simple.primary .payment-option-desc {
-  color: white;
-}
-
-.payment-option-simple.primary .payment-option-icon {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.payment-option-icon {
-  width: 48px;
-  height: 48px;
-  background: #f0f0f0;
-  border-radius: 50%;
+.payment-option-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.payment-option-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 .payment-option-title {
-  font-weight: 600;
-  font-size: 16px;
-  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 18px;
+  color: #155724;
+}
+
+.recommended-badge {
+  background: #28a745;
+  color: white;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
 .payment-option-desc {
-  font-size: 12px;
+  font-size: 13px;
+  color: #155724;
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* Bank Details */
+.bank-details-mini {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.bank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.bank-row:last-child {
+  border-bottom: none;
+}
+
+.bank-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.bank-value {
   color: #666;
-  margin-top: 2px;
+  flex: 1;
+  margin-left: 10px;
 }
 
-.payment-option-check {
-  font-size: 18px;
-  color: #999;
+.bank-value.reference {
+  color: #28a745;
+  font-weight: 600;
 }
 
-.payment-option-simple.primary .payment-option-check {
+/* Copyable rows */
+.copyable-row {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.copyable-row:hover {
+  background: #f0f0f0;
+}
+
+.copy-icon {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #28a745;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.copyable-row:hover .copy-icon {
+  opacity: 1;
+}
+
+.payment-confirm-btn {
+  width: 100%;
+  padding: 12px;
+  background: #28a745;
   color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.payment-confirm-btn:hover {
+  background: #218838;
+}
+
+/* Yoco Card Payment */
+.payment-option-simple.yoco {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.payment-option-simple.yoco:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.payment-option-simple.yoco .payment-option-title {
+  color: #1a1a1a;
+  font-size: 16px;
+}
+
+.payment-option-simple.yoco .payment-option-desc {
+  color: #666;
+  margin: 0;
+  flex: 1;
+  margin-left: 12px;
+}
+
+.payment-option-arrow {
+  font-size: 20px;
+  color: #999;
 }
 
 .payment-modal-footer-simple {
   text-align: center;
   font-size: 12px;
   color: #666;
-  margin: 16px 0 0 0;
+  margin: 20px 0 0 0;
   padding-top: 16px;
   border-top: 1px solid #eee;
 }
