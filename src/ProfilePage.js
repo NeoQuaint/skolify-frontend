@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-
 import { useNavigate } from 'react-router-dom';
 import './ProfilePage.css';
 import { 
@@ -11,8 +10,6 @@ import {
   FaHashtag, FaBoxOpen, FaLock, FaSpinner
 } from 'react-icons/fa';
 import API_URL from './config';
-
-// Import the PasswordChange component
 import PasswordChange from './PasswordChange';
 
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
@@ -22,10 +19,8 @@ function ProfileHeader({ showProfile = true }) {
   const dropdownRef = useRef(null);
 
   const handleLogout = () => {
-    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
-    // Navigate to login page
     navigate('/');
   };
 
@@ -34,7 +29,6 @@ function ProfileHeader({ showProfile = true }) {
     navigate('/profile');
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -68,7 +62,6 @@ function ProfileHeader({ showProfile = true }) {
         margin: '0 auto',
         width: '100%'
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
           <img
             src="/Skolify-Logo.jpeg"
@@ -82,7 +75,6 @@ function ProfileHeader({ showProfile = true }) {
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
 
-        {/* Profile icon */}
         {showProfile && (
           <div ref={dropdownRef} style={{ position: 'relative' }}>
             <FaUserCircle 
@@ -174,7 +166,6 @@ function ProfileHeader({ showProfile = true }) {
   );
 }
 
-
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState(null);
@@ -193,8 +184,6 @@ const ProfilePage = () => {
   const [error, setError] = useState(null);
   const [showOrders, setShowOrders] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
-  
-  // NEW: State for password change modal
   const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   useEffect(() => {
@@ -264,14 +253,12 @@ const ProfilePage = () => {
             if (selectionData.success && selectionData.selections && selectionData.selections.length > 0) {
               setPaymentSelections(selectionData.selections);
               console.log(`✅ Loaded ${selectionData.selections.length} payment selections`);
-            } else {
-              console.log('ℹ️ No payment selections found');
             }
           } catch (error) {
             console.error('❌ Error fetching payment selections:', error);
           }
           
-          // Fetch ALL applications (for tracking numbers)
+          // Fetch ALL applications
           try {
             console.log('📡 Fetching ALL applications...');
             const appsResponse = await fetch(`${API_URL}/api/applications/all`, {
@@ -286,36 +273,16 @@ const ProfilePage = () => {
             if (appsData.success && appsData.applications.length > 0) {
               setApplications(appsData.applications);
               console.log(`✅ Loaded ${appsData.applications.length} applications`);
-              
-              // Log all tracking numbers for debugging
-              appsData.applications.forEach(app => {
-                console.log(`📦 Application: ${app.tracking_number} - ${app.created_at}`);
-              });
             }
           } catch (error) {
             console.error('❌ Error fetching applications:', error);
           }
         } else {
-          // Not logged in - load from localStorage
-          console.log('ℹ️ Not logged in, loading from localStorage');
-          const savedSummary = localStorage.getItem('applicationSummary');
-          if (savedSummary) {
-            const summary = JSON.parse(savedSummary);
-            setPaymentSelections([summary]);
-          }
-          
           const storedProfileData = localStorage.getItem('userProfileData');
           if (storedProfileData) {
             const data = JSON.parse(storedProfileData);
             setProfileData(data);
             setEditedData(data);
-            
-            if (data.documents) {
-              setDocuments({
-                id: { name: data.documents.id, uploaded: !!data.documents.id, path: null },
-                results: { name: data.documents.results, uploaded: !!data.documents.results, path: null }
-              });
-            }
           }
         }
       } catch (error) {
@@ -399,16 +366,13 @@ const ProfilePage = () => {
           }
         }));
         
-        // Update profile data with document path
         const updatedData = { ...profileData };
         if (!updatedData.documents) updatedData.documents = {};
         updatedData.documents[type] = filePath;
         
-        // Save to localStorage
         localStorage.setItem('userProfileData', JSON.stringify(updatedData));
         setProfileData(updatedData);
         
-        // If logged in, update in database
         if (isLoggedIn && token) {
           await fetch(`${API_URL}/api/applications/update-profile`, {
             method: 'POST',
@@ -440,30 +404,14 @@ const ProfilePage = () => {
     }
     
     try {
-      // For now, just show the file path
-      alert(`File location: ${doc.path}`);
-      
-      // In production, you would serve the file:
-      // window.open(`${API_URL}/${doc.path}`, '_blank');
+      alert(`File: ${doc.name}\nPath: ${doc.path}`);
     } catch (error) {
       console.error('Download error:', error);
     }
   };
 
-  // NEW: Handle successful password change
   const handlePasswordChangeSuccess = () => {
     console.log('✅ Password changed successfully');
-    // You could show a toast notification here if you have one
-  };
-
-  const getStatusClass = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'processing': return 'status-processing';
-      case 'completed': return 'status-completed';
-      case 'pending': return 'status-pending';
-      case 'selection saved': return 'status-saved';
-      default: return '';
-    }
   };
 
   const formatDate = (timestamp) => {
@@ -482,34 +430,17 @@ const ProfilePage = () => {
     const prices = {
       basic: 169,
       standard: 329,
-      premium: 499,
-      custom: 'Custom'
+      premium: 499
     };
     return prices[pkg?.toLowerCase()] || prices.basic;
   };
 
-  // Get tracking number directly from the order
   const getTrackingNumber = (order) => {
     if (order.trackingNumber) return order.trackingNumber;
     if (order.tracking_number) return order.tracking_number;
-    
-    if (applications.length > 0 && order.createdAt) {
-      const orderDate = new Date(order.createdAt);
-      
-      const matchingApp = applications.find(app => {
-        if (!app.tracking_number) return false;
-        const appDate = new Date(app.created_at);
-        const diffMinutes = Math.abs(appDate - orderDate) / (1000 * 60);
-        return diffMinutes < 5;
-      });
-      
-      if (matchingApp) return matchingApp.tracking_number;
-    }
-    
     return null;
   };
 
-  // Toggle expanded order view
   const toggleOrderExpand = (orderId) => {
     if (expandedOrder === orderId) {
       setExpandedOrder(null);
@@ -534,32 +465,19 @@ const ProfilePage = () => {
     );
   }
 
-  if (!isLoggedIn && !profileData && paymentSelections.length === 0) {
-    return (
-      <div className="no-data-state">
-        <h2>No Profile Data Found</h2>
-        <p>Please sign in or complete an application first.</p>
-        <button className="back-to-dashboard" onClick={() => navigate('/')}>
-          Go to Home
-        </button>
-      </div>
-    );
-  }
-
   return (
-   <div className="profile-page">
-  <ProfileHeader showProfile={true} />
+    <div className="profile-page">
+      <ProfileHeader showProfile={true} />
 
       <div className="profile-container">
-        {/* Welcome banner */}
         {isLoggedIn && loggedInUser && (
           <div className="welcome-banner">
-      <h2>Welcome back, {profileData?.first_name || profileData?.firstName || loggedInUser?.firstName || 'User'}!</h2>
+            <h2>Welcome back, {profileData?.first_name || profileData?.firstName || loggedInUser?.firstName || 'User'}!</h2>
             <p>Your profile and all your orders are shown below.</p>
           </div>
         )}
 
-        {/* Orders Section with Toggle */}
+        {/* Orders Section */}
         {paymentSelections.length > 0 && (
           <div className="orders-section">
             <div className="orders-header" onClick={() => setShowOrders(!showOrders)}>
@@ -581,8 +499,6 @@ const ProfilePage = () => {
                   const totalCourses = order.totalCourses || 
                     orderUniversities.reduce((sum, uni) => sum + (uni.courses?.length || 0), 0);
                   const trackingNumber = getTrackingNumber(order);
-                  
-                  console.log(`🏷️ Order ${index} tracking:`, trackingNumber, 'Order data:', order);
                   
                   return (
                     <div key={index} className="order-card">
@@ -618,7 +534,6 @@ const ProfilePage = () => {
                           </span>
                         </div>
                         
-                        {/* Show mini list when collapsed, full details when expanded */}
                         {!isExpanded ? (
                           <div className="universities-mini-list">
                             {orderUniversities.slice(0, 2).map((uni, idx) => (
@@ -701,7 +616,6 @@ const ProfilePage = () => {
               </button>
             </div>
 
-            {/* NEW: Password Change Button - Only show for logged in users */}
             {isLoggedIn && (
               <div className="password-change-section">
                 <button 
@@ -720,8 +634,8 @@ const ProfilePage = () => {
                     <label><FaUser /> First Name</label>
                     <input
                       type="text"
-                      name="firstName"
-                      value={editedData.first_name || editedData.firstName || ''}
+                      name="first_name"
+                      value={editedData.first_name || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -729,8 +643,8 @@ const ProfilePage = () => {
                     <label><FaUser /> Last Name</label>
                     <input
                       type="text"
-                      name="lastName"
-                      value={editedData.last_name || editedData.lastName || ''}
+                      name="last_name"
+                      value={editedData.last_name || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -738,11 +652,20 @@ const ProfilePage = () => {
                     <label><FaIdCard /> ID Number</label>
                     <input
                       type="text"
-                      name="idNumber"
-                      value={editedData.id_number || editedData.idNumber || ''}
+                      name="id_number"
+                      value={editedData.id_number || ''}
                       onChange={handleInputChange}
                       readOnly
                       className="readonly-field"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaCalendarAlt /> Date of Birth</label>
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      value={editedData.date_of_birth || ''}
+                      onChange={handleInputChange}
                     />
                   </div>
                   <div className="form-group">
@@ -772,8 +695,8 @@ const ProfilePage = () => {
                     <label><FaPhone /> Phone Number</label>
                     <input
                       type="tel"
-                      name="phoneNumber"
-                      value={editedData.phone_number || editedData.phoneNumber || ''}
+                      name="phone_number"
+                      value={editedData.phone_number || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -781,8 +704,8 @@ const ProfilePage = () => {
                     <label><FaWhatsapp /> WhatsApp</label>
                     <input
                       type="tel"
-                      name="whatsappNumber"
-                      value={editedData.whatsapp_number || editedData.whatsappNumber || ''}
+                      name="whatsapp_number"
+                      value={editedData.whatsapp_number || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -797,7 +720,7 @@ const ProfilePage = () => {
                     <div>
                       <span className="info-label">Full Name</span>
                       <span className="info-value">
-                        {profileData?.first_name || profileData?.firstName || 'Not specified'} {profileData?.last_name || profileData?.lastName || ''}
+                        {profileData?.first_name || 'Not specified'} {profileData?.last_name || ''}
                       </span>
                     </div>
                   </div>
@@ -805,7 +728,14 @@ const ProfilePage = () => {
                     <FaIdCard className="info-icon" />
                     <div>
                       <span className="info-label">ID Number</span>
-                      <span className="info-value">{profileData?.id_number || profileData?.idNumber || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.id_number || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaCalendarAlt className="info-icon" />
+                    <div>
+                      <span className="info-label">Date of Birth</span>
+                      <span className="info-value">{profileData?.date_of_birth || 'Not specified'}</span>
                     </div>
                   </div>
                   <div className="info-row">
@@ -826,14 +756,14 @@ const ProfilePage = () => {
                     <FaPhone className="info-icon" />
                     <div>
                       <span className="info-label">Phone</span>
-                      <span className="info-value">{profileData?.phone_number || profileData?.phoneNumber || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.phone_number || 'Not specified'}</span>
                     </div>
                   </div>
                   <div className="info-row">
                     <FaWhatsapp className="info-icon" />
                     <div>
                       <span className="info-label">WhatsApp</span>
-                      <span className="info-value">{profileData?.whatsapp_number || profileData?.whatsappNumber || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.whatsapp_number || 'Not specified'}</span>
                     </div>
                   </div>
                 </div>
@@ -851,8 +781,15 @@ const ProfilePage = () => {
                 <div className="info-row">
                   <FaHome className="info-icon" />
                   <div>
-                    <span className="info-label">Province</span>
-                    <span className="info-value">{profileData?.province || 'Not specified'}</span>
+                    <span className="info-label">Address</span>
+                    <span className="info-value">{profileData?.address || 'Not specified'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaHome className="info-icon" />
+                  <div>
+                    <span className="info-label">Suburb</span>
+                    <span className="info-value">{profileData?.suburb || 'Not specified'}</span>
                   </div>
                 </div>
                 <div className="info-row">
@@ -863,10 +800,24 @@ const ProfilePage = () => {
                   </div>
                 </div>
                 <div className="info-row">
+                  <FaHome className="info-icon" />
+                  <div>
+                    <span className="info-label">Province</span>
+                    <span className="info-value">{profileData?.province || 'Not specified'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaHome className="info-icon" />
+                  <div>
+                    <span className="info-label">Postal Code</span>
+                    <span className="info-value">{profileData?.postal_code || 'Not specified'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
                   <FaLanguage className="info-icon" />
                   <div>
                     <span className="info-label">Home Language</span>
-                    <span className="info-value">{profileData?.home_language || profileData?.homeLanguage || 'Not specified'}</span>
+                    <span className="info-value">{profileData?.home_language || 'Not specified'}</span>
                   </div>
                 </div>
                 <div className="info-row">
@@ -890,15 +841,29 @@ const ProfilePage = () => {
                 <div className="info-row">
                   <FaUserTie className="info-icon" />
                   <div>
-                    <span className="info-label">Name</span>
-                    <span className="info-value">{profileData?.kin_name || profileData?.kinName || 'Not specified'}</span>
+                    <span className="info-label">Full Name</span>
+                    <span className="info-value">{profileData?.kin_name || 'Not specified'}</span>
                   </div>
                 </div>
                 <div className="info-row">
                   <FaPhoneAlt className="info-icon" />
                   <div>
-                    <span className="info-label">Phone</span>
-                    <span className="info-value">{profileData?.kin_phone || profileData?.kinPhone || 'Not specified'}</span>
+                    <span className="info-label">Phone Number</span>
+                    <span className="info-value">{profileData?.kin_phone || 'Not specified'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaUserTie className="info-icon" />
+                  <div>
+                    <span className="info-label">Relationship</span>
+                    <span className="info-value">{profileData?.kin_relationship || 'Not specified'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaEnvelope className="info-icon" />
+                  <div>
+                    <span className="info-label">Email</span>
+                    <span className="info-value">{profileData?.kin_email || 'Not specified'}</span>
                   </div>
                 </div>
               </div>
@@ -913,7 +878,6 @@ const ProfilePage = () => {
             </div>
             <div className="card-body">
               <div className="document-upload-list">
-                {/* ID Document */}
                 <div className="document-item">
                   <div className="document-info">
                     <FaIdCard className="document-icon" />
@@ -960,7 +924,6 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Matric/Results */}
                 <div className="document-item">
                   <div className="document-info">
                     <FaGraduationCap className="document-icon" />
@@ -1017,7 +980,6 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Password Change Modal */}
       {showPasswordChange && (
         <PasswordChange 
           onClose={() => setShowPasswordChange(false)}
