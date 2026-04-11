@@ -253,7 +253,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         middleName: formData.middleName,
         lastName: formData.lastName,
         idNumber: formData.idNumber,
-        dateOfBirth: formData.dateOfBirth || null,
+       dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
         gender: formData.gender,
         nationality: formData.nationality,
         homeLanguage: formData.homeLanguage,
