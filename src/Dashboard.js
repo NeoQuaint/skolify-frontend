@@ -1294,24 +1294,22 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-      {/* WhatsApp Floating Button - REPLACES CHATBOT */}
-      <a 
-        href="https://wa.me/27822589917" 
-        className="whatsapp-floating-btn"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Message Skolifyteam on WhatsApp"
-      >
-        <img 
-            src="/chatbot.jpeg" 
-          alt="WhatsApp" 
-          className="whatsapp-icon"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.parentElement.textContent = '💬';
-          }}
-        />
-      </a>
+     {/* Chatbot Floating Button - Opens WhatsApp */}
+<button 
+  className="chatbot-floating-btn"
+  onClick={() => window.open('https://wa.me/27822589917', '_blank')}
+  title="Chat with us on WhatsApp"
+>
+  <img 
+    src="/chatbot.jpeg" 
+    alt="Chat Assistant" 
+    className="chatbot-icon"
+    onError={(e) => {
+      e.target.style.display = 'none';
+      e.target.parentElement.textContent = '💬';
+    }}
+  />
+</button>
 
       {/* Search Modal */}
       {showSearchModal && (
