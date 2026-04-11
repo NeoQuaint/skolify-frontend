@@ -282,6 +282,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       };
     }
     
+    // Submit order first
     const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
       method: 'POST',
       headers: {
@@ -306,7 +307,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         package: applicationData.package,
         amount: totalAmount,
         universities: applicationData.universities,
-        courses: applicationData.courses,
+        courses: applicationData.courseDetails,
         transactionId: transactionId,
         paymentMethod: paymentMethod
       })
@@ -326,25 +327,46 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     console.log('✅ Got tracking number from backend:', trackingNumber);
     
+    // Save payment selection - FIXED VERSION
     if (applicationData.package) {
-      await fetch(`${API_URL}/api/payment/save-selection`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          selectedPackage: applicationData.package,
-          universities: applicationData.universities,
-          totalCourses: applicationData.totalCourses,
-          totalUniversities: applicationData.totalUniversities,
-          totalCost: applicationData.totalCost,
-          courseDetails: applicationData.courseDetails,
-          trackingNumber: trackingNumber
-        })
-      });
+      console.log('📥 Saving payment selection with tracking:', trackingNumber);
+      
+      const paymentSelectionData = {
+        selectedPackage: applicationData.package,
+        universities: applicationData.universities,
+        totalCourses: applicationData.totalCourses,
+        totalUniversities: applicationData.totalUniversities,
+        totalCost: applicationData.totalCost,
+        courseDetails: applicationData.courseDetails
+      };
+      
+      console.log('📤 Payment selection data:', paymentSelectionData);
+      
+      try {
+        const paymentResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(paymentSelectionData)
+        });
+        
+        if (!paymentResponse.ok) {
+          const errorText = await paymentResponse.text();
+          console.error('❌ Payment selection save failed:', errorText);
+          // Don't throw - continue with application save
+        } else {
+          const paymentResult = await paymentResponse.json();
+          console.log('✅ Payment selection saved:', paymentResult);
+        }
+      } catch (paymentError) {
+        console.error('❌ Payment selection error:', paymentError);
+        // Continue anyway - main application is more important
+      }
     }
     
+    // Save application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
       method: 'POST',
       headers: {
