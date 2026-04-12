@@ -233,117 +233,133 @@ const ProfilePage = () => {
   const [showOrders, setShowOrders] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null); // For modal
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    const loadProfileData = async () => {
-      setIsLoading(true);
-      setError(null);
+  const loadProfileData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const user = localStorage.getItem('user');
+      const isUserLoggedIn = !!(token && user);
       
-      try {
-        const token = localStorage.getItem('authToken');
-        const user = localStorage.getItem('user');
-        const isUserLoggedIn = !!(token && user);
-        
-        console.log('📊 ProfilePage - Loading data, logged in:', isUserLoggedIn);
-        setIsLoggedIn(isUserLoggedIn);
-        
-        if (isUserLoggedIn && user) {
-          const parsedUser = JSON.parse(user);
-          setLoggedInUser(parsedUser);
-          
-          // Fetch user profile from database
-          try {
-            console.log('📡 Fetching user profile...');
-            const response = await fetch(`${API_URL}/api/user/profile`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            const data = await response.json();
-            console.log('📥 Profile data:', data);
-            
-            if (data.success) {
-              setProfileData(data.user);
-              setEditedData(data.user);
-              
-              if (data.user.documents) {
-                setDocuments({
-                  id: { 
-                    name: data.user.documents.id?.split('/').pop() || null, 
-                    uploaded: !!data.user.documents.id,
-                    path: data.user.documents.id || null
-                  },
-                  results: { 
-                    name: data.user.documents.results?.split('/').pop() || null, 
-                    uploaded: !!data.user.documents.results,
-                    path: data.user.documents.results || null
-                  }
-                });
-              }
+      console.log('📊 ProfilePage - Loading data, logged in:', isUserLoggedIn);
+      setIsLoggedIn(isUserLoggedIn);
+      
+      if (isUserLoggedIn && token) {
+        // Fetch user profile from database
+        try {
+          console.log('📡 Fetching user profile...');
+          const response = await fetch(`${API_URL}/api/user/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
             }
-          } catch (error) {
-            console.error('❌ Error fetching profile:', error);
-          }
+          });
           
-          // Fetch ALL payment selections
-          try {
-            console.log('📡 Fetching ALL payment selections...');
-            const selectionResponse = await fetch(`${API_URL}/api/payment/get-all-selections`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            const selectionData = await selectionResponse.json();
-            console.log('📥 Payment selections response:', selectionData);
-            
-            if (selectionData.success && selectionData.selections && selectionData.selections.length > 0) {
-              setPaymentSelections(selectionData.selections);
-              console.log(`✅ Loaded ${selectionData.selections.length} payment selections`);
-            }
-          } catch (error) {
-            console.error('❌ Error fetching payment selections:', error);
-          }
+          const data = await response.json();
+          console.log('📥 Profile data from API:', data);
           
-          // Fetch ALL applications
-          try {
-            console.log('📡 Fetching ALL applications...');
-            const appsResponse = await fetch(`${API_URL}/api/applications/all`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
+          if (data.success && data.user) {
+            setProfileData(data.user);
+            setEditedData(data.user);
             
-            const appsData = await appsResponse.json();
-            console.log('📥 Applications response:', appsData);
+            // Also store in localStorage for offline reference
+            localStorage.setItem('userProfileData', JSON.stringify(data.user));
             
-            if (appsData.success && appsData.applications.length > 0) {
-              setApplications(appsData.applications);
-              console.log(`✅ Loaded ${appsData.applications.length} applications`);
+            if (data.user.documents) {
+              setDocuments({
+                id: { 
+                  name: data.user.documents.id?.split('/').pop() || null, 
+                  uploaded: !!data.user.documents.id,
+                  path: data.user.documents.id || null
+                },
+                results: { 
+                  name: data.user.documents.results?.split('/').pop() || null, 
+                  uploaded: !!data.user.documents.results,
+                  path: data.user.documents.results || null
+                }
+              });
             }
-          } catch (error) {
-            console.error('❌ Error fetching applications:', error);
+          } else {
+            console.log('⚠️ No profile data from API, checking localStorage');
+            const storedProfileData = localStorage.getItem('userProfileData');
+            if (storedProfileData) {
+              const parsedData = JSON.parse(storedProfileData);
+              setProfileData(parsedData);
+              setEditedData(parsedData);
+            }
           }
-        } else {
+        } catch (error) {
+          console.error('❌ Error fetching profile:', error);
+          // Fallback to localStorage
           const storedProfileData = localStorage.getItem('userProfileData');
           if (storedProfileData) {
-            const data = JSON.parse(storedProfileData);
-            setProfileData(data);
-            setEditedData(data);
+            const parsedData = JSON.parse(storedProfileData);
+            setProfileData(parsedData);
+            setEditedData(parsedData);
           }
         }
-      } catch (error) {
-        console.error('❌ Error in loadProfileData:', error);
-        setError('An unexpected error occurred');
-      } finally {
-        setIsLoading(false);
+        
+        // Fetch ALL payment selections
+        try {
+          console.log('📡 Fetching ALL payment selections...');
+          const selectionResponse = await fetch(`${API_URL}/api/payment/get-all-selections`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const selectionData = await selectionResponse.json();
+          console.log('📥 Payment selections response:', selectionData);
+          
+          if (selectionData.success && selectionData.selections && selectionData.selections.length > 0) {
+            setPaymentSelections(selectionData.selections);
+            console.log(`✅ Loaded ${selectionData.selections.length} payment selections`);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching payment selections:', error);
+        }
+        
+        // Fetch ALL applications
+        try {
+          console.log('📡 Fetching ALL applications...');
+          const appsResponse = await fetch(`${API_URL}/api/applications/all`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          const appsData = await appsResponse.json();
+          console.log('📥 Applications response:', appsData);
+          
+          if (appsData.success && appsData.applications.length > 0) {
+            setApplications(appsData.applications);
+            console.log(`✅ Loaded ${appsData.applications.length} applications`);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching applications:', error);
+        }
+      } else {
+        const storedProfileData = localStorage.getItem('userProfileData');
+        if (storedProfileData) {
+          const data = JSON.parse(storedProfileData);
+          setProfileData(data);
+          setEditedData(data);
+        }
       }
-    };
-    
+    } catch (error) {
+      console.error('❌ Error in loadProfileData:', error);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfileData();
-  }, []);
+  }, [refreshKey]);
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -359,7 +375,7 @@ const ProfilePage = () => {
     if (isLoggedIn) {
       const token = localStorage.getItem('authToken');
       try {
-        await fetch(`${API_URL}/api/applications/update-profile`, {
+        const response = await fetch(`${API_URL}/api/applications/update-profile`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -367,6 +383,12 @@ const ProfilePage = () => {
           },
           body: JSON.stringify(editedData)
         });
+        
+        if (response.ok) {
+          console.log('✅ Profile saved successfully');
+          // Refresh profile data
+          setRefreshKey(prev => prev + 1);
+        }
       } catch (error) {
         console.error('Error saving profile:', error);
       }
@@ -490,14 +512,6 @@ const ProfilePage = () => {
     return null;
   };
 
-  const toggleOrderExpand = (orderId) => {
-    if (expandedOrder === orderId) {
-      setExpandedOrder(null);
-    } else {
-      setExpandedOrder(orderId);
-    }
-  };
-
   if (isLoading) {
     return <div className="loading-state">Loading profile...</div>;
   }
@@ -519,7 +533,7 @@ const ProfilePage = () => {
       <ProfileHeader showProfile={true} />
 
       <div className="profile-container">
-        {isLoggedIn && loggedInUser && (
+        {isLoggedIn && (
           <div className="welcome-banner">
             <h2>Welcome back, {profileData?.first_name || profileData?.firstName || loggedInUser?.firstName || 'User'}!</h2>
             <p>Your profile and all your orders are shown below.</p>
@@ -675,8 +689,6 @@ const ProfilePage = () => {
                       name="id_number"
                       value={editedData.id_number || ''}
                       onChange={handleInputChange}
-                      readOnly
-                      className="readonly-field"
                     />
                   </div>
                   <div className="form-group">
@@ -709,6 +721,8 @@ const ProfilePage = () => {
                       name="email"
                       value={editedData.email || ''}
                       onChange={handleInputChange}
+                      readOnly
+                      className="readonly-field"
                     />
                   </div>
                   <div className="form-group">
@@ -729,6 +743,116 @@ const ProfilePage = () => {
                       onChange={handleInputChange}
                     />
                   </div>
+                  <div className="form-group">
+                    <label><FaHome /> Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={editedData.address || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaHome /> Suburb</label>
+                    <input
+                      type="text"
+                      name="suburb"
+                      value={editedData.suburb || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaHome /> City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={editedData.city || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaHome /> Province</label>
+                    <select
+                      name="province"
+                      value={editedData.province || ''}
+                      onChange={handleInputChange}
+                      className="profile-select"
+                    >
+                      <option value="">Select Province</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="Western Cape">Western Cape</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="North West">North West</option>
+                      <option value="Northern Cape">Northern Cape</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label><FaHome /> Postal Code</label>
+                    <input
+                      type="text"
+                      name="postal_code"
+                      value={editedData.postal_code || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaLanguage /> Home Language</label>
+                    <input
+                      type="text"
+                      name="home_language"
+                      value={editedData.home_language || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaGlobe /> Nationality</label>
+                    <input
+                      type="text"
+                      name="nationality"
+                      value={editedData.nationality || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaUserTie /> Next of Kin Name</label>
+                    <input
+                      type="text"
+                      name="kin_name"
+                      value={editedData.kin_name || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaPhoneAlt /> Next of Kin Phone</label>
+                    <input
+                      type="tel"
+                      name="kin_phone"
+                      value={editedData.kin_phone || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaUserTie /> Relationship</label>
+                    <input
+                      type="text"
+                      name="kin_relationship"
+                      value={editedData.kin_relationship || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label><FaEnvelope /> Next of Kin Email</label>
+                    <input
+                      type="email"
+                      name="kin_email"
+                      value={editedData.kin_email || ''}
+                      onChange={handleInputChange}
+                    />
+                  </div>
                   <button className="save-btn" onClick={handleSave} disabled={isUploading}>
                     <FaSave /> Save Changes
                   </button>
@@ -740,7 +864,7 @@ const ProfilePage = () => {
                     <div>
                       <span className="info-label">Full Name</span>
                       <span className="info-value">
-                        {profileData?.first_name || 'Not specified'} {profileData?.last_name || ''}
+                        {profileData?.first_name || profileData?.firstName || 'Not specified'} {profileData?.last_name || profileData?.lastName || ''}
                       </span>
                     </div>
                   </div>
@@ -748,14 +872,14 @@ const ProfilePage = () => {
                     <FaIdCard className="info-icon" />
                     <div>
                       <span className="info-label">ID Number</span>
-                      <span className="info-value">{profileData?.id_number || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.id_number || profileData?.idNumber || 'Not specified'}</span>
                     </div>
                   </div>
                   <div className="info-row">
                     <FaCalendarAlt className="info-icon" />
                     <div>
                       <span className="info-label">Date of Birth</span>
-                      <span className="info-value">{profileData?.date_of_birth || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.date_of_birth || profileData?.dateOfBirth || 'Not specified'}</span>
                     </div>
                   </div>
                   <div className="info-row">
@@ -776,117 +900,95 @@ const ProfilePage = () => {
                     <FaPhone className="info-icon" />
                     <div>
                       <span className="info-label">Phone</span>
-                      <span className="info-value">{profileData?.phone_number || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.phone_number || profileData?.phoneNumber || 'Not specified'}</span>
                     </div>
                   </div>
                   <div className="info-row">
                     <FaWhatsapp className="info-icon" />
                     <div>
                       <span className="info-label">WhatsApp</span>
-                      <span className="info-value">{profileData?.whatsapp_number || 'Not specified'}</span>
+                      <span className="info-value">{profileData?.whatsapp_number || profileData?.whatsappNumber || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaHome className="info-icon" />
+                    <div>
+                      <span className="info-label">Address</span>
+                      <span className="info-value">{profileData?.address || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaHome className="info-icon" />
+                    <div>
+                      <span className="info-label">Suburb</span>
+                      <span className="info-value">{profileData?.suburb || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaHome className="info-icon" />
+                    <div>
+                      <span className="info-label">City</span>
+                      <span className="info-value">{profileData?.city || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaHome className="info-icon" />
+                    <div>
+                      <span className="info-label">Province</span>
+                      <span className="info-value">{profileData?.province || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaHome className="info-icon" />
+                    <div>
+                      <span className="info-label">Postal Code</span>
+                      <span className="info-value">{profileData?.postal_code || profileData?.postalCode || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaLanguage className="info-icon" />
+                    <div>
+                      <span className="info-label">Home Language</span>
+                      <span className="info-value">{profileData?.home_language || profileData?.homeLanguage || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaGlobe className="info-icon" />
+                    <div>
+                      <span className="info-label">Nationality</span>
+                      <span className="info-value">{profileData?.nationality || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaUserTie className="info-icon" />
+                    <div>
+                      <span className="info-label">Next of Kin</span>
+                      <span className="info-value">{profileData?.kin_name || profileData?.kinName || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaPhoneAlt className="info-icon" />
+                    <div>
+                      <span className="info-label">Kin Phone</span>
+                      <span className="info-value">{profileData?.kin_phone || profileData?.kinPhone || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaUserTie className="info-icon" />
+                    <div>
+                      <span className="info-label">Relationship</span>
+                      <span className="info-value">{profileData?.kin_relationship || profileData?.kinRelationship || 'Not specified'}</span>
+                    </div>
+                  </div>
+                  <div className="info-row">
+                    <FaEnvelope className="info-icon" />
+                    <div>
+                      <span className="info-label">Kin Email</span>
+                      <span className="info-value">{profileData?.kin_email || profileData?.kinEmail || 'Not specified'}</span>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Address & Demographics Card */}
-          <div className="profile-card address-card">
-            <div className="card-header">
-              <h2>Address & Demographics</h2>
-            </div>
-            <div className="card-body">
-              <div className="info-display">
-                <div className="info-row">
-                  <FaHome className="info-icon" />
-                  <div>
-                    <span className="info-label">Address</span>
-                    <span className="info-value">{profileData?.address || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaHome className="info-icon" />
-                  <div>
-                    <span className="info-label">Suburb</span>
-                    <span className="info-value">{profileData?.suburb || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaHome className="info-icon" />
-                  <div>
-                    <span className="info-label">City/Town</span>
-                    <span className="info-value">{profileData?.city || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaHome className="info-icon" />
-                  <div>
-                    <span className="info-label">Province</span>
-                    <span className="info-value">{profileData?.province || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaHome className="info-icon" />
-                  <div>
-                    <span className="info-label">Postal Code</span>
-                    <span className="info-value">{profileData?.postal_code || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaLanguage className="info-icon" />
-                  <div>
-                    <span className="info-label">Home Language</span>
-                    <span className="info-value">{profileData?.home_language || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaGlobe className="info-icon" />
-                  <div>
-                    <span className="info-label">Nationality</span>
-                    <span className="info-value">{profileData?.nationality || 'Not specified'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Next of Kin Card */}
-          <div className="profile-card kin-card">
-            <div className="card-header">
-              <h2>Next of Kin</h2>
-            </div>
-            <div className="card-body">
-              <div className="info-display">
-                <div className="info-row">
-                  <FaUserTie className="info-icon" />
-                  <div>
-                    <span className="info-label">Full Name</span>
-                    <span className="info-value">{profileData?.kin_name || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaPhoneAlt className="info-icon" />
-                  <div>
-                    <span className="info-label">Phone Number</span>
-                    <span className="info-value">{profileData?.kin_phone || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaUserTie className="info-icon" />
-                  <div>
-                    <span className="info-label">Relationship</span>
-                    <span className="info-value">{profileData?.kin_relationship || 'Not specified'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaEnvelope className="info-icon" />
-                  <div>
-                    <span className="info-label">Email</span>
-                    <span className="info-value">{profileData?.kin_email || 'Not specified'}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
