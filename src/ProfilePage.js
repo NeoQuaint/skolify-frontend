@@ -12,6 +12,54 @@ import {
 import API_URL from './config';
 import PasswordChange from './PasswordChange';
 
+// ==================== ORDER DETAILS MODAL COMPONENT ====================
+const OrderDetailsModal = ({ order, onClose }) => {
+  if (!order) return null;
+  
+  const universities = order.universities || [];
+  const totalCourses = universities.reduce((sum, uni) => sum + (uni.courses?.length || 0), 0);
+  
+  return (
+    <div className="order-modal-overlay" onClick={onClose}>
+      <div className="order-modal-content" onClick={(e) => e.stopPropagation()}>
+        <button className="order-modal-close" onClick={onClose}>×</button>
+        <h2>Order Details</h2>
+        <p className="order-tracking">Tracking: {order.trackingNumber}</p>
+        <p className="order-date">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+        
+        {universities.map((uni, idx) => (
+          <div key={idx} className="order-modal-uni">
+            <h3>
+              <FaUniversity /> {uni.name} ({uni.code})
+            </h3>
+            <div className="order-modal-courses">
+              {uni.courses && uni.courses.length > 0 ? (
+                uni.courses.map((course, cidx) => (
+                  <div key={cidx} className="order-modal-course">
+                    <span className="course-bullet">•</span>
+                    <span>{course}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="no-courses">No courses selected</p>
+              )}
+            </div>
+          </div>
+        ))}
+        
+        <div className="order-modal-footer">
+          <div className="order-modal-stats">
+            <span>{universities.length} Universities</span>
+            <span>{totalCourses} Courses</span>
+            <span className="order-amount">R{order.totalCost || order.amount}</span>
+          </div>
+          <button className="order-modal-close-btn" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
 function ProfileHeader({ showProfile = true }) {
   const navigate = useNavigate();
@@ -185,6 +233,7 @@ const ProfilePage = () => {
   const [showOrders, setShowOrders] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null); // For modal
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -477,7 +526,7 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* Orders Section */}
+        {/* ENHANCED ORDERS SECTION WITH MODAL */}
         {paymentSelections.length > 0 && (
           <div className="orders-section">
             <div className="orders-header" onClick={() => setShowOrders(!showOrders)}>
@@ -493,40 +542,37 @@ const ProfilePage = () => {
             {showOrders && (
               <div className="orders-grid">
                 {paymentSelections.map((order, index) => {
-                  const orderId = order.id || `order-${index}`;
-                  const isExpanded = expandedOrder === orderId;
-                  const orderUniversities = order.universities || [];
-                  const totalCourses = order.totalCourses || 
-                    orderUniversities.reduce((sum, uni) => sum + (uni.courses?.length || 0), 0);
-                  const trackingNumber = getTrackingNumber(order);
+                  const universities = order.universities || [];
+                  const totalCourses = universities.reduce((sum, uni) => sum + (uni.courses?.length || 0), 0);
+                  const trackingNumber = order.trackingNumber;
                   
                   return (
                     <div key={index} className="order-card">
                       <div className="order-card-header">
                         <div className="order-date-badge">
                           <FaCalendarAlt className="date-icon" />
-                          <span>{formatDate(order.createdAt || order.timestamp || order.created_at)}</span>
+                          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
                         </div>
-                        {trackingNumber ? (
+                        {trackingNumber && (
                           <div className="tracking-badge">
                             <FaHashtag className="tracking-icon" />
                             <span>{trackingNumber}</span>
                           </div>
-                        ) : (
-                          <div className="status-badge saved">Selection Saved</div>
                         )}
                       </div>
                       
                       <div className="order-card-body">
                         <div className="order-package-row">
-                          <span className="package-tag">{order.package?.toUpperCase() || 'BASIC'}</span>
-                          <span className="order-amount">R{order.totalCost || order.amount || getPackagePrice(order.package)}</span>
+                          <span className={`package-tag ${order.package?.toLowerCase()}`}>
+                            {order.package?.toUpperCase() || 'BASIC'} PACKAGE
+                          </span>
+                          <span className="order-amount">R{order.totalCost || order.amount || 0}</span>
                         </div>
                         
                         <div className="order-stats-row">
                           <span className="stat-item">
                             <FaUniversity className="stat-icon" />
-                            {orderUniversities.length} {orderUniversities.length === 1 ? 'University' : 'Universities'}
+                            {universities.length} {universities.length === 1 ? 'University' : 'Universities'}
                           </span>
                           <span className="stat-item">
                             <FaGraduationCap className="stat-icon" />
@@ -534,53 +580,27 @@ const ProfilePage = () => {
                           </span>
                         </div>
                         
-                        {!isExpanded ? (
-                          <div className="universities-mini-list">
-                            {orderUniversities.slice(0, 2).map((uni, idx) => (
-                              <div key={idx} className="uni-mini-item">
-                                <span className="uni-code">{uni.code}</span>
-                                <span className="uni-courses-count">{uni.courses?.length || 0} courses</span>
-                              </div>
-                            ))}
-                            {orderUniversities.length > 2 && (
-                              <div className="more-unis">+{orderUniversities.length - 2} more</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="universities-expanded-list">
-                            {orderUniversities.map((uni, idx) => (
-                              <div key={idx} className="uni-expanded-item">
-                                <div className="uni-expanded-header">
-                                  <FaUniversity className="uni-icon-small" />
-                                  <span className="uni-expanded-name">{uni.name} ({uni.code})</span>
-                                </div>
-                                <div className="courses-expanded-list">
-                                  {uni.courses && uni.courses.length > 0 ? (
-                                    uni.courses.map((course, cidx) => (
-                                      <div key={cidx} className="course-expanded-item">
-                                        <span className="course-bullet">•</span>
-                                        <span className="course-name">{course}</span>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <span className="no-courses">No courses selected</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                            <div className="expanded-total">
-                              <strong>Total:</strong> {totalCourses} courses across {orderUniversities.length} universities
+                        {/* Show first 2 universities with course counts */}
+                        <div className="universities-mini-list">
+                          {universities.slice(0, 2).map((uni, idx) => (
+                            <div key={idx} className="uni-mini-item">
+                              <span className="uni-code">{uni.code || uni.name?.substring(0, 4).toUpperCase()}</span>
+                              <span className="uni-name">{uni.name}</span>
+                              <span className="uni-courses-count">{uni.courses?.length || 0} courses</span>
                             </div>
-                          </div>
-                        )}
+                          ))}
+                          {universities.length > 2 && (
+                            <div className="more-unis">+{universities.length - 2} more universities</div>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="order-card-footer">
                         <button 
                           className="view-details-btn"
-                          onClick={() => toggleOrderExpand(orderId)}
+                          onClick={() => setSelectedOrder(order)}
                         >
-                          {isExpanded ? 'Show Less' : 'View Details'}
+                          View Full Details
                         </button>
                       </div>
                     </div>
@@ -979,6 +999,14 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <OrderDetailsModal 
+          order={selectedOrder} 
+          onClose={() => setSelectedOrder(null)} 
+        />
+      )}
 
       {showPasswordChange && (
         <PasswordChange 
