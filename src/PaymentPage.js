@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
-import { FaUniversity, FaSpinner, FaBook, FaTimes, FaExchangeAlt, FaArrowLeft, FaCheck, FaUser, FaLock, FaHistory, FaMagic, FaLightbulb, FaSearch, FaCopy, FaUserCircle } from 'react-icons/fa';
+import { FaUniversity, FaSpinner, FaBook, FaTimes, FaExchangeAlt, FaArrowLeft, FaCheck, FaUser, FaLock, FaHistory, FaMagic, FaLightbulb, FaSearch, FaCopy, FaUserCircle, FaQuestionCircle } from 'react-icons/fa';
 import API_URL from './config';
 
 
@@ -13,10 +13,8 @@ function PaymentHeader({ showProfile = true }) {
   const dropdownRef = useRef(null);
 
   const handleLogout = () => {
-    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
-    // Navigate to login page
     navigate('/');
   };
 
@@ -25,7 +23,6 @@ function PaymentHeader({ showProfile = true }) {
     navigate('/profile');
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -59,7 +56,6 @@ function PaymentHeader({ showProfile = true }) {
         margin: '0 auto',
         width: '100%'
       }}>
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
           <img
             src="/Skolify-Logo.jpeg"
@@ -73,7 +69,6 @@ function PaymentHeader({ showProfile = true }) {
           <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
         </div>
 
-        {/* Profile icon only for logged-in pages */}
         {showProfile && (
           <div ref={dropdownRef} style={{ position: 'relative' }}>
             <FaUserCircle 
@@ -153,7 +148,6 @@ function PaymentHeader({ showProfile = true }) {
                     e.currentTarget.style.background = 'none';
                   }}
                 >
-                  <span style={{ fontSize: '18px' }}></span>
                   <span>Logout</span>
                 </button>
               </div>
@@ -178,48 +172,46 @@ const PaymentPage = () => {
   'Stellenbosch University': { code: 'SU', logo: '/SU.jpeg' },
   'University of Pretoria': { code: 'UP', logo: '/UP.jpeg' },
   'University of South Africa': { code: 'UNISA', logo: '/UNISA.jpeg' },
-  'University of Western Cape': { code: 'UWC', logo: '/UWC.jpeg' },  // Fix: UWC not UOTWC
+  'University of Western Cape': { code: 'UWC', logo: '/UWC.jpeg' },
   'University of Witwatersrand': { code: 'WITS', logo: '/WITS.jpeg' },
   'North-West University': { code: 'NWU', logo: '/NWU.jpeg' },
   'Nelson Mandela University': { code: 'NMU', logo: '/NMU.jpeg' },
   'University of KwaZulu-Natal': { code: 'UKZN', logo: '/KZN.jpeg' },
   'Rhodes University': { code: 'RHODES', logo: '/RHODES.jpeg' },
   'University of Cape Town': { code: 'UCT', logo: '/UCT.jpeg' },
-  'University of Free State': { code: 'UFS', logo: '/UFS.jpeg' },  // Fix: UFS not UOTFS
+  'University of Free State': { code: 'UFS', logo: '/UFS.jpeg' },
   'University of Limpopo': { code: 'UL', logo: '/UL.jpeg' },
   'Tshwane University of Technology': { code: 'TUT', logo: '/TUT.jpeg' },
   }), []);
 
-  // Universities with NO application fee
   const groupAInstitutions = useMemo(() => [
-    'University of Johannesburg',  // UJ
-    'Tshwane University of Technology', // TUT
-    'North-West University', // NWU
-    'Nelson Mandela University', // NMU
-    'Walter Sisulu University', // WSU
-    'Sol Plaatje University', // SPU
-    'University of Free State', // UFS
-    'University of Western Cape' // UWC
+    'University of Johannesburg',
+    'Tshwane University of Technology',
+    'North-West University',
+    'Nelson Mandela University',
+    'Walter Sisulu University',
+    'Sol Plaatje University',
+    'University of Free State',
+    'University of Western Cape'
   ], []);
 
-  // Universities with application fee required
   const groupBInstitutions = useMemo(() => [
-    'University of Cape Town', // UCT
-    'University of Witwatersrand', // WITS
-    'University of South Africa', // UNISA
-    'University of Limpopo', // UL
-    'University of Pretoria', // UP
-    'Stellenbosch University', // SU
-    'University of KwaZulu-Natal', // UKZN
-    'Rhodes University', // RHODES
-    'University of Fort Hare', // UFH
-    'University of Venda', // UNIVEN
-    'University of Zululand', // UNIZULU
-    'Durban University of Technology', // DUT
-    'Cape Peninsula University of Technology', // CPUT
-    'Central University of Technology', // CUT
-    'Mangosuthu University of Technology', // MUT
-    'Sefako Makgatho Health Sciences University' // SMU
+    'University of Cape Town',
+    'University of Witwatersrand',
+    'University of South Africa',
+    'University of Limpopo',
+    'University of Pretoria',
+    'Stellenbosch University',
+    'University of KwaZulu-Natal',
+    'Rhodes University',
+    'University of Fort Hare',
+    'University of Venda',
+    'University of Zululand',
+    'Durban University of Technology',
+    'Cape Peninsula University of Technology',
+    'Central University of Technology',
+    'Mangosuthu University of Technology',
+    'Sefako Makgatho Health Sciences University'
   ], []);
 
   const institutionCourseLimits = useMemo(() => ({
@@ -277,8 +269,6 @@ const PaymentPage = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState('info');
-
-
   
   // State for Maximise Options feature
   const [showMaximiseModal, setShowMaximiseModal] = useState(false);
@@ -300,12 +290,16 @@ const PaymentPage = () => {
   const [accountUsername, setAccountUsername] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
   
+  // State for fee info tooltip
+  const [showFeeInfoPopup, setShowFeeInfoPopup] = useState(false);
+  const [feeInfoGroup, setFeeInfoGroup] = useState(null); // 'A' or 'B'
+  
   // Profile menu state
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
   const profileIconRef = useRef(null);
   
-  // Package limits - Custom removed
+  // Package limits
   const packageLimits = useMemo(() => ({
     basic: { universities: 2 },
     standard: { universities: 4 },
@@ -330,7 +324,6 @@ const PaymentPage = () => {
     }, duration);
   }, []);
 
-  // Click outside to close profile menu
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showProfileMenu && 
@@ -348,7 +341,6 @@ const PaymentPage = () => {
     };
   }, [showProfileMenu]);
 
-  // Get student marks from all possible sources
   const getStudentMarks = useCallback(() => {
     try {
       if (studentMarks.length > 0) {
@@ -894,7 +886,6 @@ const PaymentPage = () => {
     return { groupA, groupB };
   }, [groupAInstitutions, groupBInstitutions]);
 
-  // Clear old selections on new session
   useEffect(() => {
     const sessionStarted = sessionStorage.getItem('payment_session_started');
     if (!sessionStarted) {
@@ -902,7 +893,6 @@ const PaymentPage = () => {
     }
   }, []);
 
-  // Load ALL previous selections from database when page loads
   useEffect(() => {
     const loadAllSelections = async () => {
       const token = localStorage.getItem('authToken');
@@ -929,7 +919,6 @@ const PaymentPage = () => {
     loadAllSelections();
   }, []);
 
-  // Check if a university is in previous orders
   const isUniversityInPreviousOrders = useCallback((universityCode, universityName) => {
     if (!isCreatingNewOrder) return false;
     
@@ -941,7 +930,6 @@ const PaymentPage = () => {
     });
   }, [previousSelections, isCreatingNewOrder]);
 
-  // Check if a specific course was in previous orders
   const isCourseInPreviousOrders = useCallback((universityCode, courseName) => {
     if (!isCreatingNewOrder) return false;
     
@@ -952,7 +940,6 @@ const PaymentPage = () => {
     });
   }, [previousSelections, isCreatingNewOrder]);
 
-  // Initialize page with marks and courses
   useEffect(() => {
     const initializePage = async () => {
       window.scrollTo(0, 0);
@@ -1022,7 +1009,6 @@ const PaymentPage = () => {
     initializePage();
   }, [location.state]);
 
-  // Update universities selected status
   useEffect(() => {
     if (universities.length > 0) {
       setUniversities(prev => prev.map(uni => ({
@@ -1040,7 +1026,6 @@ const PaymentPage = () => {
     }
   }, [universities, separateUniversitiesIntoGroups]);
 
-  // Fetch universities
   const fetchUniversities = async (courseNames, marks = []) => {
     setIsLoading(true);
     setError(null);
@@ -1310,7 +1295,6 @@ const PaymentPage = () => {
   }, []);
 
   const handleSwitchToCustom = useCallback(() => {
-    // Custom package removed - this function is kept but not used
     setShowSwitchToCustomPopup(false);
     if (pendingSelection) {
       if (pendingSelection.coursesToAdd) {
@@ -1362,27 +1346,23 @@ const PaymentPage = () => {
     return getCoursesForUniversity(selectedUniversity);
   }, [selectedUniversity, getCoursesForUniversity]);
 
-  // NEW FUNCTION: Check if university has maximum courses selected
   const hasUniversityReachedMaxCourses = useCallback((university) => {
     const currentCount = selectedCourses[university.code]?.length || 0;
     const maxLimit = getInstitutionCourseLimit(university.name);
     return currentCount === maxLimit;
   }, [selectedCourses, getInstitutionCourseLimit]);
 
-  // NEW FUNCTION: Check if user has selected maximum universities for their package
   const hasReachedMaxUniversities = useCallback(() => {
     const currentUniversities = Object.keys(selectedCourses).length;
     const maxUniversities = packageLimits[selectedPackage].universities;
     return currentUniversities === maxUniversities;
   }, [selectedCourses, selectedPackage, packageLimits]);
 
-  // MODIFIED: handleApply with enforcement
   const handleApply = useCallback(async () => {
     const selectedUnis = getSelectedUniversities();
     const totalCourses = calculateTotalApplications();
     const totalUniversities = Object.keys(selectedCourses).length;
     
-    // ENFORCEMENT 1: Check if any courses are selected
     if (totalCourses === 0) {
       showNotificationMessage('Please select at least one course from any university', 'warning');
       return;
@@ -1390,7 +1370,6 @@ const PaymentPage = () => {
 
     const limits = packageLimits[selectedPackage];
     
-    // ENFORCEMENT 2: Check if user has selected EXACT maximum universities for their package
     if (totalUniversities !== limits.universities) {
       const remaining = limits.universities - totalUniversities;
       if (remaining > 0) {
@@ -1401,7 +1380,6 @@ const PaymentPage = () => {
       return;
     }
     
-    // ENFORCEMENT 3: Check each selected university has maximum courses
     const incompleteUniversities = [];
     for (const uni of selectedUnis) {
       const currentCourses = selectedCourses[uni.code]?.length || 0;
@@ -1441,16 +1419,12 @@ const PaymentPage = () => {
       totalCost: totalCost
     };
     
-    // Store in sessionStorage temporarily (not localStorage)
     sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
-    
-    // Open payment popup - NO DATABASE SAVE HERE
     setShowPaymentPopup(true);
     
   }, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage, getInstitutionCourseLimit]);
   
   const handlePaymentComplete = useCallback(async (paymentResult) => {
-    // Prevent duplicate processing
     if (isProcessingComplete) {
       console.log('⚠️ Already processing payment completion, ignoring duplicate call');
       return;
@@ -1586,12 +1560,10 @@ const PaymentPage = () => {
     navigate('/');
   }, [navigate]);
 
-  // NEW: Check if apply button should be disabled based on new enforcement rules
   const isApplyDisabled = useMemo(() => {
     const totalUniversities = Object.keys(selectedCourses).length;
     const maxUniversities = packageLimits[selectedPackage].universities;
     
-    // Check if any university doesn't have max courses
     let allUniversitiesHaveMaxCourses = true;
     for (const uni of getSelectedUniversities()) {
       const currentCourses = selectedCourses[uni.code]?.length || 0;
@@ -1605,7 +1577,6 @@ const PaymentPage = () => {
     return totalUniversities !== maxUniversities || !allUniversitiesHaveMaxCourses;
   }, [selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, getInstitutionCourseLimit]);
 
-  // NEW: Get apply button tooltip text
   const getApplyButtonTooltip = useMemo(() => {
     const totalUniversities = Object.keys(selectedCourses).length;
     const maxUniversities = packageLimits[selectedPackage].universities;
@@ -1619,7 +1590,6 @@ const PaymentPage = () => {
       return `Please select ${remaining} more universit${remaining > 1 ? 'ies' : 'y'} to reach your ${selectedPackage} package limit of ${maxUniversities} universities`;
     }
     
-    // Check which universities are missing courses
     for (const uni of getSelectedUniversities()) {
       const currentCourses = selectedCourses[uni.code]?.length || 0;
       const maxCourses = getInstitutionCourseLimit(uni.name);
@@ -1635,11 +1605,10 @@ const PaymentPage = () => {
   console.log('🔵 PaymentPage rendering - Apply button enabled:', !isApplyDisabled);
 
   return (
-   <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
-  <PaymentHeader showProfile={true} />
-  
+    <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
+      <PaymentHeader showProfile={true} />
+      
       <div className="payment-container">
-        {/* New Order Banner for logged-in users with previous orders */}
         {isCreatingNewOrder && previousSelections.length > 0 && (
           <div className="new-order-banner">
             <FaHistory className="new-order-icon" />
@@ -1660,7 +1629,6 @@ const PaymentPage = () => {
           <h1 className="main-heading">Select Your Universities & Courses</h1>
         </div>
 
-        {/* Maximise Options Banner */}
         {selectedUniversities.length > 0 && selectedUniversities.length < packageLimits[selectedPackage].universities && (
           <div className="maximise-options-banner">
             <div className="maximise-banner-content">
@@ -1738,7 +1706,16 @@ const PaymentPage = () => {
                   {groupAUniversities.length > 0 && (
                     <div className="university-group-card">
                       <div className="group-header">
-                        <span className="group-name">No Application Fee</span>
+                        <div className="group-header-left">
+                          <span className="group-name">No Application Fee</span>
+                          <FaQuestionCircle 
+                            className="group-info-icon group-info-icon-grey"
+                            onClick={() => {
+                              setFeeInfoGroup('A');
+                              setShowFeeInfoPopup(true);
+                            }}
+                          />
+                        </div>
                         <span className="group-count">{groupAUniversities.length}</span>
                       </div>
                       <div className="universities-grid">
@@ -1813,7 +1790,16 @@ const PaymentPage = () => {
                   {groupBUniversities.length > 0 && (
                     <div className="university-group-card">
                       <div className="group-header">
-                        <span className="group-name">Application Fee Required</span>
+                        <div className="group-header-left">
+                          <span className="group-name">Application Fee Required</span>
+                          <FaQuestionCircle 
+                            className="group-info-icon group-info-icon-orange"
+                            onClick={() => {
+                              setFeeInfoGroup('B');
+                              setShowFeeInfoPopup(true);
+                            }}
+                          />
+                        </div>
                         <span className="group-count">{groupBUniversities.length}</span>
                       </div>
                       <div className="universities-grid">
@@ -2062,6 +2048,44 @@ const PaymentPage = () => {
         )}
       </div>
 
+      {/* Fee Info Popup Modal */}
+      {showFeeInfoPopup && (
+        <div className="fee-info-modal">
+          <div className="fee-info-overlay" onClick={() => setShowFeeInfoPopup(false)}></div>
+          <div className="fee-info-content">
+            <div className={`fee-info-header ${feeInfoGroup === 'A' ? 'header-green' : 'header-orange'}`}>
+              <h3>
+                {feeInfoGroup === 'A' ? 'No Application Fee' : 'Application Fee Required'}
+              </h3>
+              <button className="close-fee-info" onClick={() => setShowFeeInfoPopup(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="fee-info-body">
+              {feeInfoGroup === 'A' ? (
+                <p>
+                  These universities do not require an application fee. Skolify will submit your applications at no additional cost. 
+                  However, if a university charges an admission fee upon acceptance, that fee must be paid by the student directly to the university. 
+                  Skolify does not cover admission fees.
+                </p>
+              ) : (
+                <p>
+                  These universities require a non-refundable application fee per submission. Application fees are the student's responsibility 
+                  and are NOT included in any Skolify package. For example, if you apply to the University of Cape Town (UCT) which charges R100, 
+                  you must pay that R100 directly to UCT. Skolify only charges for your selected package (e.g., R329 for Standard), which covers 
+                  our application assistance service, not the university's application fee.
+                </p>
+              )}
+            </div>
+            <div className="fee-info-footer">
+              <button className="got-it-btn" onClick={() => setShowFeeInfoPopup(false)}>
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedUniversity && (
         <div className="courses-modal">
           <div className="courses-modal-overlay" onClick={handleCloseCoursesModal}></div>
@@ -2251,7 +2275,6 @@ const PaymentPage = () => {
                   {getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} slots remaining
                 </span>
               </div>
-              {/* MODIFIED: Only enable Done button when at max courses for this university */}
               <button 
                 className="done-selecting-btn"
                 onClick={handleCloseCoursesModal}
@@ -2356,7 +2379,6 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Maximise Options Modal */}
       {showMaximiseModal && (
         <div className="maximise-modal">
           <div className="maximise-modal-overlay" onClick={() => {
@@ -2487,7 +2509,6 @@ const PaymentPage = () => {
                     <div className="selected-courses-count">
                       Selected: {tempSelections[expandedUniversity.university.code]?.length || 0}/{getInstitutionCourseLimit(expandedUniversity.university.name)}
                     </div>
-                    {/* MODIFIED: Only enable Done button when at max courses in maximise modal */}
                     <button 
                       className="done-selecting-btn"
                       onClick={saveTempSelections}
@@ -2585,7 +2606,6 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Package Upgrade Popup - Updated for 3 packages only */}
       {showSwitchToCustomPopup && (
         <div className="switch-custom-popup-modal">
           <div className="switch-custom-popup-overlay" onClick={() => setShowSwitchToCustomPopup(false)}></div>
@@ -2674,7 +2694,6 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Simple Notification Popup */}
       {showNotification && (
         <div className="notification-modal">
           <div className="notification-overlay" onClick={() => setShowNotification(false)}></div>
@@ -2705,7 +2724,6 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Account Credentials Modal */}
       {showCredentialsModal && (
         <div className="credentials-modal">
           <div className="credentials-modal-overlay" onClick={() => setShowCredentialsModal(false)}></div>
@@ -2781,15 +2799,15 @@ const PaymentPage = () => {
         selectedPackage={selectedPackage}
         onPaymentComplete={handlePaymentComplete}
       />
-      {/* Footer */}
-<footer className="payment-footer">
-  <div className="footer-links">
-    <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
-    <span className="footer-separator">|</span>
-    <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>Privacy Policy</a>
-  </div>
-  <p className="copyright">© {new Date().getFullYear()} Skolify. All rights reserved.</p>
-</footer>
+
+      <footer className="payment-footer">
+        <div className="footer-links">
+          <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
+          <span className="footer-separator">|</span>
+          <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>Privacy Policy</a>
+        </div>
+        <p className="copyright">© {new Date().getFullYear()} Skolify. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
