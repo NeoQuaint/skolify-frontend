@@ -383,37 +383,27 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     'Authorization': `Bearer ${token}`
   },
   body: JSON.stringify({
-    // Personal Information
-    first_name: formData.firstName,
-    last_name: formData.lastName,
-    id_number: formData.idNumber,
-    date_of_birth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+    tracking_number: trackingNumber,  // ADD THIS LINE - pass the tracking number
+    firstName: formData.firstName,
+    middleName: formData.middleName,
+    lastName: formData.lastName,
+    idNumber: formData.idNumber,
+    dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
     gender: formData.gender,
-    
-    // Contact Information
     email: formData.email,
-    phone_number: formData.phoneNumber,
-    whatsapp_number: formData.whatsappNumber,
-    
-    // Address Information ✅ ADD THESE
+    phoneNumber: formData.phoneNumber,
+    whatsappNumber: formData.whatsappNumber,
     address: formData.address,
     suburb: formData.suburb,
     city: formData.city,
     province: formData.province,
-    postal_code: formData.postalCode,
-    
-    // Demographics
-    home_language: formData.homeLanguage,
+    postalCode: formData.postalCode,
+    homeLanguage: formData.homeLanguage,
     nationality: formData.nationality,
-    
-    // Next of Kin ✅ ADD kin_relationship and kin_email
-    kin_name: formData.kinName,
-    kin_phone: formData.kinPhone,
-    kin_relationship: formData.kinRelationship,
-    kin_email: formData.kinEmail,
-    
-    // Metadata
-    tracking_number: trackingNumber,
+    kinName: formData.kinName,
+    kinPhone: formData.kinPhone,
+    kinRelationship: formData.kinRelationship,
+    kinEmail: formData.kinEmail,
     documents: {
       id: documents.id.path || null,
       results: documents.results.path || null
