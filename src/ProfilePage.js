@@ -106,7 +106,7 @@ function ProfileHeader({ showProfile = true }) {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
         width: '100%'
       }}>
@@ -249,7 +249,6 @@ const ProfilePage = () => {
       setIsLoggedIn(isUserLoggedIn);
       
       if (isUserLoggedIn && token) {
-        // Fetch user profile from database
         try {
           console.log('📡 Fetching user profile...');
           const response = await fetch(`${API_URL}/api/user/profile`, {
@@ -265,7 +264,6 @@ const ProfilePage = () => {
             setProfileData(data.user);
             setEditedData(data.user);
             
-            // Also store in localStorage for offline reference
             localStorage.setItem('userProfileData', JSON.stringify(data.user));
             
             if (data.user.documents) {
@@ -293,7 +291,6 @@ const ProfilePage = () => {
           }
         } catch (error) {
           console.error('❌ Error fetching profile:', error);
-          // Fallback to localStorage
           const storedProfileData = localStorage.getItem('userProfileData');
           if (storedProfileData) {
             const parsedData = JSON.parse(storedProfileData);
@@ -302,7 +299,6 @@ const ProfilePage = () => {
           }
         }
         
-        // Fetch ALL payment selections
         try {
           console.log('📡 Fetching ALL payment selections...');
           const selectionResponse = await fetch(`${API_URL}/api/payment/get-all-selections`, {
@@ -322,7 +318,6 @@ const ProfilePage = () => {
           console.error('❌ Error fetching payment selections:', error);
         }
         
-        // Fetch ALL applications
         try {
           console.log('📡 Fetching ALL applications...');
           const appsResponse = await fetch(`${API_URL}/api/applications/all`, {
@@ -386,7 +381,6 @@ const ProfilePage = () => {
         
         if (response.ok) {
           console.log('✅ Profile saved successfully');
-          // Refresh profile data
           setRefreshKey(prev => prev + 1);
         }
       } catch (error) {
@@ -540,7 +534,6 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* ENHANCED ORDERS SECTION WITH MODAL */}
         {paymentSelections.length > 0 && (
           <div className="orders-section">
             <div className="orders-header" onClick={() => setShowOrders(!showOrders)}>
@@ -594,7 +587,6 @@ const ProfilePage = () => {
                           </span>
                         </div>
                         
-                        {/* Show first 2 universities with course counts */}
                         <div className="universities-mini-list">
                           {universities.slice(0, 2).map((uni, idx) => (
                             <div key={idx} className="uni-mini-item">
@@ -635,9 +627,7 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* Profile Information Grid */}
         <div className="profile-grid">
-          {/* Personal Information Card */}
           <div className="profile-card personal-card">
             <div className="card-header">
               <h2>Personal Information</h2>
@@ -992,7 +982,6 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Documents Card */}
           <div className="profile-card documents-card">
             <div className="card-header">
               <h2>Uploaded Documents</h2>
@@ -1102,7 +1091,6 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Order Details Modal */}
       {selectedOrder && (
         <OrderDetailsModal 
           order={selectedOrder} 
