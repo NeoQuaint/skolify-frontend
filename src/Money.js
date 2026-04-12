@@ -21,6 +21,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [pendingTransactionData, setPendingTransactionData] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loggedInUserEmail, setLoggedInUserEmail] = useState('');
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -72,8 +74,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       
       if (!token) {
         setIsLoadingCheck(false);
+        setIsLoggedIn(false);
         return;
       }
+      
+      setIsLoggedIn(true);
       
       try {
         const response = await fetch(`${API_URL}/api/user/completed-payments`, {
@@ -112,11 +117,16 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         const data = await response.json();
         
         if (data.success) {
+          // Set the logged-in user's email - THIS IS CRITICAL
+          if (data.user.email) {
+            setLoggedInUserEmail(data.user.email);
+          }
+          
           setFormData(prev => ({
             ...prev,
             firstName: data.user.first_name || '',
             lastName: data.user.last_name || '',
-            email: data.user.email || '',
+            email: data.user.email || '',  // Use the logged-in user's email
             idNumber: data.user.id_number || '',
             gender: data.user.gender || '',
             phoneNumber: data.user.phone_number || '',
@@ -222,7 +232,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       setError('Please enter a valid ID/Passport number');
       return false;
     }
-    if (!formData.email || !formData.email.includes('@')) {
+    // Only validate email if user is NOT logged in
+    if (!isLoggedIn && (!formData.email || !formData.email.includes('@'))) {
       setError('Please enter a valid email address');
       return false;
     }
@@ -253,11 +264,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         middleName: formData.middleName,
         lastName: formData.lastName,
         idNumber: formData.idNumber,
-       dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+        dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
         gender: formData.gender,
         nationality: formData.nationality,
         homeLanguage: formData.homeLanguage,
-        email: formData.email,
+        email: isLoggedIn ? loggedInUserEmail : formData.email, // Use logged-in email if available
         phoneNumber: formData.phoneNumber,
         whatsappNumber: formData.whatsappNumber,
         address: formData.address,
@@ -290,7 +301,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        email: formData.email,
+        email: isLoggedIn ? loggedInUserEmail : formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phoneNumber: formData.phoneNumber,
@@ -327,7 +338,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     console.log('✅ Got tracking number from backend:', trackingNumber);
     
-    // Save payment selection - FIXED VERSION
+    // Save payment selection
     if (applicationData.package) {
       console.log('📥 Saving payment selection with tracking:', trackingNumber);
       
@@ -355,61 +366,58 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         if (!paymentResponse.ok) {
           const errorText = await paymentResponse.text();
           console.error('❌ Payment selection save failed:', errorText);
-          // Don't throw - continue with application save
         } else {
           const paymentResult = await paymentResponse.json();
           console.log('✅ Payment selection saved:', paymentResult);
         }
       } catch (paymentError) {
         console.error('❌ Payment selection error:', paymentError);
-        // Continue anyway - main application is more important
       }
     }
     
-
     console.log('📤 SENDING APPLICATION DATA:', {
-  first_name: formData.firstName,
-  last_name: formData.lastName,
-  email: formData.email,
-  phone_number: formData.phoneNumber,
-  id_number: formData.idNumber,
-  tracking_number: trackingNumber
-});
-
-   const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    tracking_number: trackingNumber,  // ADD THIS LINE - pass the tracking number
-    firstName: formData.firstName,
-    middleName: formData.middleName,
-    lastName: formData.lastName,
-    idNumber: formData.idNumber,
-    dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
-    gender: formData.gender,
-    email: formData.email,
-    phoneNumber: formData.phoneNumber,
-    whatsappNumber: formData.whatsappNumber,
-    address: formData.address,
-    suburb: formData.suburb,
-    city: formData.city,
-    province: formData.province,
-    postalCode: formData.postalCode,
-    homeLanguage: formData.homeLanguage,
-    nationality: formData.nationality,
-    kinName: formData.kinName,
-    kinPhone: formData.kinPhone,
-    kinRelationship: formData.kinRelationship,
-    kinEmail: formData.kinEmail,
-    documents: {
-      id: documents.id.path || null,
-      results: documents.results.path || null
-    }
-  })
-});
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: isLoggedIn ? loggedInUserEmail : formData.email,
+      phone_number: formData.phoneNumber,
+      id_number: formData.idNumber,
+      tracking_number: trackingNumber
+    });
+    
+    const appResponse = await fetch(`${API_URL}/api/applications/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tracking_number: trackingNumber,
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+        gender: formData.gender,
+        email: isLoggedIn ? loggedInUserEmail : formData.email, // CRITICAL: Use logged-in email
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone,
+        kinRelationship: formData.kinRelationship,
+        kinEmail: formData.kinEmail,
+        documents: {
+          id: documents.id.path || null,
+          results: documents.results.path || null
+        }
+      })
+    });
     
     if (!appResponse.ok) {
       const errorData = await appResponse.json();
@@ -458,7 +466,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const handleBankTransfer = () => {
     if (!pendingTransactionData) return;
     
-    // Store payment pending info
     localStorage.setItem('hasCompletedPayment', 'false');
     localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData.trackingNumber);
     localStorage.setItem('pendingBankTransfer', JSON.stringify({
@@ -471,7 +478,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     setShowPaymentModal(false);
     
-    // Show success message with instructions
     alert(`✅ Application Submitted Successfully!\n\nPlease complete your payment via bank transfer:\n\nBank: ${bankDetails.bankName}\nAccount Name: ${bankDetails.accountName}\nAccount Number: ${bankDetails.accountNumber}\nBranch Code: ${bankDetails.branchCode}\n\nReference: ${formData.idNumber}\n\nAmount: R${totalAmount}\n\nYour application will be processed once payment is confirmed. You will receive an email confirmation shortly.`);
     
     if (onPaymentComplete) {
@@ -692,9 +698,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                       placeholder="john.doe@example.com"
                       value={formData.email}
                       onChange={handleInputChange}
-                      required
+                      readOnly={isLoggedIn} // Make read-only if logged in
+                      className={isLoggedIn ? 'readonly-field' : ''}
+                      required={!isLoggedIn}
                     />
-                    <small className="field-note">We'll send application updates here</small>
+                    {isLoggedIn && (
+                      <small className="field-note">Using your registered email: {loggedInUserEmail}</small>
+                    )}
                   </div>
 
                   <div className="money-row">
@@ -1013,7 +1023,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         </div>
       </div>
 
-                       {/* Payment Options Modal - MINIMALISTIC */}
+      {/* Payment Options Modal - MINIMALISTIC */}
       {showPaymentModal && (
         <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
