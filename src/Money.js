@@ -23,6 +23,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [pendingTransactionData, setPendingTransactionData] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loggedInUserEmail, setLoggedInUserEmail] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -58,7 +59,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
   };
 
-  // Bank account details
   const bankDetails = {
     accountNumber: '63199178419',
     accountName: 'K2026084461 (South Africa) (pty) Ltd',
@@ -75,21 +75,44 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       if (!token) {
         setIsLoadingCheck(false);
         setIsLoggedIn(false);
+        setProfileLoaded(true);
         return;
       }
       
       setIsLoggedIn(true);
       
       try {
-        const response = await fetch(`${API_URL}/api/user/completed-payments`, {
+        // First, fetch user profile to get the email
+        const profileResponse = await fetch(`${API_URL}/api/user/profile`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        const data = await response.json();
+        const profileData = await profileResponse.json();
         
-        if (data.success && data.hasCompletedPayments === true) {
+        if (profileData.success && profileData.user) {
+          const userEmail = profileData.user.email;
+          setLoggedInUserEmail(userEmail);
+          
+          // Pre-fill the email field with logged-in user's email
+          setFormData(prev => ({
+            ...prev,
+            email: userEmail,
+            firstName: profileData.user.first_name || prev.firstName,
+            lastName: profileData.user.last_name || prev.lastName,
+            phoneNumber: profileData.user.phone_number || prev.phoneNumber,
+            whatsappNumber: profileData.user.whatsapp_number || prev.whatsappNumber,
+          }));
+        }
+        
+        // Check payment history
+        const paymentResponse = await fetch(`${API_URL}/api/user/completed-payments`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        const paymentData = await paymentResponse.json();
+        
+        if (paymentData.success && paymentData.hasCompletedPayments === true) {
           setHasCompletedPaymentBefore(true);
-          await fetchUserProfile(true);
         } else {
           setHasCompletedPaymentBefore(false);
         }
@@ -98,57 +121,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         setHasCompletedPaymentBefore(false);
       } finally {
         setIsLoadingCheck(false);
-      }
-    };
-    
-    const fetchUserProfile = async (shouldLoad) => {
-      if (!shouldLoad) return;
-      
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      setIsLoadingProfile(true);
-      
-      try {
-        const response = await fetch(`${API_URL}/api/user/profile`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Set the logged-in user's email - THIS IS CRITICAL
-          if (data.user.email) {
-            setLoggedInUserEmail(data.user.email);
-          }
-          
-          setFormData(prev => ({
-            ...prev,
-            firstName: data.user.first_name || '',
-            lastName: data.user.last_name || '',
-            email: data.user.email || '',  // Use the logged-in user's email
-            idNumber: data.user.id_number || '',
-            gender: data.user.gender || '',
-            phoneNumber: data.user.phone_number || '',
-            whatsappNumber: data.user.whatsapp_number || '',
-            province: data.user.province || '',
-            city: data.user.city || '',
-            homeLanguage: data.user.home_language || '',
-            nationality: data.user.nationality || '',
-            kinName: data.user.kin_name || '',
-            kinPhone: data.user.kin_phone || '',
-            dateOfBirth: data.user.date_of_birth || '',
-            address: data.user.address || '',
-            suburb: data.user.suburb || '',
-            postalCode: data.user.postal_code || '',
-            kinRelationship: data.user.kin_relationship || '',
-            kinEmail: data.user.kin_email || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setIsLoadingProfile(false);
+        setProfileLoaded(true);
       }
     };
     
@@ -232,8 +205,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       setError('Please enter a valid ID/Passport number');
       return false;
     }
-    // Only validate email if user is NOT logged in
-    if (!isLoggedIn && (!formData.email || !formData.email.includes('@'))) {
+    // Email is required for both logged-in and non-logged-in users
+    if (!formData.email || !formData.email.includes('@')) {
       setError('Please enter a valid email address');
       return false;
     }
@@ -268,7 +241,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         gender: formData.gender,
         nationality: formData.nationality,
         homeLanguage: formData.homeLanguage,
-        email: isLoggedIn ? loggedInUserEmail : formData.email, // Use logged-in email if available
+        email: formData.email, // Use the email from form (which is pre-filled for logged-in users)
         phoneNumber: formData.phoneNumber,
         whatsappNumber: formData.whatsappNumber,
         address: formData.address,
@@ -298,10 +271,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': token ? `Bearer ${token}` : ''
       },
       body: JSON.stringify({
-        email: isLoggedIn ? loggedInUserEmail : formData.email,
+        email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phoneNumber: formData.phoneNumber,
@@ -351,14 +324,12 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         courseDetails: applicationData.courseDetails
       };
       
-      console.log('📤 Payment selection data:', paymentSelectionData);
-      
       try {
         const paymentResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': token ? `Bearer ${token}` : ''
           },
           body: JSON.stringify(paymentSelectionData)
         });
@@ -378,7 +349,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     console.log('📤 SENDING APPLICATION DATA:', {
       first_name: formData.firstName,
       last_name: formData.lastName,
-      email: isLoggedIn ? loggedInUserEmail : formData.email,
+      email: formData.email,
       phone_number: formData.phoneNumber,
       id_number: formData.idNumber,
       tracking_number: trackingNumber
@@ -388,7 +359,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': token ? `Bearer ${token}` : ''
       },
       body: JSON.stringify({
         tracking_number: trackingNumber,
@@ -398,7 +369,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         idNumber: formData.idNumber,
         dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
         gender: formData.gender,
-        email: isLoggedIn ? loggedInUserEmail : formData.email, // CRITICAL: Use logged-in email
+        email: formData.email,
         phoneNumber: formData.phoneNumber,
         whatsappNumber: formData.whatsappNumber,
         address: formData.address,
@@ -518,7 +489,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
   if (!isOpen) return null;
 
-  if (isLoadingCheck) {
+  if (isLoadingCheck || !profileLoaded) {
     return (
       <div className="money-overlay">
         <div className="money-container narrow">
@@ -698,9 +669,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                       placeholder="john.doe@example.com"
                       value={formData.email}
                       onChange={handleInputChange}
-                      readOnly={isLoggedIn} // Make read-only if logged in
+                      readOnly={isLoggedIn}
                       className={isLoggedIn ? 'readonly-field' : ''}
-                      required={!isLoggedIn}
+                      required
                     />
                     {isLoggedIn && (
                       <small className="field-note">Using your registered email: {loggedInUserEmail}</small>
