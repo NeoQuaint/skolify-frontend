@@ -1431,7 +1431,7 @@ const Dashboard = () => {
       <main className="app-main" style={{ paddingTop: '80px' }}>
         <div className="app-container">
           
-          {/* Divider Line */}
+                   {/* Divider Line */}
           <div className="divider-line"></div>
 
           {/* Main Heading with Warning */}
@@ -1451,7 +1451,8 @@ const Dashboard = () => {
             }}>
               ⚠️ Experiencing high traffic please hang tight
             </div>
-          <h1 className="main-heading">Enter Your Subjects</h1>
+            <h1 className="main-heading">Enter Your Subjects</h1>
+          </div>
 
           {/* Subjects Section */}
           <div className="subjects-section" ref={subjectsSectionRef}>
