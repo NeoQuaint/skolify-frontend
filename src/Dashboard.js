@@ -1436,21 +1436,7 @@ const Dashboard = () => {
 
           {/* Main Heading with Warning */}
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <div style={{ 
-              backgroundColor: '#856404', 
-              color: '#ffe8b3',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              display: 'inline-block',
-              width: 'auto',
-              maxWidth: '90%',
-              textAlign: 'center'
-            }}>
-              ⚠️ Experiencing high traffic please hang tight
-            </div>
+            
             <h1 className="main-heading">Enter Your Subjects</h1>
           </div>
 
