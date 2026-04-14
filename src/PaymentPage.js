@@ -186,7 +186,6 @@ const PaymentPage = () => {
 
   const groupAInstitutions = useMemo(() => [
     'University of Johannesburg',
-    'Tshwane University of Technology',
     'North-West University',
     'Nelson Mandela University',
     'Walter Sisulu University',
@@ -198,6 +197,7 @@ const PaymentPage = () => {
   const groupBInstitutions = useMemo(() => [
     'University of Cape Town',
     'University of Witwatersrand',
+    'Tshwane University of Technology',
     'University of South Africa',
     'University of Limpopo',
     'University of Pretoria',
