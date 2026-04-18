@@ -1483,13 +1483,11 @@ const Dashboard = () => {
     fontWeight: 'bold',
     fontFamily: 'monospace',
     marginBottom: '10px',
-    color: '#007bff'
+    color: '#07213c'
   }}>
     Calculating...
   </div>
-  <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-    until we open on April 24th
-  </div>
+ 
   <div style={{ 
     fontSize: '14px', 
     fontWeight: '500',
