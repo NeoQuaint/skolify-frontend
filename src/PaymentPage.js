@@ -189,13 +189,13 @@ const PaymentPage = () => {
     'North-West University',
     'Nelson Mandela University',
     'Walter Sisulu University',
-    'Sol Plaatje University',
     'University of Free State',
     'University of Western Cape'
   ], []);
 
   const groupBInstitutions = useMemo(() => [
     'University of Cape Town',
+     'Sol Plaatje University',
     'University of Witwatersrand',
     'Tshwane University of Technology',
     'University of South Africa',
