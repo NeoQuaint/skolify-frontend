@@ -1476,22 +1476,36 @@ const Dashboard = () => {
           {/* Divider Line */}
           <div className="divider-line"></div>
 
-          {/* Plain Countdown Timer */}
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <div id="launch-countdown" style={{ 
-              fontSize: '32px', 
-              fontWeight: 'bold',
-              fontFamily: 'monospace',
-              marginBottom: '10px',
-              color: '#333'
-            }}>
-              Calculating...
-            </div>
-            <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-              Opening on April 24th
-            </div>
-            <h1 className="main-heading">Enter Your Subjects</h1>
-          </div>
+          {/* Plain Countdown Timer with Message */}
+<div style={{ textAlign: 'center', marginBottom: '20px' }}>
+  <div id="launch-countdown" style={{ 
+    fontSize: '36px', 
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+    marginBottom: '10px',
+    color: '#007bff'
+  }}>
+    Calculating...
+  </div>
+  <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+    until we open on April 24th
+  </div>
+  <div style={{ 
+    fontSize: '14px', 
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: '5px'
+  }}>
+    Be back soon!
+  </div>
+  <div style={{ 
+    fontSize: '12px', 
+    color: '#888'
+  }}>
+    We're making the app better for your experience
+  </div>
+  <h1 className="main-heading">Enter Your Subjects</h1>
+</div>
 
           {/* Subjects Section */}
           <div className="subjects-section" ref={subjectsSectionRef}>
