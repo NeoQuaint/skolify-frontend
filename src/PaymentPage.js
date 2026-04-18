@@ -195,7 +195,6 @@ const PaymentPage = () => {
 
   const groupBInstitutions = useMemo(() => [
     'University of Cape Town',
-     'Sol Plaatje University',
     'University of Witwatersrand',
     'Tshwane University of Technology',
     'University of South Africa',
@@ -2027,21 +2026,21 @@ const PaymentPage = () => {
                 </div>
 
                 <button 
-                  className="apply-now-btn"
-                  onClick={handleApply}
-                  disabled={isApplyDisabled}
-                  title={getApplyButtonTooltip}
-                  style={{
-                    opacity: isApplyDisabled ? 0.6 : 1,
-                    cursor: isApplyDisabled ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isSaving ? 'Saving...' : 
-                   (totalApplications === 0 ? 'Select Courses First' :
-                    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
-                      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
-                      'Apply Now'))}
-                </button>
+  className="apply-now-btn"
+  onClick={handleApply}
+  disabled={true}
+  title="Applications are temporarily disabled"
+  style={{
+    opacity: 0.6,
+    cursor: 'not-allowed'
+  }}
+>
+  {isSaving ? 'Saving...' : 
+   (totalApplications === 0 ? 'Select Courses First' :
+    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
+      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
+      'Apply Now'))}
+</button>
               </div>
             </div>
           </>
