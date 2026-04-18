@@ -1483,7 +1483,7 @@ const Dashboard = () => {
     fontWeight: 'bold',
     fontFamily: 'monospace',
     marginBottom: '10px',
-    color: '#07213c'
+    color: '#1a426d'
   }}>
     Calculating...
   </div>
