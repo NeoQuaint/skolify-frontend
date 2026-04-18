@@ -705,6 +705,48 @@ const Dashboard = () => {
     fetchBackendData();
   }, []);
 
+  // COUNTDOWN TIMER TO APRIL 24TH
+  useEffect(() => {
+    // Target date: April 24th of current year
+    const targetDate = new Date();
+    targetDate.setMonth(3); // April (months are 0-indexed: 3 = April)
+    targetDate.setDate(24);
+    targetDate.setHours(0, 0, 0, 0); // Midnight on April 24th
+    
+    // If we've passed April 24th this year, target next year
+    if (new Date() > targetDate) {
+      targetDate.setFullYear(targetDate.getFullYear() + 1);
+    }
+    
+    const updateCountdown = () => {
+      const now = new Date();
+      const difference = targetDate - now;
+      
+      if (difference <= 0) {
+        const countdownElement = document.getElementById('launch-countdown');
+        if (countdownElement) {
+          countdownElement.innerHTML = "Now Open! 🎉";
+        }
+        return;
+      }
+      
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      
+      const countdownElement = document.getElementById('launch-countdown');
+      if (countdownElement) {
+        countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      }
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Get current faculties from backend data
   const getCurrentFaculties = useCallback(() => {
     if (backendData.isConnected && backendData.courses.length > 0) {
@@ -1431,12 +1473,23 @@ const Dashboard = () => {
       <main className="app-main" style={{ paddingTop: '80px' }}>
         <div className="app-container">
           
-                   {/* Divider Line */}
+          {/* Divider Line */}
           <div className="divider-line"></div>
 
-          {/* Main Heading with Warning */}
+          {/* Plain Countdown Timer */}
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-             
+            <div id="launch-countdown" style={{ 
+              fontSize: '32px', 
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              marginBottom: '10px',
+              color: '#333'
+            }}>
+              Calculating...
+            </div>
+            <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+              Opening on April 24th
+            </div>
             <h1 className="main-heading">Enter Your Subjects</h1>
           </div>
 
