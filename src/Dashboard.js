@@ -5,6 +5,12 @@ import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowR
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
+// ==================== HIDDEN UNIVERSITIES ====================
+const HIDDEN_UNIVERSITIES = [
+  'Nelson Mandela University',
+  'Sol Plaatje University'
+];
+
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
 function DashboardHeader({ showProfile = true}) {
   const navigate = useNavigate();
@@ -907,7 +913,13 @@ const Dashboard = () => {
       const result = await response.json();
 
       if (result.status === 'success') {
-        const eligibleCoursesData = result.eligible_courses || [];
+        // FILTER OUT HIDDEN UNIVERSITIES FROM ELIGIBLE COURSES
+        let eligibleCoursesData = (result.eligible_courses || []).filter(course => 
+          !HIDDEN_UNIVERSITIES.some(hidden => 
+            course.institution_name?.toLowerCase().includes(hidden.toLowerCase())
+          )
+        );
+        
         setEligibleCourses(eligibleCoursesData);
         saveState('eligibleCourses', eligibleCoursesData);
 
