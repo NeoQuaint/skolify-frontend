@@ -5,12 +5,6 @@ import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowR
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
-// ==================== HIDDEN UNIVERSITIES ====================
-const HIDDEN_UNIVERSITIES = [
-  'Nelson Mandela University',
-  'Sol Plaatje University'
-];
-
 // ==================== HEADER COMPONENT WITH DROPDOWN ====================
 function DashboardHeader({ showProfile = true}) {
   const navigate = useNavigate();
@@ -711,48 +705,6 @@ const Dashboard = () => {
     fetchBackendData();
   }, []);
 
-  // COUNTDOWN TIMER TO APRIL 24TH
-  useEffect(() => {
-    // Target date: April 24th of current year
-    const targetDate = new Date();
-    targetDate.setMonth(3); // April (months are 0-indexed: 3 = April)
-    targetDate.setDate(24);
-    targetDate.setHours(0, 0, 0, 0); // Midnight on April 24th
-    
-    // If we've passed April 24th this year, target next year
-    if (new Date() > targetDate) {
-      targetDate.setFullYear(targetDate.getFullYear() + 1);
-    }
-    
-    const updateCountdown = () => {
-      const now = new Date();
-      const difference = targetDate - now;
-      
-      if (difference <= 0) {
-        const countdownElement = document.getElementById('launch-countdown');
-        if (countdownElement) {
-          countdownElement.innerHTML = "Now Open! 🎉";
-        }
-        return;
-      }
-      
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-      
-      const countdownElement = document.getElementById('launch-countdown');
-      if (countdownElement) {
-        countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-      }
-    };
-    
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
   // Get current faculties from backend data
   const getCurrentFaculties = useCallback(() => {
     if (backendData.isConnected && backendData.courses.length > 0) {
@@ -913,13 +865,7 @@ const Dashboard = () => {
       const result = await response.json();
 
       if (result.status === 'success') {
-        // FILTER OUT HIDDEN UNIVERSITIES FROM ELIGIBLE COURSES
-        let eligibleCoursesData = (result.eligible_courses || []).filter(course => 
-          !HIDDEN_UNIVERSITIES.some(hidden => 
-            course.institution_name?.toLowerCase().includes(hidden.toLowerCase())
-          )
-        );
-        
+        const eligibleCoursesData = result.eligible_courses || [];
         setEligibleCourses(eligibleCoursesData);
         saveState('eligibleCourses', eligibleCoursesData);
 
@@ -1485,37 +1431,14 @@ const Dashboard = () => {
       <main className="app-main" style={{ paddingTop: '80px' }}>
         <div className="app-container">
           
-          {/* Divider Line */}
+                   {/* Divider Line */}
           <div className="divider-line"></div>
 
-          {/* Plain Countdown Timer with Message */}
-<div style={{ textAlign: 'center', marginBottom: '20px' }}>
-  <div id="launch-countdown" style={{ 
-    fontSize: '36px', 
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-    marginBottom: '10px',
-    color: '#1a426d'
-  }}>
-    Calculating...
-  </div>
- 
-  <div style={{ 
-    fontSize: '14px', 
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: '5px'
-  }}>
-    Be back soon!
-  </div>
-  <div style={{ 
-    fontSize: '12px', 
-    color: '#888'
-  }}>
-    We're making the app better for your experience
-  </div>
-  <h1 className="main-heading">Enter Your Subjects</h1>
-</div>
+          {/* Main Heading with Warning */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+             
+            <h1 className="main-heading">Enter Your Subjects</h1>
+          </div>
 
           {/* Subjects Section */}
           <div className="subjects-section" ref={subjectsSectionRef}>

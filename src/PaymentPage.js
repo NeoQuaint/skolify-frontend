@@ -187,6 +187,7 @@ const PaymentPage = () => {
   const groupAInstitutions = useMemo(() => [
     'University of Johannesburg',
     'North-West University',
+    'Nelson Mandela University',
     'Walter Sisulu University',
     'University of Free State',
     'University of Western Cape'
@@ -1025,93 +1026,118 @@ const PaymentPage = () => {
   }, [universities, separateUniversitiesIntoGroups]);
 
   const fetchUniversities = async (courseNames, marks = []) => {
-  setIsLoading(true);
-  setError(null);
-  
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    setIsLoading(true);
+    setError(null);
     
-    // ❌ REMOVE THIS ENTIRE BLOCK - Never fetch all institutions
-    // if (courseNames.length === 0) { ... }
-    
-    // ✅ ALWAYS fetch based on eligibility
-    const marksData = marks.length > 0 ? marks : getStudentMarks();
-    
-    if (marksData.length === 0) {
-      setError('No marks found. Please go back to Dashboard and enter your marks.');
-      setIsLoading(false);
-      return;
-    }
-    
-    // ✅ Use eligible-courses endpoint with student marks
-    const response = await fetch(`${API_URL}/api/eligible-courses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subjects: marksData }),
-      signal: controller.signal
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch eligible courses');
-    
-    const data = await response.json();
-    
-    if (data.status === 'success') {
-      // Group eligible courses by institution
-      const institutionsMap = new Map();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      data.eligible_courses.forEach(course => {
-        const instName = course.institution_name;
-        if (!institutionsMap.has(instName)) {
-          institutionsMap.set(instName, {
-            id: course.institution_id,
-            name: instName,
-            courses: []
-          });
-        }
-        institutionsMap.get(instName).courses.push(course);
-      });
-      
-      const universityList = Array.from(institutionsMap.values()).map(inst => {
-        let logoInfo = universityLogos[inst.name];
-        if (!logoInfo) {
-          for (const [key, value] of Object.entries(universityLogos)) {
-            if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
-                key.toLowerCase().includes(inst.name?.toLowerCase())) {
-              logoInfo = value;
-              break;
+      if (courseNames.length === 0) {
+        const response = await fetch(`${API_URL}/api/institutions-with-courses`, {
+          signal: controller.signal
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch institutions with courses');
+        const institutions = await response.json();
+        
+        const universityList = institutions.map(inst => {
+          let logoInfo = universityLogos[inst.name];
+          
+          if (!logoInfo) {
+            for (const [key, value] of Object.entries(universityLogos)) {
+              if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
+                  key.toLowerCase().includes(inst.name?.toLowerCase())) {
+                logoInfo = value;
+                break;
+              }
             }
           }
-        }
-        if (!logoInfo) {
-          logoInfo = {
-            code: inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
-            logo: '/default.png'
+          
+          if (!logoInfo) {
+            logoInfo = {
+              code: inst.code || inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
+              logo: `/${inst.code || inst.name?.split(' ').map(word => word[0]).join('')}.jpeg`
+            };
+          }
+          
+          return {
+            id: inst.id,
+            name: inst.name,
+            code: logoInfo.code,
+            logo: logoInfo.logo,
+            courses: inst.courses || [],
+            selected: selectedCourses[logoInfo.code]?.length > 0 || false,
+            available: true
           };
-        }
+        });
         
-        return {
-          id: inst.id,
-          name: inst.name,
-          code: logoInfo.code,
-          logo: logoInfo.logo,
-          courses: inst.courses,  // ✅ ONLY ELIGIBLE COURSES
-          selected: selectedCourses[logoInfo.code]?.length > 0 || false,
-          available: true
-        };
-      });
+        setUniversities(universityList);
+      } else {
+        const response = await fetch(`${API_URL}/api/institutions-by-courses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            course_names: courseNames
+          }),
+          signal: controller.signal
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch institutions by courses');
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+          const institutions = data.institutions || [];
+          
+          const universityList = institutions.map(inst => {
+            let logoInfo = universityLogos[inst.name];
+            
+            if (!logoInfo) {
+              for (const [key, value] of Object.entries(universityLogos)) {
+                if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
+                    key.toLowerCase().includes(inst.name?.toLowerCase())) {
+                  logoInfo = value;
+                  break;
+                }
+              }
+            }
+            
+            if (!logoInfo) {
+              logoInfo = {
+                code: inst.code || inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
+                logo: `/${inst.code || inst.name?.split(' ').map(word => word[0]).join('')}.jpeg`
+              };
+            }
+            
+            return {
+              id: inst.id,
+              name: inst.name,
+              code: logoInfo.code,
+              logo: logoInfo.logo,
+              courses: inst.courses || [],
+              selected: selectedCourses[logoInfo.code]?.length > 0 || false,
+              available: true
+            };
+          });
+          
+          setUniversities(universityList);
+        } else {
+          throw new Error(data.error || 'Failed to fetch institutions');
+        }
+      }
       
-      setUniversities(universityList);
+      clearTimeout(timeoutId);
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('❌ Fetch error:', error.message);
+        setError(error.message);
+        setUniversities([]);
+      }
+    } finally {
+      setIsLoading(false);
     }
-    
-    clearTimeout(timeoutId);
-  } catch (error) {
-    console.error('❌ Fetch error:', error);
-    setError(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleUniversityClick = useCallback((university) => {
     if (isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name)) {
@@ -2000,21 +2026,21 @@ const PaymentPage = () => {
                 </div>
 
                 <button 
-  className="apply-now-btn"
-  onClick={handleApply}
-  disabled={true}
-  title="Applications are temporarily disabled"
-  style={{
-    opacity: 0.6,
-    cursor: 'not-allowed'
-  }}
->
-  {isSaving ? 'Saving...' : 
-   (totalApplications === 0 ? 'Select Courses First' :
-    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
-      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
-      'Apply Now'))}
-</button>
+                  className="apply-now-btn"
+                  onClick={handleApply}
+                  disabled={isApplyDisabled}
+                  title={getApplyButtonTooltip}
+                  style={{
+                    opacity: isApplyDisabled ? 0.6 : 1,
+                    cursor: isApplyDisabled ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isSaving ? 'Saving...' : 
+                   (totalApplications === 0 ? 'Select Courses First' :
+                    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
+                      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
+                      'Apply Now'))}
+                </button>
               </div>
             </div>
           </>
