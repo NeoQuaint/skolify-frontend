@@ -161,6 +161,20 @@ function PaymentHeader({ showProfile = true }) {
 
 console.log('✅ PaymentPage.js loaded -', new Date().toISOString());
 
+// ==================== FILTER: Hide courses from specific universities ====================
+const hiddenInstitutions = [
+  'Nelson Mandela University',
+  'Sol Plaatje University'
+];
+
+const filterHiddenInstitutions = (institutions) => {
+  return institutions.filter(inst => 
+    !hiddenInstitutions.some(hidden => 
+      inst.name?.toLowerCase().includes(hidden.toLowerCase())
+    )
+  );
+};
+
 const PaymentPage = () => {
   console.log('🟢 PaymentPage component initializing');
   
@@ -574,7 +588,11 @@ const PaymentPage = () => {
         const response = await fetch(`${API_URL}/api/institutions-with-courses`);
         if (response.ok) {
           const institutions = await response.json();
-          allUniversities = institutions.map(inst => {
+          
+          // FILTER: Remove hidden institutions
+          const filteredInstitutions = filterHiddenInstitutions(institutions);
+          
+          allUniversities = filteredInstitutions.map(inst => {
             let logoInfo = universityLogos[inst.name];
             if (!logoInfo) {
               for (const [key, value] of Object.entries(universityLogos)) {
@@ -1041,7 +1059,10 @@ const PaymentPage = () => {
         if (!response.ok) throw new Error('Failed to fetch institutions with courses');
         const institutions = await response.json();
         
-        const universityList = institutions.map(inst => {
+        // FILTER: Remove hidden institutions
+        const filteredInstitutions = filterHiddenInstitutions(institutions);
+        
+        const universityList = filteredInstitutions.map(inst => {
           let logoInfo = universityLogos[inst.name];
           
           if (!logoInfo) {
@@ -1090,7 +1111,10 @@ const PaymentPage = () => {
         if (data.status === 'success') {
           const institutions = data.institutions || [];
           
-          const universityList = institutions.map(inst => {
+          // FILTER: Remove hidden institutions
+          const filteredInstitutions = filterHiddenInstitutions(institutions);
+          
+          const universityList = filteredInstitutions.map(inst => {
             let logoInfo = universityLogos[inst.name];
             
             if (!logoInfo) {
