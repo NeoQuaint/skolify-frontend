@@ -1559,49 +1559,12 @@ const PaymentPage = () => {
     navigate('/');
   }, [navigate]);
 
-  const isApplyDisabled = useMemo(() => {
-    const totalUniversities = Object.keys(selectedCourses).length;
-    const maxUniversities = packageLimits[selectedPackage].universities;
-    
-    let allUniversitiesHaveMaxCourses = true;
-    for (const uni of getSelectedUniversities()) {
-      const currentCourses = selectedCourses[uni.code]?.length || 0;
-      const maxCourses = getInstitutionCourseLimit(uni.name);
-      if (currentCourses !== maxCourses) {
-        allUniversitiesHaveMaxCourses = false;
-        break;
-      }
-    }
-    
-    return totalUniversities !== maxUniversities || !allUniversitiesHaveMaxCourses;
-  }, [selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, getInstitutionCourseLimit]);
+  // Apply button is now ALWAYS enabled
+  const isApplyDisabled = false;
 
-  const getApplyButtonTooltip = useMemo(() => {
-    const totalUniversities = Object.keys(selectedCourses).length;
-    const maxUniversities = packageLimits[selectedPackage].universities;
-    
-    if (totalUniversities === 0) {
-      return "Please select at least one university first";
-    }
-    
-    if (totalUniversities !== maxUniversities) {
-      const remaining = maxUniversities - totalUniversities;
-      return `Please select ${remaining} more universit${remaining > 1 ? 'ies' : 'y'} to reach your ${selectedPackage} package limit of ${maxUniversities} universities`;
-    }
-    
-    for (const uni of getSelectedUniversities()) {
-      const currentCourses = selectedCourses[uni.code]?.length || 0;
-      const maxCourses = getInstitutionCourseLimit(uni.name);
-      if (currentCourses !== maxCourses) {
-        const remaining = maxCourses - currentCourses;
-        return `${uni.code}: Please select ${remaining} more course${remaining > 1 ? 's' : ''} (${currentCourses}/${maxCourses} selected)`;
-      }
-    }
-    
-    return "Proceed to payment";
-  }, [selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, getInstitutionCourseLimit]);
+  const getApplyButtonTooltip = "Proceed to payment";
 
-  console.log('🔵 PaymentPage rendering - Apply button enabled:', !isApplyDisabled);
+  console.log('🔵 PaymentPage rendering - Apply button enabled: true');
 
   return (
     <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
@@ -2025,21 +1988,18 @@ const PaymentPage = () => {
                   </div>
                 </div>
 
+                {/* Apply Now Button - ALWAYS ENABLED */}
                 <button 
                   className="apply-now-btn"
                   onClick={handleApply}
-                  disabled={isApplyDisabled}
-                  title={getApplyButtonTooltip}
+                  disabled={false}
+                  title="Proceed to payment"
                   style={{
-                    opacity: isApplyDisabled ? 0.6 : 1,
-                    cursor: isApplyDisabled ? 'not-allowed' : 'pointer'
+                    opacity: 1,
+                    cursor: 'pointer'
                   }}
                 >
-                  {isSaving ? 'Saving...' : 
-                   (totalApplications === 0 ? 'Select Courses First' :
-                    (Object.keys(selectedCourses).length !== packageLimits[selectedPackage].universities ? 
-                      `Select ${packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length} More Universit${(packageLimits[selectedPackage].universities - Object.keys(selectedCourses).length) > 1 ? 'ies' : 'y'}` : 
-                      'Apply Now'))}
+                  Apply Now
                 </button>
               </div>
             </div>
