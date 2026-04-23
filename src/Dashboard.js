@@ -1638,37 +1638,42 @@ const Dashboard = () => {
           {/* ==================== PAGE 2: ELIGIBLE FACULTIES ==================== */}
           {currentPage === 2 && showFaculties && eligibleFaculties.length > 0 && (
             <>
-              {/* Back Button */}
-              <div style={{ marginBottom: '20px' }}>
-                <button 
-                  onClick={goToPage1}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 20px',
-                    background: 'transparent',
-                    border: '1px solid #007bff',
-                    borderRadius: '8px',
-                    color: '#007bff',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#007bff';
-                    e.currentTarget.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#007bff';
-                  }}
-                >
-                  <FaChevronLeft size={12} /> Back to Subjects
-                </button>
-              </div>
-
+             {/* Small Return Button - Top Left Corner */}
+<button 
+  onClick={goToPage1}
+  style={{
+    position: 'fixed',
+    top: '90px',
+    left: '20px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: 'white',
+    border: '1px solid #e0e0e0',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    color: '#007bff',
+    fontSize: '18px',
+    transition: 'all 0.2s ease',
+    zIndex: 999
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background = '#007bff';
+    e.currentTarget.style.color = 'white';
+    e.currentTarget.style.borderColor = '#007bff';
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = 'white';
+    e.currentTarget.style.color = '#007bff';
+    e.currentTarget.style.borderColor = '#e0e0e0';
+  }}
+  title="Back to Subjects"
+>
+  <FaChevronLeft size={16} />
+</button>
               <div className="divider-line"></div>
               
               <div ref={facultiesSectionRef}>
