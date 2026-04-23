@@ -4,7 +4,8 @@ import './Money.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
-  FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank
+  FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank,
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -39,8 +40,15 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     city: '',
     province: '',
     postalCode: '',
+    // Previous School fields
+    previousSchool: '',
+    previousSchoolProvince: '',
+    previousSchoolYear: '',
+    // Next of Kin fields (enhanced)
     kinName: '',
     kinRelationship: '',
+    kinIdNumber: '',
+    kinGender: '',
     kinPhone: '',
     kinEmail: '',
   });
@@ -127,12 +135,17 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             nationality: data.user.nationality || '',
             kinName: data.user.kin_name || '',
             kinPhone: data.user.kin_phone || '',
+            kinIdNumber: data.user.kin_id_number || '',
+            kinGender: data.user.kin_gender || '',
             dateOfBirth: data.user.date_of_birth || '',
             address: data.user.address || '',
             suburb: data.user.suburb || '',
             postalCode: data.user.postal_code || '',
             kinRelationship: data.user.kin_relationship || '',
-            kinEmail: data.user.kin_email || ''
+            kinEmail: data.user.kin_email || '',
+            previousSchool: data.user.previous_school || '',
+            previousSchoolProvince: data.user.previous_school_province || '',
+            previousSchoolYear: data.user.previous_school_year || ''
           }));
         }
       } catch (error) {
@@ -253,7 +266,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         middleName: formData.middleName,
         lastName: formData.lastName,
         idNumber: formData.idNumber,
-       dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+        dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
         gender: formData.gender,
         nationality: formData.nationality,
         homeLanguage: formData.homeLanguage,
@@ -265,8 +278,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         city: formData.city,
         province: formData.province,
         postalCode: formData.postalCode,
+        previousSchool: formData.previousSchool,
+        previousSchoolProvince: formData.previousSchoolProvince,
+        previousSchoolYear: formData.previousSchoolYear,
         kinName: formData.kinName,
         kinRelationship: formData.kinRelationship,
+        kinIdNumber: formData.kinIdNumber,
+        kinGender: formData.kinGender,
         kinPhone: formData.kinPhone,
         kinEmail: formData.kinEmail,
         documents: {
@@ -304,6 +322,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         dateOfBirth: formData.dateOfBirth,
         kinName: formData.kinName,
         kinPhone: formData.kinPhone,
+        kinIdNumber: formData.kinIdNumber,
+        kinGender: formData.kinGender,
         package: applicationData.package,
         amount: totalAmount,
         universities: applicationData.universities,
@@ -327,7 +347,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     console.log('✅ Got tracking number from backend:', trackingNumber);
     
-    // Save payment selection - FIXED VERSION
+    // Save payment selection
     if (applicationData.package) {
       console.log('📥 Saving payment selection with tracking:', trackingNumber);
       
@@ -355,61 +375,65 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         if (!paymentResponse.ok) {
           const errorText = await paymentResponse.text();
           console.error('❌ Payment selection save failed:', errorText);
-          // Don't throw - continue with application save
         } else {
           const paymentResult = await paymentResponse.json();
           console.log('✅ Payment selection saved:', paymentResult);
         }
       } catch (paymentError) {
         console.error('❌ Payment selection error:', paymentError);
-        // Continue anyway - main application is more important
       }
     }
     
-
     console.log('📤 SENDING APPLICATION DATA:', {
-  first_name: formData.firstName,
-  last_name: formData.lastName,
-  email: formData.email,
-  phone_number: formData.phoneNumber,
-  id_number: formData.idNumber,
-  tracking_number: trackingNumber
-});
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      phone_number: formData.phoneNumber,
+      id_number: formData.idNumber,
+      tracking_number: trackingNumber
+    });
 
-   const appResponse = await fetch(`${API_URL}/api/applications/create`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    tracking_number: trackingNumber,  // ADD THIS LINE - pass the tracking number
-    firstName: formData.firstName,
-    middleName: formData.middleName,
-    lastName: formData.lastName,
-    idNumber: formData.idNumber,
-    dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
-    gender: formData.gender,
-    email: formData.email,
-    phoneNumber: formData.phoneNumber,
-    whatsappNumber: formData.whatsappNumber,
-    address: formData.address,
-    suburb: formData.suburb,
-    city: formData.city,
-    province: formData.province,
-    postalCode: formData.postalCode,
-    homeLanguage: formData.homeLanguage,
-    nationality: formData.nationality,
-    kinName: formData.kinName,
-    kinPhone: formData.kinPhone,
-    kinRelationship: formData.kinRelationship,
-    kinEmail: formData.kinEmail,
-    documents: {
-      id: documents.id.path || null,
-      results: documents.results.path || null
-    }
-  })
-});
+    const appResponse = await fetch(`${API_URL}/api/applications/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        tracking_number: trackingNumber,
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        idNumber: formData.idNumber,
+        dateOfBirth: formData.dateOfBirth && formData.dateOfBirth !== '' ? formData.dateOfBirth : null,
+        gender: formData.gender,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        whatsappNumber: formData.whatsappNumber,
+        address: formData.address,
+        suburb: formData.suburb,
+        city: formData.city,
+        province: formData.province,
+        postalCode: formData.postalCode,
+        homeLanguage: formData.homeLanguage,
+        nationality: formData.nationality,
+        // Previous School
+        previousSchool: formData.previousSchool,
+        previousSchoolProvince: formData.previousSchoolProvince,
+        previousSchoolYear: formData.previousSchoolYear,
+        // Next of Kin (enhanced)
+        kinName: formData.kinName,
+        kinPhone: formData.kinPhone,
+        kinRelationship: formData.kinRelationship,
+        kinIdNumber: formData.kinIdNumber,
+        kinGender: formData.kinGender,
+        kinEmail: formData.kinEmail,
+        documents: {
+          id: documents.id.path || null,
+          results: documents.results.path || null
+        }
+      })
+    });
     
     if (!appResponse.ok) {
       const errorData = await appResponse.json();
@@ -420,7 +444,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
     
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
-    
     sessionStorage.removeItem('pendingApplicationSummary');
     
     return trackingNumber;
@@ -458,7 +481,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const handleBankTransfer = () => {
     if (!pendingTransactionData) return;
     
-    // Store payment pending info
     localStorage.setItem('hasCompletedPayment', 'false');
     localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData.trackingNumber);
     localStorage.setItem('pendingBankTransfer', JSON.stringify({
@@ -471,7 +493,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     setShowPaymentModal(false);
     
-    // Show success message with instructions
     alert(`✅ Application Submitted Successfully!\n\nPlease complete your payment via bank transfer:\n\nBank: ${bankDetails.bankName}\nAccount Name: ${bankDetails.accountName}\nAccount Number: ${bankDetails.accountNumber}\nBranch Code: ${bankDetails.branchCode}\n\nReference: ${formData.idNumber}\n\nAmount: R${totalAmount}\n\nYour application will be processed once payment is confirmed. You will receive an email confirmation shortly.`);
     
     if (onPaymentComplete) {
@@ -565,7 +586,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             {/* Show FULL FORM for first-time applicants ONLY */}
             {!hasCompletedPaymentBefore && (
               <>
-                {/* Personal Information Section */}
+                {/* Section 1: Personal Information */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">1</span>
@@ -677,7 +698,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Contact Information Section */}
+                {/* Section 2: Contact Information */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">2</span>
@@ -724,11 +745,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Address Section */}
+                {/* Section 3: Detailed Residential Address */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">3</span>
-                    <h3>Residential Address</h3>
+                    <h3>Detailed Residential Address</h3>
                   </div>
                   
                   <div className="money-group">
@@ -736,27 +757,29 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                     <input
                       type="text"
                       name="address"
-                      placeholder="123 Main Street"
+                      placeholder="123 Main Street, Unit 4B"
                       value={formData.address}
                       onChange={handleInputChange}
                       required
                     />
+                    <small className="field-note">Include house/unit number and street name</small>
                   </div>
 
                   <div className="money-group">
-                    <label>Suburb</label>
+                    <label><FaBuilding /> Suburb / Area *</label>
                     <input
                       type="text"
                       name="suburb"
                       placeholder="Sandton"
                       value={formData.suburb}
                       onChange={handleInputChange}
+                      required
                     />
                   </div>
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label>City *</label>
+                      <label><FaCity /> City / Town *</label>
                       <input
                         type="text"
                         name="city"
@@ -768,7 +791,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                     </div>
 
                     <div className="money-group">
-                      <label>Province *</label>
+                      <label><FaMapMarkerAlt /> Province *</label>
                       <select
                         name="province"
                         value={formData.province}
@@ -803,10 +826,66 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Next of Kin Section */}
+                {/* Section 4: Previous School Attended (NEW) */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">4</span>
+                    <h3>Previous School Attended</h3>
+                  </div>
+                  
+                  <div className="money-group">
+                    <label><FaSchool /> School Name *</label>
+                    <input
+                      type="text"
+                      name="previousSchool"
+                      placeholder="e.g. Parktown High School"
+                      value={formData.previousSchool}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label><FaMapMarkerAlt /> School Province *</label>
+                      <select
+                        name="previousSchoolProvince"
+                        value={formData.previousSchoolProvince}
+                        onChange={handleInputChange}
+                        required
+                        className="money-select"
+                      >
+                        <option value="">Select Province</option>
+                        <option value="Gauteng">Gauteng</option>
+                        <option value="Western Cape">Western Cape</option>
+                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                        <option value="Eastern Cape">Eastern Cape</option>
+                        <option value="Free State">Free State</option>
+                        <option value="Limpopo">Limpopo</option>
+                        <option value="Mpumalanga">Mpumalanga</option>
+                        <option value="North West">North West</option>
+                        <option value="Northern Cape">Northern Cape</option>
+                      </select>
+                    </div>
+
+                    <div className="money-group">
+                      <label><FaCalendarAlt /> Year Completed/Attended *</label>
+                      <input
+                        type="text"
+                        name="previousSchoolYear"
+                        placeholder="2023"
+                        value={formData.previousSchoolYear}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Next of Kin / Emergency Contact (ENHANCED) */}
+                <div className="money-section-card">
+                  <div className="section-title">
+                    <span className="section-number">5</span>
                     <h3>Next of Kin / Emergency Contact</h3>
                   </div>
                   
@@ -822,16 +901,54 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                     />
                   </div>
 
+                  <div className="money-row">
+                    <div className="money-group">
+                      <label><FaIdCard /> ID Number *</label>
+                      <input
+                        type="text"
+                        name="kinIdNumber"
+                        placeholder="800505 0187 085"
+                        value={formData.kinIdNumber}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="money-group">
+                      <label>Gender *</label>
+                      <select
+                        name="kinGender"
+                        value={formData.kinGender}
+                        onChange={handleInputChange}
+                        required
+                        className="money-select"
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="money-group">
                     <label>Relationship *</label>
-                    <input
-                      type="text"
+                    <select
                       name="kinRelationship"
-                      placeholder="Mother / Father / Guardian / Spouse"
                       value={formData.kinRelationship}
                       onChange={handleInputChange}
                       required
-                    />
+                      className="money-select"
+                    >
+                      <option value="">Select Relationship</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Father">Father</option>
+                      <option value="Guardian">Guardian</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Other Relative">Other Relative</option>
+                      <option value="Friend">Friend</option>
+                    </select>
                   </div>
 
                   <div className="money-row">
@@ -860,10 +977,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Documents Section */}
+                {/* Section 6: Documents */}
                 <div className="money-section-card">
                   <div className="section-title">
-                    <span className="section-number">5</span>
+                    <span className="section-number">6</span>
                     <h3>Required Documents</h3>
                     <small className="section-hint">Max 5MB per file. PDF or images only.</small>
                   </div>
@@ -1013,7 +1130,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         </div>
       </div>
 
-                       {/* Payment Options Modal - MINIMALISTIC */}
+      {/* Payment Options Modal */}
       {showPaymentModal && (
         <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
@@ -1027,7 +1144,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             </div>
 
             <div className="payment-options-simple">
-              {/* OPTION 1: Skolify Direct Payment - GREEN */}
+              {/* OPTION 1: Skolify Direct Payment */}
               <div className="payment-option-simple primary">
                 <div className="payment-option-header">
                   <span className="payment-option-title">Skolify Direct Payment</span>
