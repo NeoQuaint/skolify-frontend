@@ -387,10 +387,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [showAuthPopup, setShowAuthPopup] = useState(false);
-  
-  // PAGE SPLITTING STATE
-  const [currentPage, setCurrentPage] = useState(1);
-  const [countdownText, setCountdownText] = useState('Calculating...');
 
   // Backend connection state
   const [backendData, setBackendData] = useState({
@@ -476,11 +472,6 @@ const Dashboard = () => {
 
   // Student name
   const studentName = "John";
-
-  // Scroll to top when page changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
 
   // ====================
   // SUBJECT CATEGORIES - MATCH DATABASE PLURALS
@@ -738,7 +729,10 @@ const Dashboard = () => {
       const difference = targetDate - now;
       
       if (difference <= 0) {
-        setCountdownText("Now Open! 🎉");
+        const countdownElement = document.getElementById('launch-countdown');
+        if (countdownElement) {
+          countdownElement.innerHTML = "Now Open! 🎉";
+        }
         return;
       }
       
@@ -747,7 +741,10 @@ const Dashboard = () => {
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((difference % (1000 * 60)) / 1000);
       
-      setCountdownText(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      const countdownElement = document.getElementById('launch-countdown');
+      if (countdownElement) {
+        countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      }
     };
     
     updateCountdown();
@@ -985,7 +982,7 @@ const Dashboard = () => {
     }
   };
 
-  // Find matches - calls backend AND goes to page 2
+  // Find matches - calls backend
   const findMatches = async () => {
     const hasMarks = subjects.some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
     if (!hasMarks) {
@@ -1001,7 +998,9 @@ const Dashboard = () => {
     const eligibleFacultiesData = await calculateEligibleCourses();
     
     if (eligibleFacultiesData.length > 0) {
-      setCurrentPage(2);
+      setTimeout(() => {
+        smoothScrollTo(facultiesSectionRef);
+      }, 50);
     } else {
       alert('No faculties found that match your subjects. Try improving your marks or adding more subjects.');
       setShowFaculties(false);
@@ -1306,7 +1305,6 @@ const Dashboard = () => {
     setShowFaculties(false);
     setCurrentFacultyIndex(0);
     setShowCoursesForFaculty(null);
-    setCurrentPage(1);
   };
 
   // Navigate to landing page and clear data
@@ -1316,11 +1314,6 @@ const Dashboard = () => {
     setTimeout(() => {
       navigate('/');
     }, 500);
-  };
-
-  // Go back to page 1
-  const goToPage1 = () => {
-    setCurrentPage(1);
   };
 
   // Get courses for selected faculty with filter applied
@@ -1355,22 +1348,22 @@ const Dashboard = () => {
       {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-      {/* Chatbot Floating Button - Opens WhatsApp */}
-      <button 
-        className="chatbot-floating-btn"
-        onClick={() => window.open('https://wa.me/27822589917', '_blank')}
-        title="Chat with us on WhatsApp"
-      >
-        <img 
-          src="/chatbot.jpeg" 
-          alt="Chat Assistant" 
-          className="chatbot-icon"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.parentElement.textContent = '💬';
-          }}
-        />
-      </button>
+     {/* Chatbot Floating Button - Opens WhatsApp */}
+<button 
+  className="chatbot-floating-btn"
+  onClick={() => window.open('https://wa.me/27822589917', '_blank')}
+  title="Chat with us on WhatsApp"
+>
+  <img 
+    src="/chatbot.jpeg" 
+    alt="Chat Assistant" 
+    className="chatbot-icon"
+    onError={(e) => {
+      e.target.style.display = 'none';
+      e.target.parentElement.textContent = '💬';
+    }}
+  />
+</button>
 
       {/* Search Modal */}
       {showSearchModal && (
@@ -1492,188 +1485,147 @@ const Dashboard = () => {
       <main className="app-main" style={{ paddingTop: '80px' }}>
         <div className="app-container">
           
-          {/* ==================== PAGE 1: SUBJECTS ==================== */}
-          {currentPage === 1 && (
-            <>
-              {/* Divider Line */}
-              <div className="divider-line"></div>
+          {/* Divider Line */}
+          <div className="divider-line"></div>
 
-              {/* Countdown Timer with Message */}
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <div style={{ 
-                  fontSize: '36px', 
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  marginBottom: '10px',
-                  color: '#1a426d'
-                }}>
-                  {countdownText}
-                </div>
-               
-                <div style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  marginBottom: '5px'
-                }}>
-                  Be back soon!
-                </div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#888'
-                }}>
-                  We're making the app better for your experience
-                </div>
-                <h1 className="main-heading">Enter Your Subjects</h1>
+          {/* Plain Countdown Timer with Message */}
+<div style={{ textAlign: 'center', marginBottom: '20px' }}>
+  <div id="launch-countdown" style={{ 
+    fontSize: '36px', 
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+    marginBottom: '10px',
+    color: '#1a426d'
+  }}>
+    Calculating...
+  </div>
+ 
+  <div style={{ 
+    fontSize: '14px', 
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: '5px'
+  }}>
+    Be back soon!
+  </div>
+  <div style={{ 
+    fontSize: '12px', 
+    color: '#888'
+  }}>
+    We're making the app better for your experience
+  </div>
+  <h1 className="main-heading">Enter Your Subjects</h1>
+</div>
+
+          {/* Subjects Section */}
+          <div className="subjects-section" ref={subjectsSectionRef}>
+            <p className="section-description">
+            Enter your final high school marks. Click "Find My Options" to see eligible faculties.<br />
+             <strong>Life Orientation is excluded</strong>
+              </p>
+            
+            <div className="subjects-table">
+              <div className="table-header">
+                <div className="subject-col">Subject</div>
+                <div className="mark-col">Mark %</div>
+                <div className="aps-col">APS</div>
+                <div className="action-col"></div>
               </div>
-
-              {/* Subjects Section */}
-              <div className="subjects-section" ref={subjectsSectionRef}>
-                <p className="section-description">
-                Enter your final high school marks. Click "Find My Options" to see eligible faculties.<br />
-                 <strong>Life Orientation is excluded</strong>
-                  </p>
-                
-                <div className="subjects-table">
-                  <div className="table-header">
-                    <div className="subject-col">Subject</div>
-                    <div className="mark-col">Mark %</div>
-                    <div className="aps-col">APS</div>
-                    <div className="action-col"></div>
+              
+              {subjects.map((subject, index) => (
+                <div key={index} className="subject-row">
+                  <div className="subject-col">
+                    <select 
+                      value={subject.subject} 
+                      onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)}
+                      className="subject-select"
+                    >
+                      {Object.entries(groupedSubjects).map(([category, subjectsList]) => (
+                        subjectsList.length > 0 && (
+                          <optgroup key={category} label={category}>
+                            {subjectsList.map(subj => (
+                              <option key={subj} value={subj}>{subj}</option>
+                            ))}
+                          </optgroup>
+                        )
+                      ))}
+                    </select>
                   </div>
-                  
-                  {subjects.map((subject, index) => (
-                    <div key={index} className="subject-row">
-                      <div className="subject-col">
-                        <select 
-                          value={subject.subject} 
-                          onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)}
-                          className="subject-select"
-                        >
-                          {Object.entries(groupedSubjects).map(([category, subjectsList]) => (
-                            subjectsList.length > 0 && (
-                              <optgroup key={category} label={category}>
-                                {subjectsList.map(subj => (
-                                  <option key={subj} value={subj}>{subj}</option>
-                                ))}
-                              </optgroup>
-                            )
-                          ))}
-                        </select>
-                      </div>
-                      <div className="mark-col">
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="100" 
-                          placeholder="0-100" 
-                          value={subject.mark}
-                          onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)}
-                          className="mark-input"
-                        />
-                      </div>
-                      <div className="aps-col">
-                        <span className="aps-points">
-                          {calculateIndividualAPS(subject.mark)} pts
-                        </span>
-                      </div>
-                      <div className="action-col">
-                        {subjects.length > 1 && (
-                          <button 
-                            className="remove-subject-btn"
-                            onClick={() => removeSubject(index)}
-                            title="Remove subject"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button className="add-subject-btn" onClick={addSubject}>
-                  + Add another subject
-                </button>
-
-                {/* APS Display */}
-                <div className="aps-display">
-                  <div className="aps-info">
-                    <div className="aps-label">Your Current APS:</div>
-                    <div className="aps-score">{userAPS > 0 ? userAPS : '--'}</div>
+                  <div className="mark-col">
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      placeholder="0-100" 
+                      value={subject.mark}
+                      onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)}
+                      className="mark-input"
+                    />
+                  </div>
+                  <div className="aps-col">
+                    <span className="aps-points">
+                      {calculateIndividualAPS(subject.mark)} pts
+                    </span>
+                  </div>
+                  <div className="action-col">
+                    {subjects.length > 1 && (
+                      <button 
+                        className="remove-subject-btn"
+                        onClick={() => removeSubject(index)}
+                        title="Remove subject"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 </div>
+              ))}
+            </div>
 
-                {/* Loading Overlay for Find My Options */}
-                {isCalculatingEligibility && (
-                  <div className="finding-courses-overlay">
-                    <div className="finding-courses-content">
-                      <RadialPulseLoader 
-                        size={120}
-                        color="#007bff"
-                        text="Finding Courses..."
-                        showText={true}
-                      />
-                    </div>
-                  </div>
-                )}
+            <button className="add-subject-btn" onClick={addSubject}>
+              + Add another subject
+            </button>
 
-                <button 
-                  className={`get-started-btn ${isCalculatingEligibility ? 'loading' : ''}`}
-                  onClick={findMatches}
-                  disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}
-                >
-                  {isCalculatingEligibility ? (
-                    <>
-                      <FaSpinner className="spinner-icon" /> Finding Courses...
-                    </>
-                  ) : backendData.isConnected && backendData.courses.length > 0 
-                    ? "Find My Options" 
-                    : "Loading..."}
-                </button>
+            {/* APS Display */}
+            <div className="aps-display">
+              <div className="aps-info">
+                <div className="aps-label">Your Current APS:</div>
+                <div className="aps-score">{userAPS > 0 ? userAPS : '--'}</div>
               </div>
-            </>
-          )}
+            </div>
 
-          {/* ==================== PAGE 2: ELIGIBLE FACULTIES ==================== */}
-          {currentPage === 2 && showFaculties && eligibleFaculties.length > 0 && (
+            {/* Loading Overlay for Find My Options */}
+            {isCalculatingEligibility && (
+              <div className="finding-courses-overlay">
+                <div className="finding-courses-content">
+                  <RadialPulseLoader 
+                    size={120}
+                    color="#007bff"
+                    text="Finding Courses..."
+                    showText={true}
+                  />
+                </div>
+              </div>
+            )}
+
+            <button 
+              className={`get-started-btn ${isCalculatingEligibility ? 'loading' : ''}`}
+              onClick={findMatches}
+              disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}
+            >
+              {isCalculatingEligibility ? (
+                <>
+                  <FaSpinner className="spinner-icon" /> Finding Courses...
+                </>
+              ) : backendData.isConnected && backendData.courses.length > 0 
+                ? "Continue" 
+                : "Loading..."}
+            </button>
+          </div>
+
+          {/* Eligible Faculties Section */}
+          {showFaculties && eligibleFaculties.length > 0 && (
             <>
-             {/* Small Return Button - Top Left Corner */}
-<button 
-  onClick={goToPage1}
-  style={{
-    position: 'fixed',
-    top: '90px',
-    left: '20px',
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    background: 'white',
-    border: '1px solid #e0e0e0',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    color: '#007bff',
-    fontSize: '18px',
-    transition: 'all 0.2s ease',
-    zIndex: 999
-  }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.background = '#007bff';
-    e.currentTarget.style.color = 'white';
-    e.currentTarget.style.borderColor = '#007bff';
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = 'white';
-    e.currentTarget.style.color = '#007bff';
-    e.currentTarget.style.borderColor = '#e0e0e0';
-  }}
-  title="Back to Subjects"
->
-  <FaChevronLeft size={16} />
-</button>
               <div className="divider-line"></div>
               
               <div ref={facultiesSectionRef}>
@@ -1785,7 +1737,7 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* Courses Modal */}
+              {/* CHANGE: Black text for modal header */}
               {showCoursesForFaculty && (
                 <div className="courses-modal">
                   <div className="courses-modal-content">
@@ -1962,7 +1914,7 @@ const Dashboard = () => {
           )}
 
           {/* No Faculties Found */}
-          {currentPage === 2 && showFaculties && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
+          {showFaculties && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
             <div className="no-faculties">
               <h3>No Eligible Faculties Found</h3>
               <p>Based on your current marks, you don't meet the minimum requirements for any faculties.</p>
@@ -1974,26 +1926,10 @@ const Dashboard = () => {
                   <li>Consider alternative pathways like bridging courses</li>
                 </ul>
               </div>
-              <button 
-                onClick={goToPage1}
-                style={{
-                  marginTop: '20px',
-                  padding: '10px 20px',
-                  background: '#007bff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                ← Back to Subjects
-              </button>
             </div>
           )}
 
-          {/* ==================== FOOTER - ON BOTH PAGES ==================== */}
+          {/* Contact Support - ALWAYS SHOWN */}
           <div className="contact-support">
             <p className="contact-message">
               Need help? Contact our support team at{' '}
@@ -2003,6 +1939,7 @@ const Dashboard = () => {
             </p>
           </div>
 
+          {/* Footer - ALWAYS SHOWN */}
           <footer className="dashboard-footer">
             <div className="footer-links">
               <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
