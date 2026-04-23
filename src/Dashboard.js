@@ -468,6 +468,22 @@ const Dashboard = () => {
   const studentName = "John";
 
   // ====================
+  // FILTER: Hide courses from specific universities
+  // ====================
+  const hiddenInstitutions = [
+    'Nelson Mandela University',
+    'Sol Plaatje University'
+  ];
+
+  const filterHiddenInstitutions = (courses) => {
+    return courses.filter(course => 
+      !hiddenInstitutions.some(institution => 
+        course.institution_name?.toLowerCase().includes(institution.toLowerCase())
+      )
+    );
+  };
+
+  // ====================
   // SUBJECT CATEGORIES - MATCH DATABASE PLURALS
   // ====================
 
@@ -675,10 +691,14 @@ const Dashboard = () => {
           const coursesData = await coursesResponse.json();
           console.log(`Loaded ${coursesData.length} courses from backend`);
           
+          // FILTER: Remove courses from hidden institutions
+          const filteredCourses = filterHiddenInstitutions(coursesData);
+          console.log(`After filtering hidden institutions: ${filteredCourses.length} courses`);
+          
           setBackendData(prev => ({
             ...prev,
             isConnected: true,
-            courses: coursesData,
+            courses: filteredCourses,
             isLoading: false,
             error: null
           }));
@@ -865,7 +885,8 @@ const Dashboard = () => {
       const result = await response.json();
 
       if (result.status === 'success') {
-        const eligibleCoursesData = result.eligible_courses || [];
+        // FILTER: Remove courses from hidden institutions from eligible results
+        const eligibleCoursesData = filterHiddenInstitutions(result.eligible_courses || []);
         setEligibleCourses(eligibleCoursesData);
         saveState('eligibleCourses', eligibleCoursesData);
 
