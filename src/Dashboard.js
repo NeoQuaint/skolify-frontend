@@ -1,174 +1,82 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaSearch, FaArrowRight, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaTrash } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
-// ==================== HEADER COMPONENT WITH DROPDOWN ====================
-function DashboardHeader({ showProfile = true}) {
+// ==================== AUTH-ONLY HEADER ====================
+function AuthHeader() {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const token = localStorage.getItem('authToken');
 
   const handleLogout = () => {
-    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
-    // Navigate to login page (app.js route)
     navigate('/');
   };
 
   const goToProfile = () => {
-    setDropdownOpen(false); // Close dropdown before navigating
+    setDropdownOpen(false);
     navigate('/profile');
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
-    
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  if (!token) return null;
+
   return (
-    <header style={{
-      padding: '0 40px',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      background: 'white',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-      height: '70px',
-      display: 'flex',
-      alignItems: 'center'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        width: '100%'
-      }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+    <header className="auth-only-header">
+      <div className="auth-header-inner">
+        <div className="auth-header-logo" onClick={() => navigate('/dashboard')}>
           <img
             src="/Skolify-Logo.jpeg"
-            alt="Skolify Logo"
-            style={{ width: '63px' , height: '63px', objectFit: 'contain', borderRadius: '8px' }}
+            alt="Skolify"
+            className="auth-header-logo-img"
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'block';
             }}
           />
-          <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
+          <span className="auth-header-logo-text">Skolify</span>
         </div>
 
-        {/* Profile icon only for logged-in pages */}
-        {showProfile && (
-          <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <FaUserCircle 
-              size={30}
-              style={{ 
-                cursor: 'pointer',
-                color: '#4a5568',
-                transition: 'color 0.2s ease'
-              }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#2b6cb0'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#4a5568'}
-            />
-            {dropdownOpen && (
-              <div style={{
-                position: 'absolute',
-                top: '50px',
-                right: 0,
-                background: 'white',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                zIndex: 2000,
-                minWidth: '180px'
-              }}>
-                <button 
-                  onClick={goToProfile} 
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 20px', 
-                    width: '100%', 
-                    border: 'none', 
-                    background: 'none', 
-                    textAlign: 'left', 
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'background 0.2s ease',
-                    color: '#2d3748'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f7fafc';
-                    e.currentTarget.querySelector('span').style.color = '#2b6cb0';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                    e.currentTarget.querySelector('span').style.color = '#2d3748';
-                  }}
-                >
-                  <FaUserCircle size={18} />
-                  <span>Profile</span>
-                </button>
-                <button 
-                  onClick={handleLogout} 
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 20px', 
-                    width: '100%', 
-                    border: 'none', 
-                    background: 'none', 
-                    textAlign: 'left', 
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    borderTop: '1px solid #e2e8f0',
-                    transition: 'background 0.2s ease',
-                    color: '#e53e3e'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#fff5f5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}></span>
-                  <span>Logout</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        <div ref={dropdownRef} className="auth-header-profile">
+          <FaUserCircle 
+            size={28}
+            className="auth-header-icon"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          />
+          {dropdownOpen && (
+            <div className="auth-header-dropdown">
+              <button onClick={goToProfile} className="auth-dropdown-item">
+                <FaUserCircle size={16} />
+                <span>Profile</span>
+              </button>
+              <button onClick={handleLogout} className="auth-dropdown-item auth-dropdown-logout">
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
 }
 
-
-// ==================== AUTH POPUP COMPONENT (Sign In + Create Account) ====================
-// CHANGE: Create Account (Sign Up) shown first, Sign In second
+// ==================== AUTH POPUP ====================
 function AuthPopup({ isOpen, onClose, onSuccess }) {
-  const [isLogin, setIsLogin] = useState(false); // CHANGED: default to false (Create Account first)
+  const [isLogin, setIsLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -186,7 +94,6 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
     setError('');
   };
 
-  // ==================== SIGN IN ====================
   const handleSignIn = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -203,19 +110,16 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
       });
 
       const data = await response.json();
-      console.log("SIGNIN RESPONSE:", data);
 
       if (data.success) {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
-
         onSuccess(data.user);
         onClose();
       } else {
         setError(data.error || 'Invalid email or password');
       }
-
     } catch (err) {
       console.error('Signin error:', err);
       setError('Network error. Please try again.');
@@ -224,7 +128,6 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
     setIsLoading(false);
   };
 
-  // ==================== SIGN UP ====================
   const handleSignUp = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -253,24 +156,19 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
       });
 
       const data = await response.json();
-      console.log("SIGNUP RESPONSE:", data);
 
       if (data.success && data.newUser) {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
-
         onSuccess(data.user);
         onClose();
-
       } else if (data.existingUser) {
         setError('An account with this email already exists. Please sign in.');
         setIsLogin(true);
-
       } else {
         setError(data.error || 'Registration failed. Please try again.');
       }
-
     } catch (err) {
       console.error('Signup error:', err);
       setError('Network error. Please try again.');
@@ -376,29 +274,101 @@ function AuthPopup({ isOpen, onClose, onSuccess }) {
   );
 }
 
-// ==================== MAIN DASHBOARD COMPONENT ====================
+// Helper function to clean faculty name (remove "Faculty of " prefix)
+const cleanFacultyName = (name) => {
+  return name.replace(/^Faculty of\s+/i, '');
+};
+
+// ==================== COURSE SELECTION MODAL ====================
+function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCourse, getSelectedCountForFaculty }) {
+  if (!faculty) return null;
+
+  const selectedCount = getSelectedCountForFaculty(faculty.name);
+  const maxForFaculty = Math.min(3, faculty.courses.length);
+  const isMaxReached = selectedCount >= 3;
+  
+  // Sort courses: recommended first
+  const sortedCourses = [...faculty.courses].sort((a, b) => {
+    const aIsRecommended = (a.matchScore && a.matchScore >= 80) || (a.recommended_subjects && a.recommended_subjects.length > 0);
+    const bIsRecommended = (b.matchScore && b.matchScore >= 80) || (b.recommended_subjects && b.recommended_subjects.length > 0);
+    
+    if (aIsRecommended && !bIsRecommended) return -1;
+    if (!aIsRecommended && bIsRecommended) return 1;
+    return 0;
+  });
+
+  // Get recommended courses count for green dash
+  const recommendedCourses = sortedCourses.filter(c => (c.matchScore && c.matchScore >= 80) || (c.recommended_subjects && c.recommended_subjects.length > 0));
+
+  return (
+    <div className="courses-modal-overlay" onClick={onClose}>
+      <div className="courses-modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="courses-modal-header">
+          <h3 className="courses-modal-title">{cleanFacultyName(faculty.name)}</h3>
+          <button className="courses-modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className="courses-modal-list">
+          {sortedCourses.map((course, idx) => {
+            const isSelected = selectedCourses.some(c => c.id === course.id);
+            const isDisabled = !isSelected && isMaxReached;
+            const isRecommended = (course.matchScore && course.matchScore >= 80) || (course.recommended_subjects && course.recommended_subjects.length > 0);
+            const isTopRecommended = isRecommended && idx < 5;
+            
+            return (
+              <div 
+                key={course.id}
+                className={`course-modal-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''} ${isTopRecommended ? 'recommended' : ''}`}
+                onClick={() => !isDisabled && onToggleCourse(course, faculty.name)}
+              >
+                <div className="course-modal-content">
+                  <div className="course-modal-name">{course.name}</div>
+                  {course.minAPS && (
+                    <div className="course-modal-aps">Min APS: {course.minAPS}</div>
+                  )}
+                </div>
+                <div className="course-modal-check">
+                  {isSelected ? '✓' : '+'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="courses-modal-footer">
+          <div className="courses-modal-counter">
+            {selectedCount}/{maxForFaculty} selected
+          </div>
+          <button className="courses-modal-done" onClick={onClose}>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== MAIN DASHBOARD ====================
 const Dashboard = () => {
   const navigate = useNavigate();
 
+  const [step, setStep] = useState(1);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
 
-  // Backend connection state
   const [backendData, setBackendData] = useState({
     isConnected: false,
     courses: [],
-    faculties: [],
-    institutions: [],
     isLoading: true,
     error: null
   });
 
-  // Initialize with sessionStorage data or defaults
   const [subjects, setSubjects] = useState(() => {
     const saved = sessionStorage.getItem('dashboard_subjects');
     return saved ? JSON.parse(saved) : [
-      { subject: 'Mathematics', mark: '' },
-      { subject: 'English', mark: '' },
-      { subject: 'Physical Science', mark: '' }
+      { subject: '', mark: '' },
+      { subject: '', mark: '' },
+      { subject: '', mark: '' },
+      { subject: 'Life Orientation', mark: '' }
     ];
   });
 
@@ -427,49 +397,15 @@ const Dashboard = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [showFaculties, setShowFaculties] = useState(() => {
-    const saved = sessionStorage.getItem('dashboard_showFaculties');
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentFacultyIndex, setCurrentFacultyIndex] = useState(0);
-  const [showCoursesForFaculty, setShowCoursesForFaculty] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [activeFacultyModal, setActiveFacultyModal] = useState(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
-  
-  // State for course filtering
-  const [courseTypeFilter, setCourseTypeFilter] = useState('all');
-  
-  // State for course details modal
   const [selectedCourseDetails, setSelectedCourseDetails] = useState(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   
-  // SMOOTH FACULTY SLIDING STATES
-  const [isSliding, setIsSliding] = useState(false);
-  const [slideDirection, setSlideDirection] = useState(null);
-  
-  // CHANGED: facultiesPerView from 10 to 6 (3 rows x 2 columns)
-  const facultiesPerView = 6;
+  const [facultyPage, setFacultyPage] = useState(0);
+  const facultiesPerPage = 6;
 
-  // Refs for click outside detection and smooth scrolling
-  const profileMenuRef = useRef(null);
-  const profileIconRef = useRef(null);
-  const subjectsSectionRef = useRef(null);
-  const facultiesSectionRef = useRef(null);
-  const selectedCoursesSectionRef = useRef(null);
-  const applySectionRef = useRef(null);
-  const searchInputRef = useRef(null);
-
-  // Student name
-  const studentName = "John";
-
-  // ====================
-  // FILTER: Hide courses from specific universities
-  // ====================
   const hiddenInstitutions = [
     'Nelson Mandela University',
     'Sol Plaatje University'
@@ -483,81 +419,19 @@ const Dashboard = () => {
     );
   };
 
-  // ====================
-  // SUBJECT CATEGORIES - MATCH DATABASE PLURALS
-  // ====================
-
   const subjectCategories = {
-    mathematics: [
-      'Mathematics',
-      'Technical Mathematics',
-      'Mathematical Literacy'
-    ],
-    sciences: [
-      'Physical Sciences',
-      'Technical Sciences',
-      'Life Sciences',
-      'Agricultural Sciences'
-    ],
-    business: [
-      'Accounting',
-      'Business Studies',
-      'Economics'
-    ],
-    technology: [
-      'Computer Applications Technology',
-      'Information Technology',
-      'Engineering Graphics and Design',
-      'Civil Technology',
-      'Electrical Technology',
-      'Mechanical Technology'
-    ],
-    creative: [
-      'Visual Arts',
-      'Design',
-      'Music',
-      'Dramatic Arts',
-      'Dance Studies'
-    ],
-    humanities: [
-      'Geography',
-      'History',
-      'Tourism',
-      'Religion Studies'
-    ],
-    consumer: [
-      'Consumer Studies',
-      'Hospitality Studies'
-    ],
-    homeLanguages: [
-      'English HL',
-      'Afrikaans HL',
-      'IsiZulu HL',
-      'IsiXhosa HL',
-      'Sepedi HL',
-      'Sesotho HL',
-      'Setswana HL',
-      'Tshivenda HL',
-      'Xitsonga HL',
-      'SiSwati HL',
-      'Ndebele HL'
-    ],
-    additionalLanguages: [
-      'English',
-      'Afrikaans',
-      'IsiZulu',
-      'IsiXhosa',
-      'Sepedi',
-      'Sesotho',
-      'Setswana',
-      'Tshivenda',
-      'Xitsonga',
-      'SiSwati',
-      'Ndebele'
-    ]
+    mathematics: ['Mathematics', 'Technical Mathematics', 'Mathematical Literacy'],
+    sciences: ['Physical Sciences', 'Technical Sciences', 'Life Sciences', 'Agricultural Sciences'],
+    business: ['Accounting', 'Business Studies', 'Economics'],
+    technology: ['Computer Applications Technology', 'Information Technology', 'Engineering Graphics and Design', 'Civil Technology', 'Electrical Technology', 'Mechanical Technology'],
+    creative: ['Visual Arts', 'Design', 'Music', 'Dramatic Arts', 'Dance Studies'],
+    humanities: ['Geography', 'History', 'Tourism', 'Religion Studies'],
+    consumer: ['Consumer Studies', 'Hospitality Studies'],
+    homeLanguages: ['English HL', 'Afrikaans HL', 'IsiZulu HL', 'IsiXhosa HL', 'Sepedi HL', 'Sesotho HL', 'Setswana HL', 'Tshivenda HL', 'Xitsonga HL', 'SiSwati HL', 'Ndebele HL'],
+    additionalLanguages: ['English', 'Afrikaans', 'IsiZulu', 'IsiXhosa', 'Sepedi', 'Sesotho', 'Setswana', 'Tshivenda', 'Xitsonga', 'SiSwati', 'Ndebele'],
+    lifeOrientation: ['Life Orientation']
   };
 
-  // Create grouped subjects for select dropdown
   const groupedSubjects = {
     'Mathematics': subjectCategories.mathematics,
     'Science': subjectCategories.sciences,
@@ -567,10 +441,10 @@ const Dashboard = () => {
     'Humanities': subjectCategories.humanities,
     'Consumer Studies': subjectCategories.consumer,
     'Home Language': subjectCategories.homeLanguages,
-    'Additional Language': subjectCategories.additionalLanguages
+    'Additional Language': subjectCategories.additionalLanguages,
+    'Life Orientation': subjectCategories.lifeOrientation
   };
 
-  // Define faculty priority order (higher priority first)
   const facultyPriority = [
     'College of Business and Economics',
     'Faculty of Science',
@@ -589,187 +463,6 @@ const Dashboard = () => {
     'Faculty of Theology'
   ];
 
-  // Helper function to determine qualification type from course
-  const getQualificationType = (course) => {
-    const name = course.name?.toLowerCase() || '';
-    
-    if (name.includes('bachelor') || name.includes('bcom') || name.includes('bsc') || 
-        name.includes('degree') || name.startsWith('b.') || name.includes('b ')) {
-      return 'degree';
-    } else if (name.includes('diploma')) {
-      return 'diploma';
-    } else if (name.includes('higher certificate') || name.includes('certificate')) {
-      return 'certificate';
-    } else if (name.includes('online')) {
-      return 'online';
-    } else {
-      if (course.qualification_type) {
-        return course.qualification_type.toLowerCase();
-      }
-      return 'other';
-    }
-  };
-
-  // Filter courses based on selected type
-  const filterCoursesByType = (courses, filterType) => {
-    if (filterType === 'all') return courses;
-    return courses.filter(course => getQualificationType(course) === filterType);
-  };
-
-  // Fetch course details from backend
-  const fetchCourseDetails = async (course) => {
-    setIsLoadingDetails(true);
-    try {
-      const response = await fetch(`${API_URL}/api/courses/${course.id}/additional-info`);
-      let additionalInfo = [];
-      
-      if (response.ok) {
-        const data = await response.json();
-        additionalInfo = data.additional_info || [];
-      }
-      
-      setSelectedCourseDetails({
-        ...course,
-        description: course.description || 'No description available.',
-        additional_info: additionalInfo
-      });
-    } catch (error) {
-      console.error('Error fetching course details:', error);
-      setSelectedCourseDetails({
-        ...course,
-        description: course.description || 'No description available.',
-        additional_info: []
-      });
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  };
-
-  // Get student marks from all sources
-  const getStudentMarks = useCallback(() => {
-    try {
-      const marks = subjects
-        .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
-        .map(subject => ({
-          subject_name: subject.subject,
-          mark: parseInt(subject.mark)
-        }));
-      return marks;
-    } catch (error) {
-      console.error('Error getting student marks:', error);
-      return [];
-    }
-  }, [subjects]);
-
-  // Fetch data from backend
-  useEffect(() => {
-    const fetchBackendData = async () => {
-      try {
-        console.log("Testing backend connection...");
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const testResponse = await fetch(`${API_URL}/api/test`, {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!testResponse.ok) {
-          throw new Error(`Backend responded with status: ${testResponse.status}`);
-        }
-        
-        const testData = await testResponse.json();
-        console.log("Backend test response:", testData);
-        
-        const coursesResponse = await fetch(`${API_URL}/api/courses`, {
-          signal: controller.signal
-        });
-        
-        if (coursesResponse.ok) {
-          const coursesData = await coursesResponse.json();
-          console.log(`Loaded ${coursesData.length} courses from backend`);
-          
-          // FILTER: Remove courses from hidden institutions
-          const filteredCourses = filterHiddenInstitutions(coursesData);
-          console.log(`After filtering hidden institutions: ${filteredCourses.length} courses`);
-          
-          setBackendData(prev => ({
-            ...prev,
-            isConnected: true,
-            courses: filteredCourses,
-            isLoading: false,
-            error: null
-          }));
-        } else {
-          setBackendData(prev => ({
-            ...prev,
-            isConnected: true,
-            isLoading: false,
-            error: 'Could not load courses, but backend is connected'
-          }));
-        }
-        
-      } catch (error) {
-        console.error("Backend connection error:", error);
-        setBackendData(prev => ({
-          ...prev,
-          isConnected: false,
-          isLoading: false,
-          error: error.message
-        }));
-      }
-    };
-    
-    fetchBackendData();
-  }, []);
-
-  // Get current faculties from backend data
-  const getCurrentFaculties = useCallback(() => {
-    if (backendData.isConnected && backendData.courses.length > 0) {
-      const facultiesMap = {};
-      
-      backendData.courses.forEach(course => {
-        const facultyName = course.faculty_name || 'General';
-        const facultyCategory = course.faculty_category || 'General';
-        
-        if (!facultiesMap[facultyName]) {
-          facultiesMap[facultyName] = {
-            id: course.faculty_id || facultyName.toLowerCase().replace(/\s+/g, '-'),
-            name: facultyName,
-            category: facultyCategory,
-            courses: [],
-            _coursesFull: [],
-            minAPS: course.minAPS || 24
-          };
-        }
-        
-        if (!facultiesMap[facultyName].courses.includes(course.name)) {
-          facultiesMap[facultyName].courses.push(course.name);
-          facultiesMap[facultyName]._coursesFull.push(course);
-        }
-      });
-      
-      return Object.values(facultiesMap);
-    }
-    
-    return [];
-  }, [backendData]);
-
-  // Get faculty by ID
-  const getFacultyById = (facultyId) => {
-    const currentFaculties = getCurrentFaculties();
-    return currentFaculties.find(f => f.id === facultyId);
-  };
-
-  // Get faculty by name
-  const getFacultyByName = (facultyName) => {
-    const currentFaculties = getCurrentFaculties();
-    return currentFaculties.find(f => f.name === facultyName);
-  };
-
-  // Calculate APS
   const calculateAPS = useCallback((mark) => {
     if (!mark || mark === '') return 0;
     const numMark = parseInt(mark);
@@ -782,36 +475,48 @@ const Dashboard = () => {
     return 1;
   }, []);
 
-  // Save subjects to sessionStorage
-  const saveSubjects = useCallback((subjects) => {
-    sessionStorage.setItem('dashboard_subjects', JSON.stringify(subjects));
-  }, []);
+  const calculateIndividualAPS = (mark) => {
+    if (!mark || mark === '' || isNaN(mark)) return '0';
+    return calculateAPS(parseInt(mark));
+  };
 
-  // Save other states to sessionStorage
   const saveState = useCallback((key, value) => {
     sessionStorage.setItem(`dashboard_${key}`, JSON.stringify(value));
   }, []);
 
-  // Calculate total APS and save
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'instant'
+    });
+  }, [step]);
+
+  // Scroll to top when faculty page changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'instant'
+    });
+  }, [facultyPage]);
+
   useEffect(() => {
     let totalAPS = 0;
-    
     subjects.forEach(subject => {
-      if (subject.mark && !isNaN(subject.mark) && subject.mark >= 0 && subject.mark <= 100) {
+      if (subject.subject !== 'Life Orientation' && 
+          subject.mark && !isNaN(subject.mark) && 
+          subject.mark >= 0 && subject.mark <= 100) {
         totalAPS += calculateAPS(parseInt(subject.mark));
       }
     });
-    
     setUserAPS(totalAPS);
     saveState('userAPS', totalAPS);
   }, [subjects, calculateAPS, saveState]);
 
-  // Save subjects when they change
   useEffect(() => {
-    saveSubjects(subjects);
-  }, [subjects, saveSubjects]);
+    saveState('subjects', subjects);
+  }, [subjects, saveState]);
 
-  // Save other states when they change
   useEffect(() => {
     saveState('selectedFaculties', selectedFaculties);
   }, [selectedFaculties, saveState]);
@@ -829,33 +534,62 @@ const Dashboard = () => {
   }, [eligibleFaculties, saveState]);
 
   useEffect(() => {
-    saveState('showFaculties', showFaculties);
-  }, [showFaculties, saveState]);
-
-  // Clear data on page refresh
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem('dashboard_subjects');
-      sessionStorage.removeItem('dashboard_userAPS');
-      sessionStorage.removeItem('dashboard_selectedFaculties');
-      sessionStorage.removeItem('dashboard_selectedCourses');
-      sessionStorage.removeItem('dashboard_eligibleCourses');
-      sessionStorage.removeItem('dashboard_eligibleFaculties');
-      sessionStorage.removeItem('dashboard_showFaculties');
+    const fetchBackendData = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const testResponse = await fetch(`${API_URL}/api/test`, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!testResponse.ok) {
+          throw new Error(`Backend responded with status: ${testResponse.status}`);
+        }
+        
+        const coursesResponse = await fetch(`${API_URL}/api/courses`);
+        
+        if (coursesResponse.ok) {
+          const coursesData = await coursesResponse.json();
+          const filteredCourses = filterHiddenInstitutions(coursesData);
+          
+          setBackendData(prev => ({
+            ...prev,
+            isConnected: true,
+            courses: filteredCourses,
+            isLoading: false,
+            error: null
+          }));
+        } else {
+          setBackendData(prev => ({
+            ...prev,
+            isConnected: true,
+            isLoading: false,
+            error: 'Could not load courses'
+          }));
+        }
+      } catch (error) {
+        console.error("Backend connection error:", error);
+        setBackendData(prev => ({
+          ...prev,
+          isConnected: false,
+          isLoading: false,
+          error: error.message
+        }));
+      }
     };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    
+    fetchBackendData();
   }, []);
 
-  // Call backend API to get eligible courses
   const calculateEligibleCourses = async () => {
     setIsCalculatingEligibility(true);
     
     try {
       const subjectsData = subjects
+        .filter(subject => subject.subject !== 'Life Orientation')
         .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
         .map(subject => ({
           subject_name: subject.subject,
@@ -867,14 +601,12 @@ const Dashboard = () => {
       }
 
       if (!backendData.isConnected) {
-        throw new Error('Backend server is not connected. Please check if server is running.');
+        throw new Error('Backend server is not connected');
       }
 
       const response = await fetch(`${API_URL}/api/eligible-courses`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subjects: subjectsData })
       });
 
@@ -885,39 +617,38 @@ const Dashboard = () => {
       const result = await response.json();
 
       if (result.status === 'success') {
-        // FILTER: Remove courses from hidden institutions from eligible results
         const eligibleCoursesData = filterHiddenInstitutions(result.eligible_courses || []);
-        setEligibleCourses(eligibleCoursesData);
-        saveState('eligibleCourses', eligibleCoursesData);
+        
+        const coursesWithScores = eligibleCoursesData.map(course => ({
+          ...course,
+          matchScore: course.matchScore || Math.floor(Math.random() * 40) + 60
+        }));
+        
+        setEligibleCourses(coursesWithScores);
+        saveState('eligibleCourses', coursesWithScores);
 
         const facultiesMap = {};
-        eligibleCoursesData.forEach(course => {
+        coursesWithScores.forEach(course => {
           const facultyName = course.faculty_name || 'General';
           if (!facultiesMap[facultyName]) {
             facultiesMap[facultyName] = {
               id: course.faculty_id || facultyName.toLowerCase().replace(/\s+/g, '-'),
               name: facultyName,
               category: course.faculty_category || 'General',
-              courses: [],
-              _coursesFull: []
+              courses: []
             };
           }
-          if (!facultiesMap[facultyName].courses.includes(course.name)) {
-            facultiesMap[facultyName].courses.push(course.name);
-            facultiesMap[facultyName]._coursesFull.push(course);
+          if (!facultiesMap[facultyName].courses.find(c => c.id === course.id)) {
+            facultiesMap[facultyName].courses.push(course);
           }
         });
 
         let eligibleFacultiesData = Object.values(facultiesMap);
         
-        // Sort faculties by priority
         eligibleFacultiesData.sort((a, b) => {
           const indexA = facultyPriority.indexOf(a.name);
           const indexB = facultyPriority.indexOf(b.name);
-          
-          if (indexA !== -1 && indexB !== -1) {
-            return indexA - indexB;
-          }
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
           if (indexA !== -1) return -1;
           if (indexB !== -1) return 1;
           return a.name.localeCompare(b.name);
@@ -926,22 +657,12 @@ const Dashboard = () => {
         setEligibleFaculties(eligibleFacultiesData);
         saveState('eligibleFaculties', eligibleFacultiesData);
         
-        setCurrentFacultyIndex(0);
-        
-        const updatedSelectedFaculties = selectedFaculties.filter(facultyId => 
-          eligibleFacultiesData.some(f => f.id === facultyId)
-        );
-        setSelectedFaculties(updatedSelectedFaculties);
-        
-        setShowFaculties(true);
-        
         return eligibleFacultiesData;
       } else {
-        throw new Error(result.error || 'Unknown error from backend');
+        throw new Error(result.error || 'Unknown error');
       }
-      
     } catch (error) {
-      console.error('❌ Error calculating eligibility:', error);
+      console.error('Error calculating eligibility:', error);
       alert(`Error: ${error.message}`);
       return [];
     } finally {
@@ -949,179 +670,118 @@ const Dashboard = () => {
     }
   };
 
-  // Find matches - calls backend
   const findMatches = async () => {
-    const hasMarks = subjects.some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
+    const hasMarks = subjects
+      .filter(s => s.subject !== 'Life Orientation')
+      .some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
+    
     if (!hasMarks) {
       alert('Please enter at least one mark to find matches');
       return;
     }
     
     if (!backendData.isConnected) {
-      alert('Backend not connected. Please check if server is running on http://localhost:5000');
+      alert('Backend not connected. Please check if server is running.');
       return;
     }
     
     const eligibleFacultiesData = await calculateEligibleCourses();
     
-    if (eligibleFacultiesData.length > 0) {
-      setTimeout(() => {
-        smoothScrollTo(facultiesSectionRef);
-      }, 50);
+    if (eligibleFacultiesData && eligibleFacultiesData.length > 0) {
+      setStep(2);
+      setFacultyPage(0);
+      setSelectedFaculties([]);
     } else {
       alert('No faculties found that match your subjects. Try improving your marks or adding more subjects.');
-      setShowFaculties(false);
     }
   };
 
-  // Click outside to close profile menu
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showProfileMenu && 
-          profileMenuRef.current && 
-          !profileMenuRef.current.contains(event.target) &&
-          profileIconRef.current &&
-          !profileIconRef.current.contains(event.target)) {
-        setShowProfileMenu(false);
-      }
-      
-      if (showSearchModal && 
-          !event.target.closest('.search-modal') && 
-          !event.target.closest('.search-btn')) {
-        setShowSearchModal(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showProfileMenu, showSearchModal]);
-
-  // Smooth scroll function
-  const smoothScrollTo = (ref, offset = 100) => {
-    if (ref.current) {
-      const elementPosition = ref.current.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+  const getSelectedFacultyObjects = () => {
+    return eligibleFaculties.filter(f => selectedFaculties.includes(f.id));
   };
 
-  // Handle faculty selection
-  const toggleFacultySelection = (facultyId) => {
-    const wasSelected = selectedFaculties.includes(facultyId);
-    const faculty = getFacultyById(facultyId);
+  const getSelectedCountForFaculty = (facultyName) => {
+    return selectedCourses.filter(c => c.faculty_name === facultyName).length;
+  };
+
+  const isFacultySelectionComplete = (faculty) => {
+    const selectedCount = getSelectedCountForFaculty(faculty.name);
+    const availableCourses = faculty.courses.length;
     
+    return selectedCount === 3 || (selectedCount > 0 && selectedCount === availableCourses);
+  };
+
+  const canProceedToPayment = () => {
+    const selectedFacultiesObjects = getSelectedFacultyObjects();
+    for (const faculty of selectedFacultiesObjects) {
+      const selectedCount = getSelectedCountForFaculty(faculty.name);
+      const availableCourses = faculty.courses.length;
+      
+      if (availableCourses < 3 && selectedCount !== availableCourses) {
+        return false;
+      }
+      if (availableCourses >= 3 && selectedCount !== 3) {
+        return false;
+      }
+    }
+    return selectedCourses.length > 0;
+  };
+
+  const toggleFacultySelection = (facultyId) => {
     setSelectedFaculties(prev => {
       if (prev.includes(facultyId)) {
+        const faculty = eligibleFaculties.find(f => f.id === facultyId);
         if (faculty) {
           setSelectedCourses(prevCourses => 
-            prevCourses.filter(course => !faculty.courses.includes(course.name))
+            prevCourses.filter(c => c.faculty_name !== faculty.name)
           );
         }
-        setShowCoursesForFaculty(null);
         return prev.filter(id => id !== facultyId);
       } else {
-        if (prev.length < 5) {
-          setShowCoursesForFaculty(faculty);
+        if (prev.length < 3) {
           return [...prev, facultyId];
         } else {
-          alert('You can only select up to 5 faculties');
+          alert('You can only select up to 3 faculties');
           return prev;
         }
       }
     });
   };
 
-  // Toggle course selection
-  const toggleCourseSelection = (course) => {
-    const courseName = course.name || course;
-    const wasSelected = selectedCourses.some(c => c.name === courseName);
+  const toggleCourseSelection = (course, facultyName) => {
+    const currentFacultyCount = getSelectedCountForFaculty(facultyName);
+    const isSelected = selectedCourses.some(c => c.id === course.id);
     
-    setSelectedCourses(prev => {
-      if (wasSelected) {
-        return prev.filter(c => c.name !== courseName);
-      } else {
-        if (prev.length < 6) {
-          const fullCourse = typeof course === 'object' ? course : { name: courseName };
-          const newSelection = [...prev, fullCourse];
-          
-          if (prev.length === 0 && newSelection.length === 1) {
-            setTimeout(() => smoothScrollTo(selectedCoursesSectionRef), 100);
-          }
-          return newSelection;
-        } else {
-          alert('You can only select up to 6 courses');
-          return prev;
-        }
-      }
-    });
-  };
-
-  // Check if a course is selected
-  const isCourseSelected = (course) => {
-    const courseName = course.name || course;
-    return selectedCourses.some(c => c.name === courseName);
-  };
-
-  // Search for courses
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      alert('Please enter a course name to search');
-      return;
-    }
-    
-    const query = searchQuery.toLowerCase().trim();
-    const results = [];
-    
-    eligibleCourses.forEach(course => {
-      if (course.name.toLowerCase().includes(query)) {
-        results.push({
-          course: course.name,
-          faculty: course.faculty_name,
-          isEligible: true,
-          facultyId: course.faculty_id,
-          courseData: course
-        });
-      }
-    });
-    
-    if (results.length === 0) {
-      setSearchResults([{ course: 'No courses found', isEligible: false }]);
+    if (isSelected) {
+      setSelectedCourses(prev => prev.filter(c => c.id !== course.id));
     } else {
-      setSearchResults(results);
-    }
-    
-    setShowSearchModal(true);
-    
-    setTimeout(() => {
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
+      if (currentFacultyCount >= 3) {
+        alert(`You can only select up to 3 courses from ${cleanFacultyName(facultyName)}`);
+        return;
       }
-    }, 100);
+      
+      if (selectedCourses.length >= 9) {
+        alert('You can only select up to 9 courses total (3 per faculty)');
+        return;
+      }
+      
+      setSelectedCourses(prev => [...prev, course]);
+    }
   };
 
-  // Proceed to payment after account creation
   const proceedToPayment = () => {
     setIsNavigating(true);
-    smoothScrollTo(applySectionRef);
     
     const studentMarks = subjects
+      .filter(subject => subject.subject !== 'Life Orientation')
       .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
       .map(subject => ({
         subject_name: subject.subject,
         mark: parseInt(subject.mark)
       }));
     
-    console.log('📤 Passing marks to PaymentPage:', studentMarks);
-    
     sessionStorage.setItem('dashboard_subjects', JSON.stringify(subjects));
     sessionStorage.setItem('student_marks', JSON.stringify(studentMarks));
-    
     localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
     localStorage.setItem('student_marks', JSON.stringify(studentMarks));
     
@@ -1135,15 +795,13 @@ const Dashboard = () => {
     }, 500);
   };
 
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = () => {
     proceedToPayment();
   };
 
-  // Apply to selected courses - shows create account popup if not logged in
   const handleApply = () => {
-    if (selectedCourses.length === 0) {
-      alert('Please select at least one course to apply');
-      smoothScrollTo(facultiesSectionRef);
+    if (!canProceedToPayment()) {
+      alert('Please select 3 courses from each of your chosen faculties');
       return;
     }
 
@@ -1156,62 +814,6 @@ const Dashboard = () => {
     }
   };
 
-  // Handle closing courses modal
-  const handleCloseCoursesModal = () => {
-    setShowCoursesForFaculty(null);
-    setCourseTypeFilter('all');
-    if (selectedCourses.length > 0) {
-      setTimeout(() => smoothScrollTo(selectedCoursesSectionRef), 300);
-    }
-  };
-
-  // Calculate APS for individual subject
-  const calculateIndividualAPS = (mark) => {
-    if (!mark || mark === '' || isNaN(mark)) return '0';
-    const numMark = parseInt(mark);
-    return calculateAPS(numMark);
-  };
-
-  // ============================================
-  // SMOOTH FACULTY SLIDING NAVIGATION - UPDATED FOR 6 FACULTIES (3x2)
-  // ============================================
-  
-  const nextFaculties = () => {
-    if (currentFacultyIndex < eligibleFaculties.length - facultiesPerView && !isSliding) {
-      setSlideDirection('right');
-      setIsSliding(true);
-      
-      setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev + 6);
-        setTimeout(() => {
-          setIsSliding(false);
-          setSlideDirection(null);
-        }, 50);
-      }, 350);
-    }
-  };
-
-  const prevFaculties = () => {
-    if (currentFacultyIndex > 0 && !isSliding) {
-      setSlideDirection('left');
-      setIsSliding(true);
-      
-      setTimeout(() => {
-        setCurrentFacultyIndex(prev => prev - 6);
-        setTimeout(() => {
-          setIsSliding(false);
-          setSlideDirection(null);
-        }, 50);
-      }, 350);
-    }
-  };
-
-  // Get visible faculties
-  const getVisibleFaculties = () => {
-    return eligibleFaculties.slice(currentFacultyIndex, currentFacultyIndex + facultiesPerView);
-  };
-
-  // Handle subject updates
   const handleSubjectChange = (index, field, value) => {
     const newSubjects = [...subjects];
     newSubjects[index][field] = value;
@@ -1219,15 +821,7 @@ const Dashboard = () => {
   };
 
   const addSubject = () => {
-    setSubjects([...subjects, { subject: 'Mathematics', mark: '' }]);
-    setTimeout(() => {
-      if (subjectsSectionRef.current) {
-        const lastRow = subjectsSectionRef.current.querySelector('.subject-row:last-child');
-        if (lastRow) {
-          lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, 100);
+    setSubjects([...subjects, { subject: '', mark: '' }]);
   };
 
   const removeSubject = (index) => {
@@ -1237,66 +831,49 @@ const Dashboard = () => {
     }
   };
 
-  // Handle search input change
-  const handleSearchInputChange = (e) => {
-    setSearchQuery(e.target.value);
+  const totalFacultyPages = Math.ceil(eligibleFaculties.length / facultiesPerPage);
+  const visibleFaculties = eligibleFaculties.slice(
+    facultyPage * facultiesPerPage,
+    (facultyPage + 1) * facultiesPerPage
+  );
+
+  const nextFacultyPage = () => {
+    if (facultyPage < totalFacultyPages - 1) {
+      setFacultyPage(prev => prev + 1);
+    }
   };
 
-  // Clear search
-  const clearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowSearchModal(false);
+  const prevFacultyPage = () => {
+    if (facultyPage > 0) {
+      setFacultyPage(prev => prev - 1);
+    }
   };
 
-  // Clear all data
-  const clearAllData = () => {
-    sessionStorage.removeItem('dashboard_subjects');
-    sessionStorage.removeItem('dashboard_userAPS');
-    sessionStorage.removeItem('dashboard_selectedFaculties');
-    sessionStorage.removeItem('dashboard_selectedCourses');
-    sessionStorage.removeItem('dashboard_eligibleCourses');
-    sessionStorage.removeItem('dashboard_eligibleFaculties');
-    sessionStorage.removeItem('dashboard_showFaculties');
-    
-    setSubjects([
-      { subject: 'Mathematics', mark: '' },
-      { subject: 'English', mark: '' },
-      { subject: 'Physical Science', mark: '' }
-    ]);
-    setUserAPS(0);
-    setSelectedFaculties([]);
-    setSelectedCourses([]);
-    setEligibleCourses([]);
-    setEligibleFaculties([]);
-    setShowFaculties(false);
-    setCurrentFacultyIndex(0);
-    setShowCoursesForFaculty(null);
+  const getProgressPercent = () => {
+    if (step === 1) return 25;
+    if (step === 2) return 50;
+    if (step === 3) {
+      const selectedFacultiesObjects = getSelectedFacultyObjects();
+      if (selectedFacultiesObjects.length === 0) return 50;
+      
+      let completedCount = 0;
+      for (const faculty of selectedFacultiesObjects) {
+        if (isFacultySelectionComplete(faculty)) {
+          completedCount++;
+        }
+      }
+      
+      const progressPerFaculty = 25 / selectedFacultiesObjects.length;
+      return 50 + (completedCount * progressPerFaculty);
+    }
+    return 100;
   };
 
-  // Navigate to landing page and clear data
-  const goToLandingPage = () => {
-    clearAllData();
-    setIsNavigating(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 500);
-  };
-
-  // Get courses for selected faculty with filter applied
-  const getFilteredCoursesForSelectedFaculty = () => {
-    if (!showCoursesForFaculty) return [];
-    const courses = eligibleCourses.filter(course => 
-      course.faculty_name === showCoursesForFaculty.name
-    );
-    return filterCoursesByType(courses, courseTypeFilter);
-  };
-
-  const visibleFaculties = getVisibleFaculties();
+  const progressPercent = getProgressPercent();
 
   return (
     <div className={`dashboard-app ${isNavigating ? 'page-exit' : ''}`}>
-      <DashboardHeader showProfile={true} />
+      <AuthHeader />
 
       <AuthPopup 
         isOpen={showAuthPopup} 
@@ -1304,7 +881,6 @@ const Dashboard = () => {
         onSuccess={handleAuthSuccess}
       />
 
-      {/* Navigation Loading Overlay */}
       {isNavigating && (
         <div className="navigation-overlay">
           <div className="navigation-spinner"></div>
@@ -1312,553 +888,240 @@ const Dashboard = () => {
         </div>
       )}
       
-      {/* Background Pattern */}
       <div className="background-pattern"></div>
 
-     {/* Chatbot Floating Button - Opens WhatsApp */}
-<button 
-  className="chatbot-floating-btn"
-  onClick={() => window.open('https://wa.me/27822589917', '_blank')}
-  title="Chat with us on WhatsApp"
->
-  <img 
-    src="/chatbot.jpeg" 
-    alt="Chat Assistant" 
-    className="chatbot-icon"
-    onError={(e) => {
-      e.target.style.display = 'none';
-      e.target.parentElement.textContent = '💬';
-    }}
-  />
-</button>
+      <div className="progress-bar-wrapper">
+        <div className="progress-bar-track">
+          <div 
+            className="progress-bar-fill" 
+            style={{ width: `${progressPercent}%` }}
+          ></div>
+        </div>
+      </div>
 
-      {/* Search Modal */}
-      {showSearchModal && (
-        <div className="search-modal">
-          <div className="search-modal-content">
-            <div className="search-modal-header">
-              <h3>Search Courses</h3>
-              <button 
-                className="close-search-modal"
-                onClick={clearSearch}
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <div className="search-input-group">
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search for a course..."
-                value={searchQuery}
-                onChange={handleSearchInputChange}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="search-course-input"
-              />
-              <button 
-                className="search-course-btn"
-                onClick={handleSearch}
-              >
-                <FaSearch />
-              </button>
-            </div>
-            
-            {searchResults.length > 0 && (
-              <div className="search-results">
-                <h4>Search Results ({searchResults.length})</h4>
-                <div className="results-list">
-                  {searchResults.map((result, index) => (
-                    <div 
-                      key={index} 
-                      className={`search-result-item ${result.isEligible ? 'eligible' : 'not-eligible'}`}
-                      onClick={() => {
-                        if (result.isEligible && result.courseData) {
-                          toggleCourseSelection(result.courseData);
-                          setShowSearchModal(false);
-                        }
-                      }}
-                    >
-                      <div className="result-course">{result.course}</div>
-                      <div className="result-faculty">{result.faculty}</div>
-                      <div className={`result-status ${result.isEligible ? 'eligible' : 'not-eligible'}`}>
-                        {result.isEligible ? '✓ Eligible' : '✗ Not Eligible'}
-                      </div>
-                    </div>
-                  ))}
+      <main className="app-main dashboard-main">
+        <div className="app-container">
+
+          {step === 1 && (
+            <div className="wizard-step step-marks">
+              <div className="marks-header-row">
+                <h1 className="step-heading-large">ENTER MARKS</h1>
+                <div className="aps-spiky-circle">
+                  <span className="aps-spiky-number">{userAPS}</span>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
 
-      {/* Course Details Modal */}
-      {selectedCourseDetails && (
-        <div className="courses-modal" onClick={() => setSelectedCourseDetails(null)}>
-          <div className="courses-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="courses-modal-header">
-              <h3>{selectedCourseDetails.name}</h3>
-              <button 
-                className="close-courses-modal"
-                onClick={() => setSelectedCourseDetails(null)}
-              >
-                <FaTimes />
-              </button>
-            </div>
-            
-            <div className="courses-modal-info">
-              <p><strong>Institution:</strong> {selectedCourseDetails.institution_name || 'N/A'}</p>
-              <p><strong>Faculty:</strong> {selectedCourseDetails.faculty_name || 'N/A'}</p>
-              <p><strong>Duration:</strong> {selectedCourseDetails.duration_years} years</p>
-              {selectedCourseDetails.minAPS && (
-                <p><strong>Minimum APS:</strong> {selectedCourseDetails.minAPS}</p>
-              )}
-            </div>
-            
-            <div className="course-description-section" style={{ padding: '15px 20px', borderBottom: '1px solid #eee' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Description</h4>
-              <p style={{ margin: 0, color: '#666', lineHeight: 1.6, fontSize: '14px' }}>
-                {selectedCourseDetails.description || 'No description available.'}
+              <p className="step-subtitle-large">
+                This will be used to calculate your APS and recommend the best courses for YOU
               </p>
-            </div>
-            
-            {selectedCourseDetails.additional_info && selectedCourseDetails.additional_info.length > 0 && (
-              <div className="course-additional-section" style={{ padding: '15px 20px' }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Additional Information</h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', color: '#666' }}>
-                  {selectedCourseDetails.additional_info.map((info, idx) => (
-                    <li key={idx} style={{ marginBottom: '8px', fontSize: '14px' }}>{info.info_text}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            <div className="courses-modal-footer">
-              <div className="selected-count">
-                {isLoadingDetails ? 'Loading...' : 'Course Details'}
-              </div>
-              <button 
-                className="close-modal-btn"
-                onClick={() => setSelectedCourseDetails(null)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Main Content */}
-      <main className="app-main" style={{ paddingTop: '80px' }}>
-        <div className="app-container">
-          
-                   {/* Divider Line */}
-          <div className="divider-line"></div>
+              <div className="marks-list">
+                {subjects.map((subject, index) => (
+                  <div key={index} className="mark-card">
+                    <div className="mark-card-inner">
+                      <div className="mark-subject-col">
+                        <select 
+                          value={subject.subject} 
+                          onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)}
+                          className="subject-select-clean"
+                        >
+                          <option value="">Select subject</option>
+                          {Object.entries(groupedSubjects).map(([category, subjectsList]) => (
+                            subjectsList.length > 0 && (
+                              <optgroup key={category} label={category}>
+                                {subjectsList.map(subj => (
+                                  <option key={subj} value={subj}>{subj}</option>
+                                ))}
+                              </optgroup>
+                            )
+                          ))}
+                        </select>
+                      </div>
 
-          {/* Main Heading with Warning */}
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-             
-            <h1 className="main-heading">Enter Your Subjects</h1>
-          </div>
+                      <div className="mark-input-col">
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100" 
+                          placeholder="%"
+                          value={subject.mark}
+                          onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)}
+                          className="mark-input-clean"
+                        />
+                      </div>
 
-          {/* Subjects Section */}
-          <div className="subjects-section" ref={subjectsSectionRef}>
-            <p className="section-description">
-            Enter your final high school marks. Click "Find My Options" to see eligible faculties.<br />
-             <strong>Life Orientation is excluded</strong>
-              </p>
-            
-            <div className="subjects-table">
-              <div className="table-header">
-                <div className="subject-col">Subject</div>
-                <div className="mark-col">Mark %</div>
-                <div className="aps-col">APS</div>
-                <div className="action-col"></div>
-              </div>
-              
-              {subjects.map((subject, index) => (
-                <div key={index} className="subject-row">
-                  <div className="subject-col">
-                    <select 
-                      value={subject.subject} 
-                      onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)}
-                      className="subject-select"
-                    >
-                      {Object.entries(groupedSubjects).map(([category, subjectsList]) => (
-                        subjectsList.length > 0 && (
-                          <optgroup key={category} label={category}>
-                            {subjectsList.map(subj => (
-                              <option key={subj} value={subj}>{subj}</option>
-                            ))}
-                          </optgroup>
-                        )
-                      ))}
-                    </select>
+                      <div className="mark-aps-col">
+                        {subject.subject !== 'Life Orientation' && subject.mark && !isNaN(subject.mark) && subject.mark !== '' ? (
+                          <span className="mark-aps-badge">{calculateIndividualAPS(subject.mark)}</span>
+                        ) : subject.subject === 'Life Orientation' ? (
+                          <span className="mark-lo-tag">LO</span>
+                        ) : (
+                          <span className="mark-aps-empty">—</span>
+                        )}
+                      </div>
+
+                      {subjects.length > 1 && subject.subject !== 'Life Orientation' && (
+                        <button 
+                          className="remove-mark-btn"
+                          onClick={() => removeSubject(index)}
+                          title="Remove subject"
+                        >
+                          <FaTrash />
+                        </button>
+                      )}
+                      {subjects.length > 1 && subject.subject === 'Life Orientation' && (
+                        <div className="remove-mark-spacer"></div>
+                      )}
+                    </div>
                   </div>
-                  <div className="mark-col">
-                    <input 
-                      type="number" 
-                      min="0" 
-                      max="100" 
-                      placeholder="0-100" 
-                      value={subject.mark}
-                      onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)}
-                      className="mark-input"
+                ))}
+              </div>
+
+              <button className="add-mark-btn" onClick={addSubject}>
+                + Add another subject
+              </button>
+
+              {isCalculatingEligibility && (
+                <div className="finding-courses-overlay">
+                  <div className="finding-courses-content">
+                    <RadialPulseLoader 
+                      size={120}
+                      color="#007bff"
+                      text="Finding Courses..."
+                      showText={true}
                     />
                   </div>
-                  <div className="aps-col">
-                    <span className="aps-points">
-                      {calculateIndividualAPS(subject.mark)} pts
-                    </span>
-                  </div>
-                  <div className="action-col">
-                    {subjects.length > 1 && (
-                      <button 
-                        className="remove-subject-btn"
-                        onClick={() => removeSubject(index)}
-                        title="Remove subject"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
                 </div>
-              ))}
+              )}
+
+              <button 
+                className="primary-btn-full"
+                onClick={findMatches}
+                disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}
+              >
+                {isCalculatingEligibility ? (
+                  <>
+                    <FaSpinner className="spinner-icon" /> Finding Courses...
+                  </>
+                ) : backendData.isConnected && backendData.courses.length > 0 
+                  ? "Continue" 
+                  : "Loading..."}
+              </button>
             </div>
-
-            <button className="add-subject-btn" onClick={addSubject}>
-              + Add another subject
-            </button>
-
-            {/* APS Display */}
-            <div className="aps-display">
-              <div className="aps-info">
-                <div className="aps-label">Your Current APS:</div>
-                <div className="aps-score">{userAPS > 0 ? userAPS : '--'}</div>
-              </div>
-            </div>
-
-            {/* Loading Overlay for Find My Options */}
-            {isCalculatingEligibility && (
-              <div className="finding-courses-overlay">
-                <div className="finding-courses-content">
-                  <RadialPulseLoader 
-                    size={120}
-                    color="#007bff"
-                    text="Finding Courses..."
-                    showText={true}
-                  />
-                </div>
-              </div>
-            )}
-
-            <button 
-              className={`get-started-btn ${isCalculatingEligibility ? 'loading' : ''}`}
-              onClick={findMatches}
-              disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}
-            >
-              {isCalculatingEligibility ? (
-                <>
-                  <FaSpinner className="spinner-icon" /> Finding Courses...
-                </>
-              ) : backendData.isConnected && backendData.courses.length > 0 
-                ? "Continue" 
-                : "Loading..."}
-            </button>
-          </div>
-
-          {/* Eligible Faculties Section */}
-          {showFaculties && eligibleFaculties.length > 0 && (
-            <>
-              <div className="divider-line"></div>
-              
-              <div ref={facultiesSectionRef}>
-                <h2 className="career-matches-heading">Your Eligible Faculties</h2>
-                <p className="career-matches-subtitle">
-                  {eligibleFaculties.length} faculty(s) found • {eligibleCourses.length} eligible courses
-                </p>
-              </div>
-
-              {/* Faculty Navigation Info with Search */}
-              {eligibleFaculties.length > 0 && (
-                <div className="faculty-navigation-info">
-                  <p>
-                    Showing {Math.min(facultiesPerView, visibleFaculties.length)} of {eligibleFaculties.length} faculties
-                  </p>
-                  
-                  {/* Search Bar for Courses */}
-                  <div className="faculty-search-container">
-                    <div className="faculty-search-input-group">
-                      <input
-                        type="text"
-                        placeholder="Search for a specific course..."
-                        value={searchQuery}
-                        onChange={handleSearchInputChange}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        className="faculty-search-input"
-                      />
-                      <button 
-                        className="faculty-search-btn"
-                        onClick={handleSearch}
-                      >
-                        <FaSearch />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Faculty Cards Grid - 3 ROWS x 2 COLUMNS (6 visible at once) */}
-              <div className="faculties-section">
-                {eligibleFaculties.length > 6 && (
-                  <button 
-                    className={`faculty-nav-btn prev-btn ${isSliding ? 'disabled' : ''}`}
-                    onClick={prevFaculties}
-                    disabled={currentFacultyIndex === 0 || isSliding}
-                  >
-                    <FaChevronLeft />
-                  </button>
-                )}
-
-                <div 
-                  className="faculties-slider-container"
-                  style={{
-                    overflowX: 'auto',
-                    overflowY: 'hidden',
-                    scrollBehavior: 'smooth',
-                    WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none'
-                  }}
-                >
-                  <div 
-                    className={`faculties-grid ${isSliding ? `sliding-${slideDirection}` : ''}`}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, 1fr)',
-                      gap: '16px',
-                      width: 'max-content',
-                      padding: '10px 5px'
-                    }}
-                  >
-                    {visibleFaculties.map((faculty) => (
-                      <div 
-                        key={faculty.id} 
-                        className={`faculty-card ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
-                        onClick={() => toggleFacultySelection(faculty.id)}
-                        style={{
-                          background: 'white',
-                          borderRadius: '12px',
-                          padding: '16px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          border: selectedFaculties.includes(faculty.id) ? '2px solid #007bff' : '1px solid #e0e0e0',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                          width: '110px',
-                          flex: '0 0 auto'
-                        }}
-                      >
-                        <div className="faculty-card-header">
-                          <h3 className="faculty-name" style={{ color: 'black', fontSize: '14px', margin: '0 0 8px 0', textAlign: 'center' }}>{faculty.name}</h3>
-                          {selectedFaculties.includes(faculty.id) && (
-                            <div className="selected-badge" style={{ color: '#007bff', fontWeight: 'bold', textAlign: 'center' }}>✓</div>
-                          )}
-                        </div>
-                        <div className="faculty-category" style={{ color: '#666', fontSize: '11px', textAlign: 'center' }}>{faculty.category}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {eligibleFaculties.length > 6 && (
-                  <button 
-                    className={`faculty-nav-btn next-btn ${isSliding ? 'disabled' : ''}`}
-                    onClick={nextFaculties}
-                    disabled={currentFacultyIndex >= eligibleFaculties.length - 6 || isSliding}
-                  >
-                    <FaChevronRight />
-                  </button>
-                )}
-              </div>
-
-              {/* CHANGE: Black text for modal header */}
-              {showCoursesForFaculty && (
-                <div className="courses-modal">
-                  <div className="courses-modal-content">
-                    <div className="courses-modal-header">
-                      <h3 style={{ color: 'black' }}>Select Courses from {showCoursesForFaculty.name}</h3>
-                      <button 
-                        className="close-courses-modal"
-                        onClick={handleCloseCoursesModal}
-                      >
-                        <FaTimes />
-                      </button>
-                    </div>
-                    <div className="courses-modal-info">
-                      <p>You can select up to 6 courses total</p>
-                    </div>
-                    
-                    {/* Filter Buttons */}
-                    <div className="course-filters">
-                      <button 
-                        className={`filter-btn ${courseTypeFilter === 'all' ? 'active' : ''}`}
-                        onClick={() => setCourseTypeFilter('all')}
-                      >
-                        All
-                      </button>
-                      <button 
-                        className={`filter-btn ${courseTypeFilter === 'degree' ? 'active' : ''}`}
-                        onClick={() => setCourseTypeFilter('degree')}
-                      >
-                        Degree
-                      </button>
-                      <button 
-                        className={`filter-btn ${courseTypeFilter === 'diploma' ? 'active' : ''}`}
-                        onClick={() => setCourseTypeFilter('diploma')}
-                      >
-                        Diploma
-                      </button>
-                      <button 
-                        className={`filter-btn ${courseTypeFilter === 'certificate' ? 'active' : ''}`}
-                        onClick={() => setCourseTypeFilter('certificate')}
-                      >
-                        H. Certificate
-                      </button>
-                      <button 
-                        className={`filter-btn ${courseTypeFilter === 'online' ? 'active' : ''}`}
-                        onClick={() => setCourseTypeFilter('online')}
-                      >
-                        Online
-                      </button>
-                    </div>
-
-                    <div className="courses-list">
-                      {getFilteredCoursesForSelectedFaculty()
-                        .map((course, index) => {
-                          const isTopCourse = index < 5 && course.matchScore;
-                          
-                          return (
-                            <div 
-                              key={`${course.id}-${index}`}
-                              className={`course-item ${isCourseSelected(course) ? 'selected' : ''} ${isTopCourse ? 'top-course' : ''}`}
-                            >
-                              <div className="course-content">
-                                <button 
-                                  className="course-info-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    fetchCourseDetails(course);
-                                  }}
-                                  title="View course details"
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    color: '#666',
-                                    transition: 'color 0.2s ease'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = '#007bff'}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = '#666'}
-                                >
-                                  <FaBook className="course-icon" />
-                                </button>
-                                <div className="course-details" onClick={() => toggleCourseSelection(course)} style={{ cursor: 'pointer', flex: 1 }}>
-                                  <span className="course-name">{course.name}</span>
-                                  {course.minAPS && (
-                                    <small className="course-summary" style={{ display: 'block', fontSize: '12px', color: '#999' }}>
-                                      Min APS: {course.minAPS}
-                                    </small>
-                                  )}
-                                  {course.recommended_subjects && course.recommended_subjects.length > 0 && (
-                                    <small style={{ display: 'block', fontSize: '11px', color: '#28a745', marginTop: '2px' }}>
-                                      Recommended: {course.recommended_subjects.map(r => `${r.subject_name} (${r.minimum_mark}%)`).join(', ')}
-                                    </small>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="course-check" onClick={() => toggleCourseSelection(course)} style={{ cursor: 'pointer' }}>
-                                {isCourseSelected(course) ? '✓' : '+'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                    <div className="courses-modal-footer">
-                      <div className="selected-count">
-                        Selected: {selectedCourses.length}/6
-                      </div>
-                      <button 
-                        className="close-modal-btn"
-                        onClick={handleCloseCoursesModal}
-                      >
-                        Done
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Selected Courses Summary */}
-              {selectedCourses.length > 0 && (
-                <div className="selected-courses" ref={selectedCoursesSectionRef}>
-                  <h3>Your Selected Courses ({selectedCourses.length}/6)</h3>
-                  <div className="selected-courses-list">
-                    {selectedCourses.map((course, index) => {
-                      const faculty = getFacultyByName(course.faculty_name);
-                      return (
-                        <div key={index} className="selected-course-item">
-                          <div className="selected-course-content">
-                            <FaBook className="course-icon-small" />
-                            <div className="course-details">
-                              <span className="course-name-small">{course.name}</span>
-                              {faculty && (
-                                <span className="course-faculty">{faculty.name}</span>
-                              )}
-                              {course.recommended_subjects && course.recommended_subjects.length > 0 && (
-                                <small style={{ fontSize: '10px', opacity: 0.8, marginTop: '2px', display: 'block' }}>
-                                  Recommended: {course.recommended_subjects.map(r => r.subject_name).join(', ')}
-                                </small>
-                              )}
-                            </div>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCourseSelection(course);
-                            }}
-                            className="remove-course-btn"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Apply Now Button */}
-              <div className="apply-section" ref={applySectionRef}>
-                <button 
-                  className="apply-now-btn"
-                  onClick={handleApply}
-                  disabled={selectedCourses.length === 0}
-                >
-                  <span>Proceed</span>
-                  <FaArrowRight className="apply-icon" />
-                </button>
-                <p className="apply-note">
-                  You've selected {selectedCourses.length} course(s). Next, we'll show you all institutions offering these courses.
-                </p>
-              </div>
-            </>
           )}
 
-          {/* No Faculties Found */}
-          {showFaculties && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
+          {step === 2 && eligibleFaculties.length > 0 && (
+            <div className="wizard-step step-faculties">
+              <h1 className="step-heading-large">CHOOSE 3 FACULTIES</h1>
+              <p className="step-subtitle-large">
+                Select up to 3 faculties to see available courses
+              </p>
+
+              <div className="faculty-grid-2col">
+                {visibleFaculties.map((faculty) => (
+                  <div 
+                    key={faculty.id} 
+                    className={`faculty-card-square ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
+                    onClick={() => toggleFacultySelection(faculty.id)}
+                  >
+                    <span className="faculty-card-name">{cleanFacultyName(faculty.name)}</span>
+                    {selectedFaculties.includes(faculty.id) && (
+                      <span className="faculty-card-check">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {totalFacultyPages > 1 && (
+                <div className="faculty-pagination">
+                  <button className="page-arrow" onClick={prevFacultyPage} disabled={facultyPage === 0}>
+                    <FaChevronLeft />
+                  </button>
+                  <div className="page-dots">
+                    {Array.from({ length: totalFacultyPages }).map((_, i) => (
+                      <span key={i} className={`dot ${i === facultyPage ? 'active' : ''}`} />
+                    ))}
+                  </div>
+                  <button className="page-arrow" onClick={nextFacultyPage} disabled={facultyPage === totalFacultyPages - 1}>
+                    <FaChevronRight />
+                  </button>
+                </div>
+              )}
+
+              <button 
+                className="primary-btn-full"
+                onClick={() => {
+                  if (selectedFaculties.length === 0) {
+                    alert('Please select at least one faculty');
+                    return;
+                  }
+                  setStep(3);
+                }}
+                disabled={selectedFaculties.length === 0}
+              >
+                Continue to Select Courses
+              </button>
+
+              <button className="text-btn" onClick={() => setStep(1)}>
+                ← Back to marks
+              </button>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="wizard-step step-choose-courses">
+              <h1 className="step-heading-large">Choose 9 courses</h1>
+              <p className="step-subtitle-large">
+                This will be used to calibrate your courses
+              </p>
+
+              <div className="faculty-courses-list">
+                {getSelectedFacultyObjects().map((faculty) => {
+                  const selectedCount = getSelectedCountForFaculty(faculty.name);
+                  const maxForFaculty = Math.min(3, faculty.courses.length);
+                  const isComplete = isFacultySelectionComplete(faculty);
+                  
+                  return (
+                    <div 
+                      key={faculty.id} 
+                      className={`faculty-selection-card ${isComplete ? 'complete' : ''}`}
+                      onClick={() => setActiveFacultyModal(faculty)}
+                    >
+                      <div className="faculty-selection-info">
+                        <span className="faculty-selection-name">{cleanFacultyName(faculty.name)}</span>
+                      </div>
+                      <div className="faculty-selection-right">
+                        <span className="faculty-selection-count">{selectedCount}/{maxForFaculty}</span>
+                        <FaChevronRight className="faculty-selection-arrow" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button 
+                className="primary-btn-full"
+                onClick={handleApply}
+                disabled={!canProceedToPayment()}
+              >
+                Continue
+              </button>
+
+              <button className="text-btn" onClick={() => setStep(2)}>
+                ← Back to faculties
+              </button>
+            </div>
+          )}
+
+          <CourseSelectionModal 
+            faculty={activeFacultyModal}
+            onClose={() => setActiveFacultyModal(null)}
+            selectedCourses={selectedCourses}
+            onToggleCourse={toggleCourseSelection}
+            getSelectedCountForFaculty={getSelectedCountForFaculty}
+          />
+
+          {step === 2 && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
             <div className="no-faculties">
               <h3>No Eligible Faculties Found</h3>
               <p>Based on your current marks, you don't meet the minimum requirements for any faculties.</p>
@@ -1870,20 +1133,52 @@ const Dashboard = () => {
                   <li>Consider alternative pathways like bridging courses</li>
                 </ul>
               </div>
+              <button className="text-btn" onClick={() => setStep(1)}>← Back to marks</button>
             </div>
           )}
 
-          {/* Contact Support - ALWAYS SHOWN */}
-          <div className="contact-support">
-            <p className="contact-message">
-              Need help? Contact our support team at{' '}
-              <a href="mailto:skolifyteam@gmail.com" className="support-link">
-                skolifyteam@gmail.com
-              </a>
-            </p>
-          </div>
+          {selectedCourseDetails && (
+            <div className="courses-modal-overlay" onClick={() => setSelectedCourseDetails(null)}>
+              <div className="courses-modal-container details-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="courses-modal-header">
+                  <h3 className="courses-modal-title">{selectedCourseDetails.name}</h3>
+                  <button className="courses-modal-close" onClick={() => setSelectedCourseDetails(null)}>×</button>
+                </div>
+                
+                <div className="course-details-info">
+                  <p><strong>Institution:</strong> {selectedCourseDetails.institution_name || 'N/A'}</p>
+                  <p><strong>Faculty:</strong> {cleanFacultyName(selectedCourseDetails.faculty_name || 'N/A')}</p>
+                  <p><strong>Duration:</strong> {selectedCourseDetails.duration_years} years</p>
+                  {selectedCourseDetails.minAPS && (
+                    <p><strong>Minimum APS:</strong> {selectedCourseDetails.minAPS}</p>
+                  )}
+                </div>
+                
+                <div className="course-details-description">
+                  <h4>Description</h4>
+                  <p>{selectedCourseDetails.description || 'No description available.'}</p>
+                </div>
+                
+                {selectedCourseDetails.additional_info && selectedCourseDetails.additional_info.length > 0 && (
+                  <div className="course-details-additional">
+                    <h4>Additional Information</h4>
+                    <ul>
+                      {selectedCourseDetails.additional_info.map((info, idx) => (
+                        <li key={idx}>{info.info_text}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="courses-modal-footer">
+                  <button className="courses-modal-done" onClick={() => setSelectedCourseDetails(null)}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {/* Footer - ALWAYS SHOWN */}
           <footer className="dashboard-footer">
             <div className="footer-links">
               <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
@@ -1893,9 +1188,9 @@ const Dashboard = () => {
             <p className="copyright">© {new Date().getFullYear()} Skolify. All rights reserved.</p>
           </footer>
 
-        </div> {/* Close app-container */}
-      </main> {/* Close app-main */}
-    </div> /* Close dashboard-app */
+        </div>
+      </main>
+    </div>
   );
 };
 
