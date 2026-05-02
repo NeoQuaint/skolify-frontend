@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaTrash } from 'react-icons/fa';
+import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaTrash, FaInfoCircle } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
@@ -279,72 +279,194 @@ const cleanFacultyName = (name) => {
   return name.replace(/^Faculty of\s+/i, '');
 };
 
+// ==================== COURSE DETAIL MODAL ====================
+function CourseDetailModal({ course, onClose }) {
+  const [details, setDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!course) return;
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${API_URL}/api/courses/${course.id}/additional-info`);
+        let additionalInfo = [];
+        if (response.ok) {
+          const data = await response.json();
+          additionalInfo = data.additional_info || [];
+        }
+        setDetails({
+          ...course,
+          description: course.description || 'No description available.',
+          additional_info: additionalInfo
+        });
+      } catch (error) {
+        setDetails({
+          ...course,
+          description: course.description || 'No description available.',
+          additional_info: []
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [course]);
+
+  if (!course) return null;
+
+  return (
+    <div className="courses-modal-overlay" onClick={onClose}>
+      <div className="courses-modal-container details-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="courses-modal-header">
+          <h3 className="courses-modal-title">{course.name}</h3>
+          <button className="courses-modal-close" onClick={onClose}>×</button>
+        </div>
+
+        {isLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <FaSpinner className="spinner-icon" style={{ fontSize: '24px', color: '#007bff' }} />
+            <p style={{ marginTop: '12px', color: '#666' }}>Loading details...</p>
+          </div>
+        ) : details && (
+          <>
+            <div className="course-details-info">
+              <p><strong>Institution:</strong> {details.institution_name || 'N/A'}</p>
+              <p><strong>Faculty:</strong> {cleanFacultyName(details.faculty_name || 'N/A')}</p>
+              <p><strong>Duration:</strong> {details.duration_years} years</p>
+              {details.minAPS && (
+                <p><strong>Minimum APS:</strong> {details.minAPS}</p>
+              )}
+            </div>
+            
+            <div className="course-details-description">
+              <h4>Description</h4>
+              <p>{details.description}</p>
+            </div>
+            
+            {details.additional_info && details.additional_info.length > 0 && (
+              <div className="course-details-additional">
+                <h4>Additional Information</h4>
+                <ul>
+                  {details.additional_info.map((info, idx) => (
+                    <li key={idx}>{info.info_text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            <div className="courses-modal-footer">
+              <button className="courses-modal-done" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ==================== COURSE SELECTION MODAL ====================
 function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCourse, getSelectedCountForFaculty }) {
+  const [detailCourse, setDetailCourse] = useState(null);
+
   if (!faculty) return null;
 
   const selectedCount = getSelectedCountForFaculty(faculty.name);
   const maxForFaculty = Math.min(3, faculty.courses.length);
   const isMaxReached = selectedCount >= 3;
   
-  // Sort courses: recommended first
   const sortedCourses = [...faculty.courses].sort((a, b) => {
     const aIsRecommended = (a.matchScore && a.matchScore >= 80) || (a.recommended_subjects && a.recommended_subjects.length > 0);
     const bIsRecommended = (b.matchScore && b.matchScore >= 80) || (b.recommended_subjects && b.recommended_subjects.length > 0);
-    
     if (aIsRecommended && !bIsRecommended) return -1;
     if (!aIsRecommended && bIsRecommended) return 1;
     return 0;
   });
 
-  // Get recommended courses count for green dash
-  const recommendedCourses = sortedCourses.filter(c => (c.matchScore && c.matchScore >= 80) || (c.recommended_subjects && c.recommended_subjects.length > 0));
-
   return (
-    <div className="courses-modal-overlay" onClick={onClose}>
-      <div className="courses-modal-container" onClick={(e) => e.stopPropagation()}>
-        <div className="courses-modal-header">
-          <h3 className="courses-modal-title">{cleanFacultyName(faculty.name)}</h3>
-          <button className="courses-modal-close" onClick={onClose}>×</button>
-        </div>
-
-        <div className="courses-modal-list">
-          {sortedCourses.map((course, idx) => {
-            const isSelected = selectedCourses.some(c => c.id === course.id);
-            const isDisabled = !isSelected && isMaxReached;
-            const isRecommended = (course.matchScore && course.matchScore >= 80) || (course.recommended_subjects && course.recommended_subjects.length > 0);
-            const isTopRecommended = isRecommended && idx < 5;
-            
-            return (
-              <div 
-                key={course.id}
-                className={`course-modal-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''} ${isTopRecommended ? 'recommended' : ''}`}
-                onClick={() => !isDisabled && onToggleCourse(course, faculty.name)}
-              >
-                <div className="course-modal-content">
-                  <div className="course-modal-name">{course.name}</div>
-                  {course.minAPS && (
-                    <div className="course-modal-aps">Min APS: {course.minAPS}</div>
-                  )}
-                </div>
-                <div className="course-modal-check">
-                  {isSelected ? '✓' : '+'}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="courses-modal-footer">
-          <div className="courses-modal-counter">
-            {selectedCount}/{maxForFaculty} selected
+    <>
+      <div className="courses-modal-overlay" onClick={onClose}>
+        <div className="courses-modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className="courses-modal-header">
+            <h3 className="courses-modal-title">{cleanFacultyName(faculty.name)}</h3>
+            <button className="courses-modal-close" onClick={onClose}>×</button>
           </div>
-          <button className="courses-modal-done" onClick={onClose}>
-            Done
-          </button>
+
+          <div className="courses-modal-list">
+            {sortedCourses.map((course, idx) => {
+              const isSelected = selectedCourses.some(c => c.id === course.id);
+              const isDisabled = !isSelected && isMaxReached;
+              const isRecommended = (course.matchScore && course.matchScore >= 80) || (course.recommended_subjects && course.recommended_subjects.length > 0);
+              const isTopRecommended = isRecommended && idx < 5;
+              
+              return (
+                <div 
+                  key={course.id}
+                  className={`course-modal-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''} ${isTopRecommended ? 'recommended' : ''}`}
+                  onClick={() => !isDisabled && onToggleCourse(course, faculty.name)}
+                >
+                  <div className="course-modal-content">
+                    <div className="course-modal-name">{course.name}</div>
+                    {course.minAPS && (
+                      <div className="course-modal-aps">Min APS: {course.minAPS}</div>
+                    )}
+                    {course.institution_name && (
+                      <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{course.institution_name}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetailCourse(course);
+                      }}
+                      title="View course details"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#999',
+                        fontSize: '16px',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#007bff'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+                    >
+                      <FaInfoCircle />
+                    </button>
+                    <div className="course-modal-check">
+                      {isSelected ? '✓' : '+'}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="courses-modal-footer">
+            <div className="courses-modal-counter">
+              {selectedCount}/{maxForFaculty} selected
+            </div>
+            <button className="courses-modal-done" onClick={onClose}>
+              Done
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {detailCourse && (
+        <CourseDetailModal 
+          course={detailCourse} 
+          onClose={() => setDetailCourse(null)} 
+        />
+      )}
+    </>
   );
 }
 
@@ -399,8 +521,6 @@ const Dashboard = () => {
 
   const [activeFacultyModal, setActiveFacultyModal] = useState(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
-  const [selectedCourseDetails, setSelectedCourseDetails] = useState(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   
   const [facultyPage, setFacultyPage] = useState(0);
@@ -484,20 +604,12 @@ const Dashboard = () => {
     sessionStorage.setItem(`dashboard_${key}`, JSON.stringify(value));
   }, []);
 
-  // Scroll to top when step changes
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'instant'
-    });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [step]);
 
-  // Scroll to top when faculty page changes
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'instant'
-    });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [facultyPage]);
 
   useEffect(() => {
@@ -513,138 +625,73 @@ const Dashboard = () => {
     saveState('userAPS', totalAPS);
   }, [subjects, calculateAPS, saveState]);
 
-  useEffect(() => {
-    saveState('subjects', subjects);
-  }, [subjects, saveState]);
-
-  useEffect(() => {
-    saveState('selectedFaculties', selectedFaculties);
-  }, [selectedFaculties, saveState]);
-
-  useEffect(() => {
-    saveState('selectedCourses', selectedCourses);
-  }, [selectedCourses, saveState]);
-
-  useEffect(() => {
-    saveState('eligibleCourses', eligibleCourses);
-  }, [eligibleCourses, saveState]);
-
-  useEffect(() => {
-    saveState('eligibleFaculties', eligibleFaculties);
-  }, [eligibleFaculties, saveState]);
+  useEffect(() => { saveState('subjects', subjects); }, [subjects, saveState]);
+  useEffect(() => { saveState('selectedFaculties', selectedFaculties); }, [selectedFaculties, saveState]);
+  useEffect(() => { saveState('selectedCourses', selectedCourses); }, [selectedCourses, saveState]);
+  useEffect(() => { saveState('eligibleCourses', eligibleCourses); }, [eligibleCourses, saveState]);
+  useEffect(() => { saveState('eligibleFaculties', eligibleFaculties); }, [eligibleFaculties, saveState]);
 
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const testResponse = await fetch(`${API_URL}/api/test`, {
-          signal: controller.signal
-        });
-        
+        const testResponse = await fetch(`${API_URL}/api/test`, { signal: controller.signal });
         clearTimeout(timeoutId);
-        
-        if (!testResponse.ok) {
-          throw new Error(`Backend responded with status: ${testResponse.status}`);
-        }
-        
+        if (!testResponse.ok) throw new Error(`Backend responded with status: ${testResponse.status}`);
         const coursesResponse = await fetch(`${API_URL}/api/courses`);
-        
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json();
           const filteredCourses = filterHiddenInstitutions(coursesData);
-          
-          setBackendData(prev => ({
-            ...prev,
-            isConnected: true,
-            courses: filteredCourses,
-            isLoading: false,
-            error: null
-          }));
+          setBackendData({ isConnected: true, courses: filteredCourses, isLoading: false, error: null });
         } else {
-          setBackendData(prev => ({
-            ...prev,
-            isConnected: true,
-            isLoading: false,
-            error: 'Could not load courses'
-          }));
+          setBackendData(prev => ({ ...prev, isConnected: true, isLoading: false, error: 'Could not load courses' }));
         }
       } catch (error) {
         console.error("Backend connection error:", error);
-        setBackendData(prev => ({
-          ...prev,
-          isConnected: false,
-          isLoading: false,
-          error: error.message
-        }));
+        setBackendData(prev => ({ ...prev, isConnected: false, isLoading: false, error: error.message }));
       }
     };
-    
     fetchBackendData();
   }, []);
 
   const calculateEligibleCourses = async () => {
     setIsCalculatingEligibility(true);
-    
     try {
       const subjectsData = subjects
         .filter(subject => subject.subject !== 'Life Orientation')
         .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
-        .map(subject => ({
-          subject_name: subject.subject,
-          mark: parseInt(subject.mark)
-        }));
-
-      if (subjectsData.length === 0) {
-        throw new Error('Please enter at least one subject mark');
-      }
-
-      if (!backendData.isConnected) {
-        throw new Error('Backend server is not connected');
-      }
-
+        .map(subject => ({ subject_name: subject.subject, mark: parseInt(subject.mark) }));
+      if (subjectsData.length === 0) throw new Error('Please enter at least one subject mark');
+      if (!backendData.isConnected) throw new Error('Backend server is not connected');
       const response = await fetch(`${API_URL}/api/eligible-courses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subjects: subjectsData })
       });
-
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Backend error: ${response.status}`);
       const result = await response.json();
-
       if (result.status === 'success') {
         const eligibleCoursesData = filterHiddenInstitutions(result.eligible_courses || []);
-        
         const coursesWithScores = eligibleCoursesData.map(course => ({
           ...course,
           matchScore: course.matchScore || Math.floor(Math.random() * 40) + 60
         }));
-        
         setEligibleCourses(coursesWithScores);
         saveState('eligibleCourses', coursesWithScores);
-
         const facultiesMap = {};
         coursesWithScores.forEach(course => {
           const facultyName = course.faculty_name || 'General';
           if (!facultiesMap[facultyName]) {
             facultiesMap[facultyName] = {
               id: course.faculty_id || facultyName.toLowerCase().replace(/\s+/g, '-'),
-              name: facultyName,
-              category: course.faculty_category || 'General',
-              courses: []
+              name: facultyName, category: course.faculty_category || 'General', courses: []
             };
           }
           if (!facultiesMap[facultyName].courses.find(c => c.id === course.id)) {
             facultiesMap[facultyName].courses.push(course);
           }
         });
-
         let eligibleFacultiesData = Object.values(facultiesMap);
-        
         eligibleFacultiesData.sort((a, b) => {
           const indexA = facultyPriority.indexOf(a.name);
           const indexB = facultyPriority.indexOf(b.name);
@@ -653,10 +700,8 @@ const Dashboard = () => {
           if (indexB !== -1) return 1;
           return a.name.localeCompare(b.name);
         });
-        
         setEligibleFaculties(eligibleFacultiesData);
         saveState('eligibleFaculties', eligibleFacultiesData);
-        
         return eligibleFacultiesData;
       } else {
         throw new Error(result.error || 'Unknown error');
@@ -671,43 +716,23 @@ const Dashboard = () => {
   };
 
   const findMatches = async () => {
-    const hasMarks = subjects
-      .filter(s => s.subject !== 'Life Orientation')
-      .some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
-    
-    if (!hasMarks) {
-      alert('Please enter at least one mark to find matches');
-      return;
-    }
-    
-    if (!backendData.isConnected) {
-      alert('Backend not connected. Please check if server is running.');
-      return;
-    }
-    
+    const hasMarks = subjects.filter(s => s.subject !== 'Life Orientation').some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
+    if (!hasMarks) { alert('Please enter at least one mark to find matches'); return; }
+    if (!backendData.isConnected) { alert('Backend not connected.'); return; }
     const eligibleFacultiesData = await calculateEligibleCourses();
-    
     if (eligibleFacultiesData && eligibleFacultiesData.length > 0) {
-      setStep(2);
-      setFacultyPage(0);
-      setSelectedFaculties([]);
+      setStep(2); setFacultyPage(0); setSelectedFaculties([]);
     } else {
-      alert('No faculties found that match your subjects. Try improving your marks or adding more subjects.');
+      alert('No faculties found that match your subjects.');
     }
   };
 
-  const getSelectedFacultyObjects = () => {
-    return eligibleFaculties.filter(f => selectedFaculties.includes(f.id));
-  };
-
-  const getSelectedCountForFaculty = (facultyName) => {
-    return selectedCourses.filter(c => c.faculty_name === facultyName).length;
-  };
+  const getSelectedFacultyObjects = () => eligibleFaculties.filter(f => selectedFaculties.includes(f.id));
+  const getSelectedCountForFaculty = (facultyName) => selectedCourses.filter(c => c.faculty_name === facultyName).length;
 
   const isFacultySelectionComplete = (faculty) => {
     const selectedCount = getSelectedCountForFaculty(faculty.name);
     const availableCourses = faculty.courses.length;
-    
     return selectedCount === 3 || (selectedCount > 0 && selectedCount === availableCourses);
   };
 
@@ -716,13 +741,8 @@ const Dashboard = () => {
     for (const faculty of selectedFacultiesObjects) {
       const selectedCount = getSelectedCountForFaculty(faculty.name);
       const availableCourses = faculty.courses.length;
-      
-      if (availableCourses < 3 && selectedCount !== availableCourses) {
-        return false;
-      }
-      if (availableCourses >= 3 && selectedCount !== 3) {
-        return false;
-      }
+      if (availableCourses < 3 && selectedCount !== availableCourses) return false;
+      if (availableCourses >= 3 && selectedCount !== 3) return false;
     }
     return selectedCourses.length > 0;
   };
@@ -731,19 +751,11 @@ const Dashboard = () => {
     setSelectedFaculties(prev => {
       if (prev.includes(facultyId)) {
         const faculty = eligibleFaculties.find(f => f.id === facultyId);
-        if (faculty) {
-          setSelectedCourses(prevCourses => 
-            prevCourses.filter(c => c.faculty_name !== faculty.name)
-          );
-        }
+        if (faculty) setSelectedCourses(prevCourses => prevCourses.filter(c => c.faculty_name !== faculty.name));
         return prev.filter(id => id !== facultyId);
       } else {
-        if (prev.length < 3) {
-          return [...prev, facultyId];
-        } else {
-          alert('You can only select up to 3 faculties');
-          return prev;
-        }
+        if (prev.length < 3) return [...prev, facultyId];
+        else { alert('You can only select up to 3 faculties'); return prev; }
       }
     });
   };
@@ -751,67 +763,36 @@ const Dashboard = () => {
   const toggleCourseSelection = (course, facultyName) => {
     const currentFacultyCount = getSelectedCountForFaculty(facultyName);
     const isSelected = selectedCourses.some(c => c.id === course.id);
-    
     if (isSelected) {
       setSelectedCourses(prev => prev.filter(c => c.id !== course.id));
     } else {
-      if (currentFacultyCount >= 3) {
-        alert(`You can only select up to 3 courses from ${cleanFacultyName(facultyName)}`);
-        return;
-      }
-      
-      if (selectedCourses.length >= 9) {
-        alert('You can only select up to 9 courses total (3 per faculty)');
-        return;
-      }
-      
+      if (currentFacultyCount >= 3) { alert(`You can only select up to 3 courses from ${cleanFacultyName(facultyName)}`); return; }
+      if (selectedCourses.length >= 9) { alert('You can only select up to 9 courses total'); return; }
       setSelectedCourses(prev => [...prev, course]);
     }
   };
 
   const proceedToPayment = () => {
     setIsNavigating(true);
-    
     const studentMarks = subjects
       .filter(subject => subject.subject !== 'Life Orientation')
       .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
-      .map(subject => ({
-        subject_name: subject.subject,
-        mark: parseInt(subject.mark)
-      }));
-    
+      .map(subject => ({ subject_name: subject.subject, mark: parseInt(subject.mark) }));
     sessionStorage.setItem('dashboard_subjects', JSON.stringify(subjects));
     sessionStorage.setItem('student_marks', JSON.stringify(studentMarks));
     localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
     localStorage.setItem('student_marks', JSON.stringify(studentMarks));
-    
     setTimeout(() => {
-      navigate('/payment', { 
-        state: { 
-          selectedCourses: selectedCourses,
-          studentMarks: studentMarks
-        } 
-      });
+      navigate('/payment', { state: { selectedCourses, studentMarks } });
     }, 500);
   };
 
-  const handleAuthSuccess = () => {
-    proceedToPayment();
-  };
+  const handleAuthSuccess = () => proceedToPayment();
 
   const handleApply = () => {
-    if (!canProceedToPayment()) {
-      alert('Please select 3 courses from each of your chosen faculties');
-      return;
-    }
-
+    if (!canProceedToPayment()) { alert('Please select 3 courses from each of your chosen faculties'); return; }
     const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      setShowAuthPopup(true);
-    } else {
-      proceedToPayment();
-    }
+    if (!token) { setShowAuthPopup(true); } else { proceedToPayment(); }
   };
 
   const handleSubjectChange = (index, field, value) => {
@@ -820,34 +801,14 @@ const Dashboard = () => {
     setSubjects(newSubjects);
   };
 
-  const addSubject = () => {
-    setSubjects([...subjects, { subject: '', mark: '' }]);
-  };
-
-  const removeSubject = (index) => {
-    if (subjects.length > 1) {
-      const newSubjects = subjects.filter((_, i) => i !== index);
-      setSubjects(newSubjects);
-    }
-  };
+  const addSubject = () => setSubjects([...subjects, { subject: '', mark: '' }]);
+  const removeSubject = (index) => { if (subjects.length > 1) setSubjects(subjects.filter((_, i) => i !== index)); };
 
   const totalFacultyPages = Math.ceil(eligibleFaculties.length / facultiesPerPage);
-  const visibleFaculties = eligibleFaculties.slice(
-    facultyPage * facultiesPerPage,
-    (facultyPage + 1) * facultiesPerPage
-  );
+  const visibleFaculties = eligibleFaculties.slice(facultyPage * facultiesPerPage, (facultyPage + 1) * facultiesPerPage);
 
-  const nextFacultyPage = () => {
-    if (facultyPage < totalFacultyPages - 1) {
-      setFacultyPage(prev => prev + 1);
-    }
-  };
-
-  const prevFacultyPage = () => {
-    if (facultyPage > 0) {
-      setFacultyPage(prev => prev - 1);
-    }
-  };
+  const nextFacultyPage = () => { if (facultyPage < totalFacultyPages - 1) setFacultyPage(prev => prev + 1); };
+  const prevFacultyPage = () => { if (facultyPage > 0) setFacultyPage(prev => prev - 1); };
 
   const getProgressPercent = () => {
     if (step === 1) return 25;
@@ -855,14 +816,10 @@ const Dashboard = () => {
     if (step === 3) {
       const selectedFacultiesObjects = getSelectedFacultyObjects();
       if (selectedFacultiesObjects.length === 0) return 50;
-      
       let completedCount = 0;
       for (const faculty of selectedFacultiesObjects) {
-        if (isFacultySelectionComplete(faculty)) {
-          completedCount++;
-        }
+        if (isFacultySelectionComplete(faculty)) completedCount++;
       }
-      
       const progressPerFaculty = 25 / selectedFacultiesObjects.length;
       return 50 + (completedCount * progressPerFaculty);
     }
@@ -874,28 +831,13 @@ const Dashboard = () => {
   return (
     <div className={`dashboard-app ${isNavigating ? 'page-exit' : ''}`}>
       <AuthHeader />
-
-      <AuthPopup 
-        isOpen={showAuthPopup} 
-        onClose={() => setShowAuthPopup(false)} 
-        onSuccess={handleAuthSuccess}
-      />
-
-      {isNavigating && (
-        <div className="navigation-overlay">
-          <div className="navigation-spinner"></div>
-          <p>Loading...</p>
-        </div>
-      )}
-      
+      <AuthPopup isOpen={showAuthPopup} onClose={() => setShowAuthPopup(false)} onSuccess={handleAuthSuccess} />
+      {isNavigating && (<div className="navigation-overlay"><div className="navigation-spinner"></div><p>Loading...</p></div>)}
       <div className="background-pattern"></div>
 
       <div className="progress-bar-wrapper">
         <div className="progress-bar-track">
-          <div 
-            className="progress-bar-fill" 
-            style={{ width: `${progressPercent}%` }}
-          ></div>
+          <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }}></div>
         </div>
       </div>
 
@@ -906,106 +848,53 @@ const Dashboard = () => {
             <div className="wizard-step step-marks">
               <div className="marks-header-row">
                 <h1 className="step-heading-large">ENTER MARKS</h1>
-                <div className="aps-spiky-circle">
-                  <span className="aps-spiky-number">{userAPS}</span>
-                </div>
+                <div className="aps-spiky-circle"><span className="aps-spiky-number">{userAPS}</span></div>
               </div>
-
-              <p className="step-subtitle-large">
-                This will be used to calculate your APS and recommend the best courses for YOU
-              </p>
-
+              <p className="step-subtitle-large">This will be used to calculate your APS and recommend the best courses for YOU</p>
               <div className="marks-list">
                 {subjects.map((subject, index) => (
                   <div key={index} className="mark-card">
                     <div className="mark-card-inner">
                       <div className="mark-subject-col">
-                        <select 
-                          value={subject.subject} 
-                          onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)}
-                          className="subject-select-clean"
-                        >
+                        <select value={subject.subject} onChange={(e) => handleSubjectChange(index, 'subject', e.target.value)} className="subject-select-clean">
                           <option value="">Select subject</option>
                           {Object.entries(groupedSubjects).map(([category, subjectsList]) => (
                             subjectsList.length > 0 && (
                               <optgroup key={category} label={category}>
-                                {subjectsList.map(subj => (
-                                  <option key={subj} value={subj}>{subj}</option>
-                                ))}
+                                {subjectsList.map(subj => (<option key={subj} value={subj}>{subj}</option>))}
                               </optgroup>
                             )
                           ))}
                         </select>
                       </div>
-
                       <div className="mark-input-col">
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="100" 
-                          placeholder="%"
-                          value={subject.mark}
-                          onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)}
-                          className="mark-input-clean"
-                        />
+                        <input type="number" min="0" max="100" placeholder="%" value={subject.mark} onChange={(e) => handleSubjectChange(index, 'mark', e.target.value)} className="mark-input-clean" />
                       </div>
-
                       <div className="mark-aps-col">
                         {subject.subject !== 'Life Orientation' && subject.mark && !isNaN(subject.mark) && subject.mark !== '' ? (
                           <span className="mark-aps-badge">{calculateIndividualAPS(subject.mark)}</span>
                         ) : subject.subject === 'Life Orientation' ? (
                           <span className="mark-lo-tag">LO</span>
-                        ) : (
-                          <span className="mark-aps-empty">—</span>
-                        )}
+                        ) : (<span className="mark-aps-empty">—</span>)}
                       </div>
-
                       {subjects.length > 1 && subject.subject !== 'Life Orientation' && (
-                        <button 
-                          className="remove-mark-btn"
-                          onClick={() => removeSubject(index)}
-                          title="Remove subject"
-                        >
-                          <FaTrash />
-                        </button>
+                        <button className="remove-mark-btn" onClick={() => removeSubject(index)} title="Remove subject"><FaTrash /></button>
                       )}
-                      {subjects.length > 1 && subject.subject === 'Life Orientation' && (
-                        <div className="remove-mark-spacer"></div>
-                      )}
+                      {subjects.length > 1 && subject.subject === 'Life Orientation' && (<div className="remove-mark-spacer"></div>)}
                     </div>
                   </div>
                 ))}
               </div>
-
-              <button className="add-mark-btn" onClick={addSubject}>
-                + Add another subject
-              </button>
-
+              <button className="add-mark-btn" onClick={addSubject}>+ Add another subject</button>
               {isCalculatingEligibility && (
                 <div className="finding-courses-overlay">
                   <div className="finding-courses-content">
-                    <RadialPulseLoader 
-                      size={120}
-                      color="#007bff"
-                      text="Finding Courses..."
-                      showText={true}
-                    />
+                    <RadialPulseLoader size={120} color="#007bff" text="Finding Courses..." showText={true} />
                   </div>
                 </div>
               )}
-
-              <button 
-                className="primary-btn-full"
-                onClick={findMatches}
-                disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}
-              >
-                {isCalculatingEligibility ? (
-                  <>
-                    <FaSpinner className="spinner-icon" /> Finding Courses...
-                  </>
-                ) : backendData.isConnected && backendData.courses.length > 0 
-                  ? "Continue" 
-                  : "Loading..."}
+              <button className="primary-btn-full" onClick={findMatches} disabled={!backendData.isConnected || backendData.courses.length === 0 || isCalculatingEligibility}>
+                {isCalculatingEligibility ? (<><FaSpinner className="spinner-icon" /> Finding Courses...</>) : backendData.isConnected && backendData.courses.length > 0 ? "Continue" : "Loading..."}
               </button>
             </div>
           )}
@@ -1013,83 +902,45 @@ const Dashboard = () => {
           {step === 2 && eligibleFaculties.length > 0 && (
             <div className="wizard-step step-faculties">
               <h1 className="step-heading-large">CHOOSE 3 FACULTIES</h1>
-              <p className="step-subtitle-large">
-                Select up to 3 faculties to see available courses
-              </p>
-
+              <p className="step-subtitle-large">Select up to 3 faculties to see available courses</p>
               <div className="faculty-grid-2col">
                 {visibleFaculties.map((faculty) => (
-                  <div 
-                    key={faculty.id} 
-                    className={`faculty-card-square ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`}
-                    onClick={() => toggleFacultySelection(faculty.id)}
-                  >
+                  <div key={faculty.id} className={`faculty-card-square ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`} onClick={() => toggleFacultySelection(faculty.id)}>
                     <span className="faculty-card-name">{cleanFacultyName(faculty.name)}</span>
-                    {selectedFaculties.includes(faculty.id) && (
-                      <span className="faculty-card-check">✓</span>
-                    )}
+                    {selectedFaculties.includes(faculty.id) && (<span className="faculty-card-check">✓</span>)}
                   </div>
                 ))}
               </div>
-
               {totalFacultyPages > 1 && (
                 <div className="faculty-pagination">
-                  <button className="page-arrow" onClick={prevFacultyPage} disabled={facultyPage === 0}>
-                    <FaChevronLeft />
-                  </button>
+                  <button className="page-arrow" onClick={prevFacultyPage} disabled={facultyPage === 0}><FaChevronLeft /></button>
                   <div className="page-dots">
                     {Array.from({ length: totalFacultyPages }).map((_, i) => (
                       <span key={i} className={`dot ${i === facultyPage ? 'active' : ''}`} />
                     ))}
                   </div>
-                  <button className="page-arrow" onClick={nextFacultyPage} disabled={facultyPage === totalFacultyPages - 1}>
-                    <FaChevronRight />
-                  </button>
+                  <button className="page-arrow" onClick={nextFacultyPage} disabled={facultyPage === totalFacultyPages - 1}><FaChevronRight /></button>
                 </div>
               )}
-
-              <button 
-                className="primary-btn-full"
-                onClick={() => {
-                  if (selectedFaculties.length === 0) {
-                    alert('Please select at least one faculty');
-                    return;
-                  }
-                  setStep(3);
-                }}
-                disabled={selectedFaculties.length === 0}
-              >
+              <button className="primary-btn-full" onClick={() => { if (selectedFaculties.length === 0) { alert('Please select at least one faculty'); return; } setStep(3); }} disabled={selectedFaculties.length === 0}>
                 Continue to Select Courses
               </button>
-
-              <button className="text-btn" onClick={() => setStep(1)}>
-                ← Back to marks
-              </button>
+              <button className="text-btn" onClick={() => setStep(1)}>← Back to marks</button>
             </div>
           )}
 
           {step === 3 && (
             <div className="wizard-step step-choose-courses">
               <h1 className="step-heading-large">Choose 9 courses</h1>
-              <p className="step-subtitle-large">
-                This will be used to calibrate your courses
-              </p>
-
+              <p className="step-subtitle-large">This will be used to calibrate your courses</p>
               <div className="faculty-courses-list">
                 {getSelectedFacultyObjects().map((faculty) => {
                   const selectedCount = getSelectedCountForFaculty(faculty.name);
                   const maxForFaculty = Math.min(3, faculty.courses.length);
                   const isComplete = isFacultySelectionComplete(faculty);
-                  
                   return (
-                    <div 
-                      key={faculty.id} 
-                      className={`faculty-selection-card ${isComplete ? 'complete' : ''}`}
-                      onClick={() => setActiveFacultyModal(faculty)}
-                    >
-                      <div className="faculty-selection-info">
-                        <span className="faculty-selection-name">{cleanFacultyName(faculty.name)}</span>
-                      </div>
+                    <div key={faculty.id} className={`faculty-selection-card ${isComplete ? 'complete' : ''}`} onClick={() => setActiveFacultyModal(faculty)}>
+                      <div className="faculty-selection-info"><span className="faculty-selection-name">{cleanFacultyName(faculty.name)}</span></div>
                       <div className="faculty-selection-right">
                         <span className="faculty-selection-count">{selectedCount}/{maxForFaculty}</span>
                         <FaChevronRight className="faculty-selection-arrow" />
@@ -1098,28 +949,12 @@ const Dashboard = () => {
                   );
                 })}
               </div>
-
-              <button 
-                className="primary-btn-full"
-                onClick={handleApply}
-                disabled={!canProceedToPayment()}
-              >
-                Continue
-              </button>
-
-              <button className="text-btn" onClick={() => setStep(2)}>
-                ← Back to faculties
-              </button>
+              <button className="primary-btn-full" onClick={handleApply} disabled={!canProceedToPayment()}>Continue</button>
+              <button className="text-btn" onClick={() => setStep(2)}>← Back to faculties</button>
             </div>
           )}
 
-          <CourseSelectionModal 
-            faculty={activeFacultyModal}
-            onClose={() => setActiveFacultyModal(null)}
-            selectedCourses={selectedCourses}
-            onToggleCourse={toggleCourseSelection}
-            getSelectedCountForFaculty={getSelectedCountForFaculty}
-          />
+          <CourseSelectionModal faculty={activeFacultyModal} onClose={() => setActiveFacultyModal(null)} selectedCourses={selectedCourses} onToggleCourse={toggleCourseSelection} getSelectedCountForFaculty={getSelectedCountForFaculty} />
 
           {step === 2 && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
             <div className="no-faculties">
@@ -1127,55 +962,9 @@ const Dashboard = () => {
               <p>Based on your current marks, you don't meet the minimum requirements for any faculties.</p>
               <div className="suggestions">
                 <p><strong>Suggestions:</strong></p>
-                <ul>
-                  <li>Improve your marks in key subjects</li>
-                  <li>Add more relevant subjects</li>
-                  <li>Consider alternative pathways like bridging courses</li>
-                </ul>
+                <ul><li>Improve your marks in key subjects</li><li>Add more relevant subjects</li><li>Consider alternative pathways like bridging courses</li></ul>
               </div>
               <button className="text-btn" onClick={() => setStep(1)}>← Back to marks</button>
-            </div>
-          )}
-
-          {selectedCourseDetails && (
-            <div className="courses-modal-overlay" onClick={() => setSelectedCourseDetails(null)}>
-              <div className="courses-modal-container details-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="courses-modal-header">
-                  <h3 className="courses-modal-title">{selectedCourseDetails.name}</h3>
-                  <button className="courses-modal-close" onClick={() => setSelectedCourseDetails(null)}>×</button>
-                </div>
-                
-                <div className="course-details-info">
-                  <p><strong>Institution:</strong> {selectedCourseDetails.institution_name || 'N/A'}</p>
-                  <p><strong>Faculty:</strong> {cleanFacultyName(selectedCourseDetails.faculty_name || 'N/A')}</p>
-                  <p><strong>Duration:</strong> {selectedCourseDetails.duration_years} years</p>
-                  {selectedCourseDetails.minAPS && (
-                    <p><strong>Minimum APS:</strong> {selectedCourseDetails.minAPS}</p>
-                  )}
-                </div>
-                
-                <div className="course-details-description">
-                  <h4>Description</h4>
-                  <p>{selectedCourseDetails.description || 'No description available.'}</p>
-                </div>
-                
-                {selectedCourseDetails.additional_info && selectedCourseDetails.additional_info.length > 0 && (
-                  <div className="course-details-additional">
-                    <h4>Additional Information</h4>
-                    <ul>
-                      {selectedCourseDetails.additional_info.map((info, idx) => (
-                        <li key={idx}>{info.info_text}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                <div className="courses-modal-footer">
-                  <button className="courses-modal-done" onClick={() => setSelectedCourseDetails(null)}>
-                    Close
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 

@@ -2,2795 +2,1032 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
-import { FaUniversity, FaSpinner, FaBook, FaTimes, FaExchangeAlt, FaArrowLeft, FaCheck, FaUser, FaLock, FaHistory, FaMagic, FaLightbulb, FaSearch, FaCopy, FaUserCircle, FaQuestionCircle } from 'react-icons/fa';
+import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaLightbulb, FaCopy, FaHistory, FaLock, FaCommentDots } from 'react-icons/fa';
 import API_URL from './config';
 
-
-// ==================== HEADER COMPONENT WITH DROPDOWN ====================
-function PaymentHeader({ showProfile = true }) {
-  const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate('/');
-  };
-
-  const goToProfile = () => {
-    setDropdownOpen(false);
-    navigate('/profile');
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <header style={{
-      padding: '0 40px',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      background: 'white',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-      height: '70px',
-      display: 'flex',
-      alignItems: 'center'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        width: '100%'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
-          <img
-            src="/Skolify-Logo.jpeg"
-            alt="Skolify Logo"
-            style={{ width: '63px', height: '63px', objectFit: 'contain', borderRadius: '8px' }}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
-          />
-          <span style={{ fontSize: '24px', fontWeight: 700 }}>Skolify</span>
-        </div>
-
-        {showProfile && (
-          <div ref={dropdownRef} style={{ position: 'relative' }}>
-            <FaUserCircle 
-              size={30}
-              style={{ 
-                cursor: 'pointer',
-                color: '#4a5568',
-                transition: 'color 0.2s ease'
-              }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              onMouseEnter={(e) => e.currentTarget.style.color = '#2b6cb0'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#4a5568'}
-            />
-            {dropdownOpen && (
-              <div style={{
-                position: 'absolute',
-                top: '50px',
-                right: 0,
-                background: 'white',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                zIndex: 2000,
-                minWidth: '180px'
-              }}>
-                <button 
-                  onClick={goToProfile} 
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 20px', 
-                    width: '100%', 
-                    border: 'none', 
-                    background: 'none', 
-                    textAlign: 'left', 
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'background 0.2s ease',
-                    color: '#2d3748'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f7fafc';
-                    e.currentTarget.querySelector('span').style.color = '#2b6cb0';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                    e.currentTarget.querySelector('span').style.color = '#2d3748';
-                  }}
-                >
-                  <FaUserCircle size={18} />
-                  <span>Profile</span>
-                </button>
-                <button 
-                  onClick={handleLogout} 
-                  style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 20px', 
-                    width: '100%', 
-                    border: 'none', 
-                    background: 'none', 
-                    textAlign: 'left', 
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    borderTop: '1px solid #e2e8f0',
-                    transition: 'background 0.2s ease',
-                    color: '#e53e3e'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#fff5f5';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  <span>Logout</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </header>
-  );
-}
-
-console.log('✅ PaymentPage.js loaded -', new Date().toISOString());
-
-// ==================== FILTER: Hide courses from specific universities ====================
-const hiddenInstitutions = [
-  'Nelson Mandela University',
-  'Sol Plaatje University'
-];
-
-const filterHiddenInstitutions = (institutions) => {
-  return institutions.filter(inst => 
-    !hiddenInstitutions.some(hidden => 
-      inst.name?.toLowerCase().includes(hidden.toLowerCase())
-    )
-  );
-};
-
 const PaymentPage = () => {
-  console.log('🟢 PaymentPage component initializing');
-  
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const universityLogos = useMemo(() => ({
-  'University of Johannesburg': { code: 'UJ', logo: '/UJ.jpeg' },
-  'Stellenbosch University': { code: 'SU', logo: '/SU.jpeg' },
-  'University of Pretoria': { code: 'UP', logo: '/UP.jpeg' },
-  'University of South Africa': { code: 'UNISA', logo: '/UNISA.jpeg' },
-  'University of Western Cape': { code: 'UWC', logo: '/UWC.jpeg' },
-  'University of Witwatersrand': { code: 'WITS', logo: '/WITS.jpeg' },
-  'North-West University': { code: 'NWU', logo: '/NWU.jpeg' },
-  'Nelson Mandela University': { code: 'NMU', logo: '/NMU.jpeg' },
-  'University of KwaZulu-Natal': { code: 'UKZN', logo: '/KZN.jpeg' },
-  'Rhodes University': { code: 'RHODES', logo: '/RHODES.jpeg' },
-  'University of Cape Town': { code: 'UCT', logo: '/UCT.jpeg' },
-  'University of Free State': { code: 'UFS', logo: '/UFS.jpeg' },
-  'University of Limpopo': { code: 'UL', logo: '/UL.jpeg' },
-  'Tshwane University of Technology': { code: 'TUT', logo: '/TUT.jpeg' },
-  }), []);
-
-  const groupAInstitutions = useMemo(() => [
-    'University of Johannesburg',
-    'North-West University',
-    'Nelson Mandela University',
-    'Walter Sisulu University',
-    'University of Free State',
-    'University of Western Cape'
-  ], []);
-
-  const groupBInstitutions = useMemo(() => [
-    'University of Cape Town',
-    'University of Witwatersrand',
-    'Tshwane University of Technology',
-    'University of South Africa',
-    'University of Limpopo',
-    'University of Pretoria',
-    'Stellenbosch University',
-    'University of KwaZulu-Natal',
-    'Rhodes University',
-    'University of Fort Hare',
-    'University of Venda',
-    'University of Zululand',
-    'Durban University of Technology',
-    'Cape Peninsula University of Technology',
-    'Central University of Technology',
-    'Mangosuthu University of Technology',
-    'Sefako Makgatho Health Sciences University'
-  ], []);
-
-  const institutionCourseLimits = useMemo(() => ({
-    'University of Johannesburg': 2,
-    'Stellenbosch University': 3,
-    'University of Pretoria': 2,
-    'University of South Africa': 3,
-    'University of Western Cape': 2,
-    'University of Witwatersrand': 3,
-    'North-West University': 2,
-    'Nelson Mandela University': 2,
-    'University of KwaZulu-Natal': 6,
-    'Rhodes University': 3,
-    'University of Cape Town': 2,
-    'University of Free State': 2,
-    'University of Limpopo': 2,
-    'Tshwane University of Technology': 3,
-    'Durban University of Technology': 4,
-    'Cape Peninsula University of Technology': 4,
-    'University of Zululand': 4,
-    'Walter Sisulu University': 3,
-    'Sol Plaatje University': 3,
-    'Central University of Technology': 4,
-    'Mangosuthu University of Technology': 4,
-    'Sefako Makgatho Health Sciences University': 3,
-    'University of Fort Hare': 3,
-    'University of Venda': 3
-  }), []);
 
   const [universities, setUniversities] = useState([]);
-  const [groupAUniversities, setGroupAUniversities] = useState([]);
-  const [groupBUniversities, setGroupBUniversities] = useState([]);
   const [selectedUniversity, setSelectedUniversity] = useState(null);
   const [selectedCourses, setSelectedCourses] = useState({});
   const [selectedCourseNames, setSelectedCourseNames] = useState([]);
-  const [selectedCourseDetails, setSelectedCourseDetails] = useState([]);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState('premium');
-  const [showSwitchToCustomPopup, setShowSwitchToCustomPopup] = useState(false);
-  const [exceededItem, setExceededItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pageLoaded, setPageLoaded] = useState(false);
-  const [currentUnavailableCourse, setCurrentUnavailableCourse] = useState('');
-  const [showAlternativeModal, setShowAlternativeModal] = useState(false);
-  const [availableAlternatives, setAvailableAlternatives] = useState([]);
-  const [paymentStatus, setPaymentStatus] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [previousSelections, setPreviousSelections] = useState([]);
-  const [isCreatingNewOrder, setIsCreatingNewOrder] = useState(false);
-  const [studentMarks, setStudentMarks] = useState([]);
-  const [isProcessingComplete, setIsProcessingComplete] = useState(false);
-  
-  // State for notifications
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState('info');
-  
-  // State for Maximise Options feature
+  const [showFeeInfo, setShowFeeInfo] = useState(false);
+  const [feeInfoGroup, setFeeInfoGroup] = useState(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [accountUsername, setAccountUsername] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
+  const [isProcessingComplete, setIsProcessingComplete] = useState(false);
+  const [studentMarks, setStudentMarks] = useState([]);
+  const [previousSelections, setPreviousSelections] = useState([]);
+  const [isCreatingNewOrder, setIsCreatingNewOrder] = useState(false);
   const [showMaximiseModal, setShowMaximiseModal] = useState(false);
   const [maximiseSuggestions, setMaximiseSuggestions] = useState([]);
   const [isCalculatingMaximise, setIsCalculatingMaximise] = useState(false);
-  const [pendingSelection, setPendingSelection] = useState(null);
-  
-  // State for expanded university view
   const [expandedUniversity, setExpandedUniversity] = useState(null);
   const [universitySearchQuery, setUniversitySearchQuery] = useState('');
   const [filteredUniversityCourses, setFilteredUniversityCourses] = useState([]);
   const [tempSelections, setTempSelections] = useState({});
-  
-  // Course type filter state
   const [courseTypeFilter, setCourseTypeFilter] = useState('all');
-  
-  // State for credentials modal
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [accountUsername, setAccountUsername] = useState('');
-  const [accountPassword, setAccountPassword] = useState('');
-  
-  // State for fee info tooltip
-  const [showFeeInfoPopup, setShowFeeInfoPopup] = useState(false);
-  const [feeInfoGroup, setFeeInfoGroup] = useState(null); // 'A' or 'B'
-  
-  // Profile menu state
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const profileMenuRef = useRef(null);
-  const profileIconRef = useRef(null);
-  
-  // Package limits
-  const packageLimits = useMemo(() => ({
-    basic: { universities: 2 },
-    standard: { universities: 4 },
-    premium: { universities: 6 }
+  const [showAlternativeModal, setShowAlternativeModal] = useState(false);
+  const [availableAlternatives, setAvailableAlternatives] = useState([]);
+  const [showSwitchPopup, setShowSwitchPopup] = useState(false);
+  const [alternativeUniversity, setAlternativeUniversity] = useState(null);
+  const [showPackagePopup, setShowPackagePopup] = useState(false);
+  const [packageToApply, setPackageToApply] = useState(null);
+  const [isSavingSelection, setIsSavingSelection] = useState(false);
+
+  const universityLogos = useMemo(() => ({
+    'University of Johannesburg': { code: 'UJ', logo: '/UJ.jpeg' },
+    'Stellenbosch University': { code: 'SU', logo: '/SU.jpeg' },
+    'University of Pretoria': { code: 'UP', logo: '/UP.jpeg' },
+    'University of South Africa': { code: 'UNISA', logo: '/UNISA.jpeg' },
+    'University of Western Cape': { code: 'UWC', logo: '/UWC.jpeg' },
+    'University of Witwatersrand': { code: 'WITS', logo: '/WITS.jpeg' },
+    'North-West University': { code: 'NWU', logo: '/NWU.jpeg' },
+    'University of KwaZulu-Natal': { code: 'UKZN', logo: '/KZN.jpeg' },
+    'Rhodes University': { code: 'RHODES', logo: '/RHODES.jpeg' },
+    'University of Cape Town': { code: 'UCT', logo: '/UCT.jpeg' },
+    'University of Free State': { code: 'UFS', logo: '/UFS.jpeg' },
+    'University of Limpopo': { code: 'UL', logo: '/UL.jpeg' },
+    'Tshwane University of Technology': { code: 'TUT', logo: '/TUT.jpeg' },
+    'Walter Sisulu University': { code: 'WSU', logo: '/WSU.jpeg' },
+    'Durban University of Technology': { code: 'DUT', logo: '/DUT.jpeg' },
+    'Cape Peninsula University of Technology': { code: 'CPUT', logo: '/CPUT.jpeg' },
+    'Central University of Technology': { code: 'CUT', logo: '/CUT.jpeg' },
+    'Mangosuthu University of Technology': { code: 'MUT', logo: '/MUT.jpeg' },
+    'University of Fort Hare': { code: 'UFH', logo: '/UFH.jpeg' },
+    'University of Venda': { code: 'UNIVEN', logo: '/UNIVEN.jpeg' },
+    'University of Zululand': { code: 'UNIZULU', logo: '/UNIZULU.jpeg' },
+    'Sefako Makgatho Health Sciences University': { code: 'SMU', logo: '/SMU.jpeg' },
   }), []);
 
-  const packagePrices = {
-    basic: 169,
-    standard: 329,
-    premium: 499
+  const hiddenInstitutions = ['Nelson Mandela University', 'Sol Plaatje University'];
+  const filterHiddenInstitutions = (institutions) => {
+    return institutions.filter(inst => !hiddenInstitutions.some(hidden => inst.name?.toLowerCase().includes(hidden.toLowerCase())));
   };
 
-  // Helper function to show notifications
+  const noFeeUniversitiesList = useMemo(() => [
+    'University of Johannesburg', 'North-West University', 'University of Free State',
+    'University of Western Cape', 'Walter Sisulu University'
+  ], []);
+
+  const getInstitutionCourseLimit = useCallback((institutionName) => {
+    const limits = {
+      'University of Johannesburg': 2, 'Stellenbosch University': 3, 'University of Pretoria': 2,
+      'University of South Africa': 3, 'University of Western Cape': 2, 'University of Witwatersrand': 3,
+      'North-West University': 2, 'University of KwaZulu-Natal': 6, 'Rhodes University': 3,
+      'University of Cape Town': 2, 'University of Free State': 2, 'University of Limpopo': 2,
+      'Tshwane University of Technology': 3, 'Walter Sisulu University': 3, 'Durban University of Technology': 4,
+      'Cape Peninsula University of Technology': 4, 'Central University of Technology': 4,
+      'Mangosuthu University of Technology': 4, 'University of Fort Hare': 3, 'University of Venda': 3,
+      'University of Zululand': 4, 'Sefako Makgatho Health Sciences University': 3,
+    };
+    return limits[institutionName] || 3;
+  }, []);
+
+  const packageLimits = useMemo(() => ({
+    basic: { universities: 2 }, standard: { universities: 4 }, premium: { universities: 6 }
+  }), []);
+
+  const packagePrices = { basic: 169, standard: 329, premium: 499 };
+
+  const packageNames = { basic: 'Basic Plan', standard: 'Standard Plan', premium: 'Premium Plan' };
+
+  const packageDescriptions = {
+    basic: 'Apply to 2 universities of your choice',
+    standard: 'Apply to 4 universities of your choice',
+    premium: 'Apply to 6 universities of your choice'
+  };
+
   const showNotificationMessage = useCallback((message, type = 'info') => {
     setNotificationMessage(message);
     setNotificationType(type);
     setShowNotification(true);
-    
-    const duration = type === 'error' ? 5000 : 3000;
-    setTimeout(() => {
-      setShowNotification(false);
-    }, duration);
+    setTimeout(() => setShowNotification(false), 3000);
   }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showProfileMenu && 
-          profileMenuRef.current && 
-          !profileMenuRef.current.contains(event.target) &&
-          profileIconRef.current &&
-          !profileIconRef.current.contains(event.target)) {
-        setShowProfileMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showProfileMenu]);
 
   const getStudentMarks = useCallback(() => {
-    try {
-      if (studentMarks.length > 0) {
-        return studentMarks;
-      }
-      
-      if (location.state?.studentMarks && location.state.studentMarks.length > 0) {
-        setStudentMarks(location.state.studentMarks);
-        return location.state.studentMarks;
-      }
-      
-      const storedMarks = localStorage.getItem('student_marks');
-      if (storedMarks) {
-        const marks = JSON.parse(storedMarks);
-        if (marks.length > 0) {
-          setStudentMarks(marks);
-          return marks;
-        }
-      }
-      
-      const savedSubjects = localStorage.getItem('dashboard_subjects');
-      if (savedSubjects) {
-        const subjects = JSON.parse(savedSubjects);
-        const marks = subjects
-          .filter(subject => subject.mark && subject.mark !== '' && !isNaN(subject.mark))
-          .map(subject => ({
-            subject_name: subject.subject,
-            mark: parseInt(subject.mark)
-          }));
-        
-        if (marks.length > 0) {
-          setStudentMarks(marks);
-          localStorage.setItem('student_marks', JSON.stringify(marks));
-          return marks;
-        }
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('❌ Error getting student marks:', error);
-      return [];
-    }
+    if (studentMarks.length > 0) return studentMarks;
+    if (location.state?.studentMarks?.length > 0) { setStudentMarks(location.state.studentMarks); return location.state.studentMarks; }
+    const storedMarks = localStorage.getItem('student_marks');
+    if (storedMarks) { try { const m = JSON.parse(storedMarks); if (m.length > 0) { setStudentMarks(m); return m; } } catch (e) {} }
+    return [];
   }, [location.state, studentMarks]);
 
-  const getInstitutionCourseLimit = useCallback((institutionName) => {
-    if (institutionCourseLimits[institutionName]) {
-      return institutionCourseLimits[institutionName];
-    }
-    
-    for (const [key, limit] of Object.entries(institutionCourseLimits)) {
-      if (institutionName?.toLowerCase().includes(key.toLowerCase()) || 
-          key.toLowerCase().includes(institutionName?.toLowerCase())) {
-        return limit;
-      }
-    }
-    
-    return 3;
-  }, [institutionCourseLimits]);
-
-  const calculateTotalApplications = useCallback(() => {
-    return Object.values(selectedCourses).reduce((sum, courses) => sum + (courses?.length || 0), 0);
-  }, [selectedCourses]);
-
-  const getSelectedUniversities = useCallback(() => {
-    return universities.filter(uni => selectedCourses[uni.code]?.length > 0);
-  }, [universities, selectedCourses]);
-
-  const getUsageStats = useCallback(() => {
-    const universitiesCount = Object.keys(selectedCourses).length;
-    const limits = packageLimits[selectedPackage];
-    
-    return {
-      universities: { current: universitiesCount, limit: limits.universities },
-      isWithinLimits: universitiesCount <= limits.universities
+  useEffect(() => {
+    const loadPreviousOrders = async () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      try {
+        const response = await fetch(`${API_URL}/api/payment/get-all-selections`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success && data.selections?.length > 0) {
+          setPreviousSelections(data.selections);
+          setIsCreatingNewOrder(true);
+        }
+      } catch (error) { console.error('Error loading previous orders:', error); }
     };
-  }, [selectedCourses, selectedPackage, packageLimits]);
-
-  const getFilteredCoursesForUniversity = useCallback((university) => {
-    if (!university || !university.courses) return [];
-    
-    const uniqueCourses = [];
-    const seenCourseNames = new Set();
-    
-    university.courses.forEach(course => {
-      if (!seenCourseNames.has(course.name)) {
-        seenCourseNames.add(course.name);
-        uniqueCourses.push(course);
-      }
-    });
-    
-    return uniqueCourses;
+    loadPreviousOrders();
   }, []);
 
-  const getCoursesForUniversity = useCallback((university) => {
-    if (!university || !university.courses) {
-      return { availableCourses: [], unavailableCourses: [] };
-    }
-    
-    const availableCourses = university.courses.filter(course => 
-      selectedCourseNames.includes(course.name)
-    );
-    
-    const unavailableCourses = selectedCourseNames.filter(courseName => 
-      !university.courses.some(course => course.name === courseName)
-    );
-    
-    return { availableCourses, unavailableCourses };
-  }, [selectedCourseNames]);
+  const isUniversityInPreviousOrders = useCallback((code, name) => {
+    if (!isCreatingNewOrder) return false;
+    return previousSelections.some(s => s.universities?.some(u => u.code === code || u.name === name));
+  }, [previousSelections, isCreatingNewOrder]);
 
-  const getOtherCoursesAtUniversity = useCallback((university) => {
-    if (!university || !university.courses) return [];
-    
-    const otherCourses = university.courses.filter(course => 
-      !selectedCourseNames.includes(course.name)
-    );
-    
-    const uniqueCourses = [];
-    const seen = new Set();
-    
-    otherCourses.forEach(course => {
-      if (!seen.has(course.name)) {
-        seen.add(course.name);
-        uniqueCourses.push({
-          ...course,
-          minAPS: course.min_aps || course.minAPS,
-          subject_requirements: course.subject_requirements || []
+  const isCourseInPreviousOrders = useCallback((code, courseName) => {
+    if (!isCreatingNewOrder) return false;
+    return previousSelections.some(s => {
+      const uni = s.universities?.find(u => u.code === code);
+      return uni?.courses?.includes(courseName);
+    });
+  }, [previousSelections, isCreatingNewOrder]);
+
+  useEffect(() => {
+    if (location.state?.selectedCourses) {
+      const courses = location.state.selectedCourses;
+      setSelectedCourseNames(courses.map(c => c.name));
+      localStorage.setItem('selectedCourseDetails', JSON.stringify(courses));
+      localStorage.setItem('selectedCourseNames', JSON.stringify(courses.map(c => c.name)));
+    } else {
+      const savedNames = localStorage.getItem('selectedCourseNames');
+      if (savedNames) setSelectedCourseNames(JSON.parse(savedNames));
+    }
+    const savedMarks = localStorage.getItem('student_marks');
+    if (savedMarks) { try { const m = JSON.parse(savedMarks); if (m.length > 0) setStudentMarks(m); } catch (e) {} }
+    const savedCourses = localStorage.getItem('selectedUniversityCourses');
+    if (savedCourses) { try { setSelectedCourses(JSON.parse(savedCourses)); } catch (e) { setSelectedCourses({}); } }
+    const savedPackage = localStorage.getItem('selectedPackage');
+    if (savedPackage) setSelectedPackage(savedPackage);
+  }, [location.state]);
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      if (selectedCourseNames.length === 0) { setIsLoading(false); return; }
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${API_URL}/api/institutions-by-courses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ course_names: selectedCourseNames })
         });
-      }
-    });
-    
-    return uniqueCourses.slice(0, 15);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.status === 'success') {
+            const filtered = filterHiddenInstitutions(data.institutions || []);
+            const uniList = filtered.map(uni => {
+              let logoInfo = universityLogos[uni.name];
+              if (!logoInfo) {
+                for (const [key, value] of Object.entries(universityLogos)) {
+                  if (uni.name?.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(uni.name?.toLowerCase())) {
+                    logoInfo = value; break;
+                  }
+                }
+              }
+              return {
+                id: uni.id, name: uni.name,
+                code: logoInfo?.code || uni.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
+                logo: logoInfo?.logo || `/${uni.code || 'university'}.jpeg`,
+                courses: uni.courses || []
+              };
+            });
+            setUniversities(uniList);
+          }
+        }
+      } catch (error) { console.error('Error fetching universities:', error); }
+      finally { setIsLoading(false); }
+    };
+    fetchUniversities();
+  }, [selectedCourseNames, universityLogos]);
+
+  const noFeeUniversities = useMemo(() => universities.filter(uni => noFeeUniversitiesList.includes(uni.name)), [universities, noFeeUniversitiesList]);
+  const feeUniversities = useMemo(() => universities.filter(uni => !noFeeUniversitiesList.includes(uni.name)), [universities, noFeeUniversitiesList]);
+  const totalFound = universities.length;
+
+  const getAvailableCoursesForUniversity = useCallback((university) => {
+    if (!university?.courses || selectedCourseNames.length === 0) return [];
+    const available = university.courses.filter(c => selectedCourseNames.includes(c.name));
+    const unique = [];
+    const seen = new Set();
+    available.forEach(c => { if (!seen.has(c.name)) { seen.add(c.name); unique.push(c); } });
+    return unique;
   }, [selectedCourseNames]);
 
-  const completeAddSelection = useCallback((university, universityCode, tempSelectedCourses, isNewUniversity) => {
-    const updatedSelections = {
-      ...selectedCourses,
-      [universityCode]: tempSelectedCourses
-    };
-    
-    if (tempSelectedCourses.length === 0) {
-      delete updatedSelections[universityCode];
-    }
-    
-    const allSelectedCourses = Object.values(updatedSelections).flat();
-    const uniqueCourseNames = [...new Set(allSelectedCourses)];
-    
-    setSelectedCourses(updatedSelections);
-    setSelectedCourseNames(uniqueCourseNames);
-    
-    setUniversities(prev => {
-      const exists = prev.some(u => u.id === university.id);
-      if (!exists && tempSelectedCourses.length > 0) {
-        return [...prev, { ...university, selected: true }];
-      } else {
-        return prev.map(u => 
-          u.id === university.id ? { ...u, selected: tempSelectedCourses.length > 0 } : u
-        );
-      }
-    });
-    
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updatedSelections));
-    localStorage.setItem('selectedCourseNames', JSON.stringify(uniqueCourseNames));
-    
-  }, [selectedCourses]);
+  const selectedUniCount = Object.keys(selectedCourses).length;
+  const maxUnis = packageLimits[selectedPackage].universities;
+  const totalApplications = Object.values(selectedCourses).reduce((sum, courses) => sum + (courses?.length || 0), 0);
+  const showMaximiseBanner = selectedUniCount > 0 && selectedUniCount === maxUnis && maxUnis < 6;
 
-  const completeAddSuggestion = useCallback((university, coursesToAdd, isNewUniversity) => {
-    console.log(`➕ Adding ${university.code} with ${coursesToAdd.length} courses:`, coursesToAdd.map(c => c.name));
-    
-    const updatedSelections = { 
-      ...selectedCourses, 
-      [university.code]: coursesToAdd.map(c => c.name) 
-    };
-    
-    const newCourseNames = [...selectedCourseNames];
-    coursesToAdd.forEach(course => {
-      if (!newCourseNames.includes(course.name)) {
-        newCourseNames.push(course.name);
+  const handlePackageSelectConfirm = (pkg) => {
+    setSelectedPackage(pkg);
+    localStorage.setItem('selectedPackage', pkg);
+    const current = Object.keys(selectedCourses).length;
+    const newLimit = packageLimits[pkg].universities;
+    if (current > newLimit) {
+      const codes = Object.keys(selectedCourses);
+      const updated = { ...selectedCourses };
+      for (let i = newLimit; i < codes.length; i++) delete updated[codes[i]];
+      setSelectedCourses(updated);
+      localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    }
+  };
+
+  const handlePackageClick = (pkg) => {
+    setPackageToApply(pkg);
+    setShowPackagePopup(true);
+  };
+
+  const confirmPackageSelection = () => {
+    setShowPackagePopup(false);
+    if (packageToApply) {
+      handlePackageSelectConfirm(packageToApply);
+      setPackageToApply(null);
+    }
+  };
+
+  const handleUniversityClick = (university) => {
+    if (isUniversityInPreviousOrders(university.code, university.name)) {
+      showNotificationMessage(`You've already applied to ${university.code} in a previous order.`, 'warning');
+      return;
+    }
+    const isAlreadySelected = selectedCourses[university.code]?.length > 0;
+    if (selectedUniCount >= maxUnis && !isAlreadySelected) {
+      setShowSwitchPopup(true);
+      return;
+    }
+    setSelectedUniversity(university);
+  };
+
+  const handleCourseSelection = (course) => {
+    if (!selectedUniversity) return;
+    const code = selectedUniversity.code;
+    const current = selectedCourses[code] || [];
+    const limit = getInstitutionCourseLimit(selectedUniversity.name);
+
+    if (isCourseInPreviousOrders(code, course.name)) {
+      showNotificationMessage(`Already applied to "${course.name}" in a previous order.`, 'warning');
+      return;
+    }
+
+    if (current.includes(course.name)) {
+      const updated = { ...selectedCourses, [code]: current.filter(c => c !== course.name) };
+      if (updated[code].length === 0) delete updated[code];
+      setSelectedCourses(updated);
+      localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    } else {
+      if (current.length >= limit) {
+        showNotificationMessage(`${selectedUniversity.code} allows max ${limit} courses.`, 'warning');
+        return;
       }
-    });
-    
-    setSelectedCourses(updatedSelections);
-    setSelectedCourseNames(newCourseNames);
-    
-    setUniversities(prev => {
-      const exists = prev.some(u => u.id === university.id);
-      if (!exists) {
-        return [...prev, { 
-          ...university, 
-          selected: true,
-          courses: university.courses || [] 
-        }];
-      } else {
-        return prev.map(u => 
-          u.id === university.id ? { ...u, selected: true } : u
-        );
-      }
-    });
-    
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updatedSelections));
-    localStorage.setItem('selectedCourseNames', JSON.stringify(newCourseNames));
-    
-  }, [selectedCourses, selectedCourseNames]);
+      const updated = { ...selectedCourses, [code]: [...current, course.name] };
+      setSelectedCourses(updated);
+      localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    }
+  };
+
+  const handleUniversityDeselect = (university, e) => {
+    e.stopPropagation();
+    const updated = { ...selectedCourses };
+    delete updated[university.code];
+    setSelectedCourses(updated);
+    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+  };
 
   const calculateMaximiseOptions = useCallback(async () => {
     setIsCalculatingMaximise(true);
     setMaximiseSuggestions([]);
-    
     try {
       const marks = getStudentMarks();
-      
-      const calculateAPS = (mark) => {
-        if (!mark || mark === '') return 0;
-        if (mark >= 80) return 7;
-        if (mark >= 70) return 6;
-        if (mark >= 60) return 5;
-        if (mark >= 50) return 4;
-        if (mark >= 40) return 3;
-        if (mark >= 30) return 2;
-        return 1;
-      };
-      const studentAPS = marks.reduce((sum, s) => sum + calculateAPS(s.mark), 0);
-      
-      if (marks.length === 0) {
-        showNotificationMessage('No marks found. Please go back to Dashboard and enter your marks.', 'warning');
-        setIsCalculatingMaximise(false);
-        return;
-      }
-
-      let allUniversities = [];
-      
+      if (marks.length === 0) { showNotificationMessage('No marks found.', 'warning'); setIsCalculatingMaximise(false); return; }
+      let allUnis = [];
       try {
-        const response = await fetch(`${API_URL}/api/institutions-with-courses`);
-        if (response.ok) {
-          const institutions = await response.json();
-          
-          // FILTER: Remove hidden institutions
-          const filteredInstitutions = filterHiddenInstitutions(institutions);
-          
-          allUniversities = filteredInstitutions.map(inst => {
+        const res = await fetch(`${API_URL}/api/institutions-with-courses`);
+        if (res.ok) {
+          const insts = await res.json();
+          const filtered = filterHiddenInstitutions(insts);
+          allUnis = filtered.map(inst => {
             let logoInfo = universityLogos[inst.name];
             if (!logoInfo) {
               for (const [key, value] of Object.entries(universityLogos)) {
-                if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
-                    key.toLowerCase().includes(inst.name?.toLowerCase())) {
-                  logoInfo = value;
-                  break;
+                if (inst.name?.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(inst.name?.toLowerCase())) {
+                  logoInfo = value; break;
                 }
               }
             }
-            
             return {
-              id: inst.id,
-              name: inst.name,
-              code: logoInfo?.code || inst.code || inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
+              id: inst.id, name: inst.name,
+              code: logoInfo?.code || inst.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4),
               logo: logoInfo?.logo || `/${inst.code || 'university'}.jpeg`,
               courses: inst.courses || []
             };
           });
-        } else {
-          throw new Error('Failed to fetch universities');
         }
-      } catch (error) {
-        console.error('Error fetching universities:', error);
-        allUniversities = universities;
-      }
-      
-      if (allUniversities.length === 0) {
-        showNotificationMessage('No universities found in the system.', 'error');
-        setIsCalculatingMaximise(false);
-        return;
-      }
-
-      const selectedUniCodes = Object.keys(selectedCourses);
-      const availableUniversities = allUniversities.filter(uni => 
-        !selectedUniCodes.includes(uni.code)
-      );
-      
-      if (availableUniversities.length === 0) {
-        showNotificationMessage('You have already selected all available universities in the system.', 'info');
-        setIsCalculatingMaximise(false);
-        setShowMaximiseModal(false);
-        return;
-      }
-      
+      } catch (e) { allUnis = universities; }
+      const selectedCodes = Object.keys(selectedCourses);
+      const available = allUnis.filter(u => !selectedCodes.includes(u.code));
+      if (available.length === 0) { showNotificationMessage('All universities already selected.', 'info'); setIsCalculatingMaximise(false); return; }
       const suggestions = [];
-      let checkedCount = 0;
-      
-      for (const uni of availableUniversities) {
-        checkedCount++;
-        
+      for (const uni of available.slice(0, 15)) {
         try {
-          const response = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              university_id: uni.id,
-              subjects: marks,
-              limit: 50
-            })
+          const res = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ university_id: uni.id, subjects: marks, limit: 50 })
           });
-          
-          if (response.ok) {
-            const data = await response.json();
-            
-            if (data.status === 'success' && data.eligible_courses && data.eligible_courses.length > 0) {
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'success' && data.eligible_courses?.length > 0) {
               suggestions.push({
-                university: uni,
-                eligibleCourses: data.eligible_courses,
+                university: uni, eligibleCourses: data.eligible_courses,
                 courseCount: Math.min(data.eligible_courses.length, getInstitutionCourseLimit(uni.name)),
-                maxCourses: getInstitutionCourseLimit(uni.name),
-                basedOnMarks: true
+                maxCourses: getInstitutionCourseLimit(uni.name)
               });
             }
           }
-        } catch (error) {
-          console.error(`Error checking ${uni.name}:`, error);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (e) {}
       }
-      
       suggestions.sort((a, b) => b.courseCount - a.courseCount);
-      
-      if (suggestions.length === 0) {
-        showNotificationMessage('No new universities found with courses you qualify for based on your marks. Try improving your marks or adding more subjects.', 'info');
-        setIsCalculatingMaximise(false);
-        setShowMaximiseModal(false);
-        return;
-      }
-      
       setMaximiseSuggestions(suggestions);
       setShowMaximiseModal(true);
-      
-    } catch (error) {
-      console.error('❌ Error calculating maximise options:', error);
-      showNotificationMessage('Error finding options. Please try again.', 'error');
-    } finally {
-      setIsCalculatingMaximise(false);
-    }
+    } catch (e) { showNotificationMessage('Error finding options.', 'error'); }
+    finally { setIsCalculatingMaximise(false); }
   }, [universities, selectedCourses, getStudentMarks, getInstitutionCourseLimit, universityLogos, showNotificationMessage]);
 
-  const handleUniversityClickInMaximise = useCallback((suggestion) => {
+  const handleUniversityClickInMaximise = (suggestion) => {
     setExpandedUniversity(suggestion);
     setUniversitySearchQuery('');
     setFilteredUniversityCourses(suggestion.eligibleCourses);
     setCourseTypeFilter('all');
-    setTempSelections({
-      [suggestion.university.code]: selectedCourses[suggestion.university.code] || []
-    });
-  }, [selectedCourses]);
+    setTempSelections({ [suggestion.university.code]: selectedCourses[suggestion.university.code] || [] });
+  };
 
-  const handleUniversitySearch = useCallback((query, courses) => {
-    setUniversitySearchQuery(query);
-    if (!query.trim()) {
-      setFilteredUniversityCourses(courses);
-    } else {
-      const filtered = courses.filter(course => 
-        course.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredUniversityCourses(filtered);
-    }
-  }, []);
-
-  const handleBackFromExpanded = useCallback(() => {
-    setExpandedUniversity(null);
-    setUniversitySearchQuery('');
-    setFilteredUniversityCourses([]);
-    setTempSelections({});
-    setCourseTypeFilter('all');
-  }, []);
-
-  const toggleTempCourse = useCallback((universityCode, course) => {
+  const toggleTempCourse = (code, course) => {
     setTempSelections(prev => {
-      const current = prev[universityCode] || [];
-      let newSelections;
-      
-      if (current.includes(course.name)) {
-        newSelections = current.filter(c => c !== course.name);
-      } else {
-        const university = expandedUniversity?.university;
-        if (university && current.length >= getInstitutionCourseLimit(university.name)) {
-          showNotificationMessage(`Maximum ${getInstitutionCourseLimit(university.name)} courses at ${university.name}`, 'warning');
-          return prev;
-        }
-        newSelections = [...current, course.name];
+      const current = prev[code] || [];
+      if (current.includes(course.name)) return { ...prev, [code]: current.filter(c => c !== course.name) };
+      const uni = expandedUniversity?.university;
+      if (uni && current.length >= getInstitutionCourseLimit(uni.name)) {
+        showNotificationMessage(`Max ${getInstitutionCourseLimit(uni.name)} courses at ${uni.name}`, 'warning');
+        return prev;
       }
-      
-      return {
-        ...prev,
-        [universityCode]: newSelections
-      };
+      return { ...prev, [code]: [...current, course.name] };
     });
-  }, [expandedUniversity, getInstitutionCourseLimit, showNotificationMessage]);
+  };
 
-  const saveTempSelections = useCallback(() => {
+  const saveTempSelections = () => {
     if (!expandedUniversity) return;
-    
-    const university = expandedUniversity.university;
-    const universityCode = university.code;
-    const tempSelectedCourses = tempSelections[universityCode] || [];
-    const isNewUniversity = !selectedCourses[universityCode];
-    const newTotalUniversities = Object.keys(selectedCourses).length + (isNewUniversity ? 1 : 0);
-    const limit = packageLimits[selectedPackage].universities;
-    
-    if (isNewUniversity && newTotalUniversities > limit) {
-      setPendingSelection({
-        university,
-        tempSelectedCourses,
-        isNewUniversity
-      });
-      setExceededItem({
-        type: 'university',
-        current: Object.keys(selectedCourses).length,
-        limit: limit,
-        package: selectedPackage,
-        newTotal: newTotalUniversities
-      });
-      setShowSwitchToCustomPopup(true);
-      setShowMaximiseModal(false);
-      setExpandedUniversity(null);
-      setTempSelections({});
-      return;
-    }
-    
-    completeAddSelection(university, universityCode, tempSelectedCourses, isNewUniversity);
-    
-    if (isNewUniversity && tempSelectedCourses.length > 0) {
-      setMaximiseSuggestions(prev => 
-        prev.filter(s => s.university.code !== universityCode)
-      );
-    }
-    
-    setExpandedUniversity(null);
-    setTempSelections({});
-    setCourseTypeFilter('all');
-    
-  }, [expandedUniversity, tempSelections, selectedCourses, selectedPackage, packageLimits, completeAddSelection]);
+    const uni = expandedUniversity.university;
+    const code = uni.code;
+    const temp = tempSelections[code] || [];
+    const limit = getInstitutionCourseLimit(uni.name);
+    if (temp.length !== limit) { showNotificationMessage(`Select exactly ${limit} courses for ${uni.name}`, 'warning'); return; }
+    const isNew = !selectedCourses[code];
+    const newTotal = Object.keys(selectedCourses).length + (isNew ? 1 : 0);
+    if (isNew && newTotal > maxUnis) { setShowSwitchPopup(true); setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({}); return; }
+    const updated = { ...selectedCourses, [code]: temp };
+    setSelectedCourses(updated);
+    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({});
+    showNotificationMessage(`Saved ${uni.code}`, 'success');
+  };
 
-  const applyMaximiseSuggestion = useCallback((suggestion) => {
-    const university = suggestion.university;
-    const coursesToAdd = suggestion.eligibleCourses.slice(0, getInstitutionCourseLimit(university.name));
-    const isNewUniversity = !selectedCourses[university.code];
-    const newTotalUniversities = Object.keys(selectedCourses).length + (isNewUniversity ? 1 : 0);
-    const limit = packageLimits[selectedPackage].universities;
-    
-    if (isNewUniversity && newTotalUniversities > limit) {
-      setPendingSelection({
-        university,
-        coursesToAdd,
-        isNewUniversity
-      });
-      setExceededItem({
-        type: 'university',
-        current: Object.keys(selectedCourses).length,
-        limit: limit,
-        package: selectedPackage,
-        newTotal: newTotalUniversities
-      });
-      setShowSwitchToCustomPopup(true);
-      setShowMaximiseModal(false);
-      return;
-    }
-    
-    completeAddSuggestion(university, coursesToAdd, isNewUniversity);
-    
-    setMaximiseSuggestions(prev => 
-      prev.filter(s => s.university.code !== university.code)
-    );
-    
-  }, [selectedCourses, getInstitutionCourseLimit, selectedPackage, packageLimits, completeAddSuggestion]);
+  const applyMaximiseSuggestion = (suggestion) => {
+    const uni = suggestion.university;
+    const courses = suggestion.eligibleCourses.slice(0, getInstitutionCourseLimit(uni.name));
+    const isNew = !selectedCourses[uni.code];
+    const newTotal = Object.keys(selectedCourses).length + (isNew ? 1 : 0);
+    if (isNew && newTotal > maxUnis) { setShowSwitchPopup(true); setShowMaximiseModal(false); return; }
+    const updated = { ...selectedCourses, [uni.code]: courses.map(c => c.name) };
+    setSelectedCourses(updated);
+    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    setShowMaximiseModal(false);
+    showNotificationMessage(`Added ${uni.code}`, 'success');
+  };
 
-  const findAlternativeCourses = useCallback(async (university, unavailableCourseName) => {
+  const findAlternativeCourses = useCallback(async (university) => {
+    setAlternativeUniversity(university);
+    const marks = getStudentMarks();
     try {
-      setCurrentUnavailableCourse(unavailableCourseName);
-      const marks = getStudentMarks();
-      
-      if (marks.length === 0) {
-        showNotificationMessage('No marks found. Please go back and enter your marks.', 'warning');
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          university_id: university.id,
+      const res = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          university_id: university.id, 
           subjects: marks,
           exclude_courses: [...selectedCourseNames, ...(selectedCourses[university.code] || [])]
         })
       });
-      
-      if (!response.ok) throw new Error('Failed to fetch eligible courses');
-      
-      const data = await response.json();
-      
-      if (data.status === 'success') {
-        const alternatives = data.eligible_courses.map(course => ({
-          ...course,
-          similarity: "You qualify for this course"
-        }));
-        
-        setAvailableAlternatives(alternatives);
-        setShowAlternativeModal(true);
-      } else {
-        throw new Error(data.error || 'Failed to get alternatives');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching alternatives:', error.message);
-      const otherCourses = getOtherCoursesAtUniversity(university);
-      const alternatives = otherCourses.map(course => ({
-        ...course,
-        similarity: "Available at this university"
-      }));
-      setAvailableAlternatives(alternatives);
-      setShowAlternativeModal(true);
-    }
-  }, [getStudentMarks, getOtherCoursesAtUniversity, selectedCourseNames, selectedCourses, showNotificationMessage]);
-
-  const isCourseSelected = useCallback((courseName, universityCode) => {
-    return selectedCourses[universityCode]?.includes(courseName) || false;
-  }, [selectedCourses]);
-
-  const separateUniversitiesIntoGroups = useCallback((allUniversities) => {
-    const groupA = [];
-    const groupB = [];
-    
-    allUniversities.forEach(uni => {
-      const isInGroupA = groupAInstitutions.some(name => 
-        uni.name?.toLowerCase().includes(name.toLowerCase()) || 
-        name.toLowerCase().includes(uni.name?.toLowerCase())
-      );
-      
-      const isInGroupB = groupBInstitutions.some(name => 
-        uni.name?.toLowerCase().includes(name.toLowerCase()) || 
-        name.toLowerCase().includes(uni.name?.toLowerCase())
-      );
-      
-      if (isInGroupA) {
-        groupA.push(uni);
-      } else if (isInGroupB) {
-        groupB.push(uni);
-      } else {
-        groupB.push(uni);
-      }
-    });
-    
-    return { groupA, groupB };
-  }, [groupAInstitutions, groupBInstitutions]);
-
-  useEffect(() => {
-    const sessionStarted = sessionStorage.getItem('payment_session_started');
-    if (!sessionStarted) {
-      sessionStorage.setItem('payment_session_started', 'true');
-    }
-  }, []);
-
-  useEffect(() => {
-    const loadAllSelections = async () => {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      try {
-        const response = await fetch(`${API_URL}/api/payment/get-all-selections`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.selections && data.selections.length > 0) {
-          setPreviousSelections(data.selections);
-          setIsCreatingNewOrder(true);
-        }
-      } catch (error) {
-        console.error('❌ Error loading previous selections:', error);
-      }
-    };
-    
-    loadAllSelections();
-  }, []);
-
-  const isUniversityInPreviousOrders = useCallback((universityCode, universityName) => {
-    if (!isCreatingNewOrder) return false;
-    
-    return previousSelections.some(selection => {
-      if (!selection.universities) return false;
-      return selection.universities.some(uni => 
-        uni.code === universityCode || uni.name === universityName
-      );
-    });
-  }, [previousSelections, isCreatingNewOrder]);
-
-  const isCourseInPreviousOrders = useCallback((universityCode, courseName) => {
-    if (!isCreatingNewOrder) return false;
-    
-    return previousSelections.some(selection => {
-      if (!selection.universities) return false;
-      const university = selection.universities.find(uni => uni.code === universityCode);
-      return university && university.courses && university.courses.includes(courseName);
-    });
-  }, [previousSelections, isCreatingNewOrder]);
-
-  useEffect(() => {
-    const initializePage = async () => {
-      window.scrollTo(0, 0);
-      
-      let courseDetails = [];
-      let courseNames = [];
-      
-      if (location.state?.selectedCourses) {
-        courseDetails = location.state.selectedCourses;
-        courseNames = courseDetails.map(course => course.name);
-        localStorage.setItem('selectedCourseDetails', JSON.stringify(courseDetails));
-        localStorage.setItem('selectedCourseNames', JSON.stringify(courseNames));
-      } else {
-        const savedDetails = localStorage.getItem('selectedCourseDetails');
-        const savedNames = localStorage.getItem('selectedCourseNames');
-        
-        if (savedDetails && savedNames) {
-          courseDetails = JSON.parse(savedDetails);
-          courseNames = JSON.parse(savedNames);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'success' && data.eligible_courses?.length > 0) {
+          setAvailableAlternatives(data.eligible_courses);
+          setShowAlternativeModal(true);
+          return;
         }
       }
-      
-      setSelectedCourseDetails(courseDetails);
-      setSelectedCourseNames(courseNames);
-      
-      let marks = [];
-      if (location.state?.studentMarks) {
-        marks = location.state.studentMarks;
-        localStorage.setItem('student_marks', JSON.stringify(marks));
-      } else {
-        const savedMarks = localStorage.getItem('student_marks');
-        if (savedMarks) {
-          marks = JSON.parse(savedMarks);
-        }
-      }
-      
-      if (marks.length > 0) {
-        setStudentMarks(marks);
-      }
-      
-      const savedCourses = localStorage.getItem('selectedUniversityCourses');
-      if (savedCourses) {
-        try {
-          const parsed = JSON.parse(savedCourses);
-          if (Object.keys(parsed).length > 0) {
-            setSelectedCourses(parsed);
-          }
-        } catch (e) {
-          setSelectedCourses({});
-        }
-      }
-      
-      const savedPackage = localStorage.getItem('selectedPackage');
-      if (savedPackage) {
-        setSelectedPackage(savedPackage);
-      } else {
-        setSelectedPackage('premium');
-      }
-      
-      setPageLoaded(true);
-      
-      setTimeout(() => {
-        fetchUniversities(courseNames, marks);
-      }, 100);
-    };
-    
-    initializePage();
-  }, [location.state]);
+    } catch (e) {}
+    const otherCourses = university.courses?.filter(c => !selectedCourseNames.includes(c.name)) || [];
+    const unique = [];
+    const seen = new Set();
+    otherCourses.forEach(c => { if (!seen.has(c.name)) { seen.add(c.name); unique.push(c); } });
+    setAvailableAlternatives(unique.slice(0, 15));
+    setShowAlternativeModal(true);
+  }, [getStudentMarks, selectedCourseNames, selectedCourses]);
 
-  useEffect(() => {
-    if (universities.length > 0) {
-      setUniversities(prev => prev.map(uni => ({
-        ...uni,
-        selected: selectedCourses[uni.code]?.length > 0 || false
-      })));
+  const handleAlternativeSelect = (course) => {
+    const uni = alternativeUniversity || selectedUniversity;
+    if (!uni) return;
+    const code = uni.code;
+    const current = selectedCourses[code] || [];
+    const limit = getInstitutionCourseLimit(uni.name);
+    if (current.includes(course.name)) { showNotificationMessage('Course already selected', 'warning'); return; }
+    if (current.length >= limit) { showNotificationMessage(`Max ${limit} courses at ${uni.code}`, 'warning'); return; }
+    const updated = { ...selectedCourses, [code]: [...current, course.name] };
+    setSelectedCourses(updated);
+    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    setShowAlternativeModal(false);
+    setAlternativeUniversity(null);
+    showNotificationMessage(`Added "${course.name}" to ${uni.code}`, 'success');
+  };
+
+  // 🔥 SAVE PAYMENT SELECTION TO DATABASE
+  const savePaymentSelectionToDatabase = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.log('⚠️ No auth token, cannot save selection');
+      return;
     }
-  }, [selectedCourses, universities.length]);
 
-  useEffect(() => {
-    if (universities.length > 0) {
-      const { groupA, groupB } = separateUniversitiesIntoGroups(universities);
-      setGroupAUniversities(groupA);
-      setGroupBUniversities(groupB);
-    }
-  }, [universities, separateUniversitiesIntoGroups]);
+    setIsSavingSelection(true);
 
-  const fetchUniversities = async (courseNames, marks = []) => {
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      if (courseNames.length === 0) {
-        const response = await fetch(`${API_URL}/api/institutions-with-courses`, {
-          signal: controller.signal
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch institutions with courses');
-        const institutions = await response.json();
-        
-        // FILTER: Remove hidden institutions
-        const filteredInstitutions = filterHiddenInstitutions(institutions);
-        
-        const universityList = filteredInstitutions.map(inst => {
-          let logoInfo = universityLogos[inst.name];
-          
-          if (!logoInfo) {
-            for (const [key, value] of Object.entries(universityLogos)) {
-              if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
-                  key.toLowerCase().includes(inst.name?.toLowerCase())) {
-                logoInfo = value;
-                break;
-              }
-            }
-          }
-          
-          if (!logoInfo) {
-            logoInfo = {
-              code: inst.code || inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
-              logo: `/${inst.code || inst.name?.split(' ').map(word => word[0]).join('')}.jpeg`
-            };
-          }
-          
-          return {
-            id: inst.id,
-            name: inst.name,
-            code: logoInfo.code,
-            logo: logoInfo.logo,
-            courses: inst.courses || [],
-            selected: selectedCourses[logoInfo.code]?.length > 0 || false,
-            available: true
-          };
-        });
-        
-        setUniversities(universityList);
+      const universitiesData = Object.entries(selectedCourses).map(([code, courses]) => {
+        const uni = universities.find(u => u.code === code);
+        return { code, name: uni?.name || code, courses };
+      });
+
+      const totalCourses = Object.values(selectedCourses).reduce((sum, courses) => sum + courses.length, 0);
+      const totalUniversities = Object.keys(selectedCourses).length;
+      const totalCost = packagePrices[selectedPackage];
+
+      console.log('💾 Saving payment selection:', {
+        selectedPackage,
+        totalUniversities,
+        totalCourses,
+        totalCost,
+        universities: universitiesData
+      });
+
+      const response = await fetch(`${API_URL}/api/payment/save-selection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedPackage,
+          universities: universitiesData,
+          totalCourses,
+          totalUniversities,
+          totalCost,
+          courseDetails: {}
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Payment selection saved to database:', data.trackingNumber);
+        localStorage.setItem('trackingNumber', data.trackingNumber);
+        return data.trackingNumber;
       } else {
-        const response = await fetch(`${API_URL}/api/institutions-by-courses`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            course_names: courseNames
-          }),
-          signal: controller.signal
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch institutions by courses');
-        
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-          const institutions = data.institutions || [];
-          
-          // FILTER: Remove hidden institutions
-          const filteredInstitutions = filterHiddenInstitutions(institutions);
-          
-          const universityList = filteredInstitutions.map(inst => {
-            let logoInfo = universityLogos[inst.name];
-            
-            if (!logoInfo) {
-              for (const [key, value] of Object.entries(universityLogos)) {
-                if (inst.name?.toLowerCase().includes(key.toLowerCase()) || 
-                    key.toLowerCase().includes(inst.name?.toLowerCase())) {
-                  logoInfo = value;
-                  break;
-                }
-              }
-            }
-            
-            if (!logoInfo) {
-              logoInfo = {
-                code: inst.code || inst.name?.split(' ').map(word => word[0]).join('').toUpperCase(),
-                logo: `/${inst.code || inst.name?.split(' ').map(word => word[0]).join('')}.jpeg`
-              };
-            }
-            
-            return {
-              id: inst.id,
-              name: inst.name,
-              code: logoInfo.code,
-              logo: logoInfo.logo,
-              courses: inst.courses || [],
-              selected: selectedCourses[logoInfo.code]?.length > 0 || false,
-              available: true
-            };
-          });
-          
-          setUniversities(universityList);
-        } else {
-          throw new Error(data.error || 'Failed to fetch institutions');
-        }
+        console.error('❌ Failed to save selection:', data.error);
+        showNotificationMessage('Failed to save your selections. Please try again.', 'error');
+        return null;
       }
-      
-      clearTimeout(timeoutId);
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('❌ Fetch error:', error.message);
-        setError(error.message);
-        setUniversities([]);
-      }
+      console.error('❌ Error saving payment selection:', error);
+      showNotificationMessage('Network error. Please check your connection.', 'error');
+      return null;
     } finally {
-      setIsLoading(false);
+      setIsSavingSelection(false);
     }
   };
 
-  const handleUniversityClick = useCallback((university) => {
-    if (isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name)) {
-      showNotificationMessage(`You've already applied to ${university.name} in a previous order. Please select different universities for your new order.`, 'warning');
-      return;
-    }
-
-    const currentUniversities = Object.keys(selectedCourses).length;
+  const handleApply = async () => {
+    const selectedCount = Object.keys(selectedCourses).length;
     const limit = packageLimits[selectedPackage].universities;
-    
-    if (currentUniversities >= limit && !selectedCourses[university.code]?.length > 0) {
-      setExceededItem({
-        type: 'university',
-        current: currentUniversities,
-        limit: limit,
-        package: selectedPackage
-      });
-      setShowSwitchToCustomPopup(true);
-      return;
-    }
-    
-    setSelectedUniversity(university);
-  }, [selectedCourses, selectedPackage, packageLimits, isCreatingNewOrder, isUniversityInPreviousOrders, showNotificationMessage]);
-
-  const handleCourseSelection = useCallback((course) => {
-    if (!selectedUniversity) return;
-
-    if (isCreatingNewOrder && isCourseInPreviousOrders(selectedUniversity.code, course.name)) {
-      showNotificationMessage(`You've already applied to "${course.name}" in a previous order. Please select different courses for your new order.`, 'warning');
-      return;
-    }
-
-    const universityCode = selectedUniversity.code;
-    const currentSelections = selectedCourses[universityCode] || [];
-    const institutionLimit = getInstitutionCourseLimit(selectedUniversity.name);
-
-    if (currentSelections.includes(course.name)) {
-      const newSelections = currentSelections.filter(c => c !== course.name);
-      const updated = { ...selectedCourses, [universityCode]: newSelections };
-      if (newSelections.length === 0) {
-        delete updated[universityCode];
-      }
-      setSelectedCourses(updated);
-      localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-    } else {
-      if (currentSelections.length >= institutionLimit) {
-        showNotificationMessage(`${selectedUniversity.name} allows maximum ${institutionLimit} courses.`, 'warning');
-        return;
-      }
-      
-      const newSelections = [...currentSelections, course.name];
-      const updated = { ...selectedCourses, [universityCode]: newSelections };
-      setSelectedCourses(updated);
-      localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-    }
-  }, [selectedUniversity, selectedCourses, getInstitutionCourseLimit, isCreatingNewOrder, isCourseInPreviousOrders, showNotificationMessage]);
-
-  const handleAlternativeSelect = useCallback((alternativeCourse) => {
-    if (!selectedUniversity) return;
-    
-    const universityCode = selectedUniversity.code;
-    const currentSelections = selectedCourses[universityCode] || [];
-    const institutionLimit = getInstitutionCourseLimit(selectedUniversity.name);
-    
-    if (currentSelections.length >= institutionLimit) {
-      const unavailableCourseIndex = currentSelections.findIndex(courseName => 
-        courseName === currentUnavailableCourse
-      );
-      
-      if (unavailableCourseIndex !== -1) {
-        const newSelections = [...currentSelections];
-        newSelections[unavailableCourseIndex] = alternativeCourse.name;
-        
-        const updated = { ...selectedCourses, [universityCode]: newSelections };
-        setSelectedCourses(updated);
-        localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-        
-        const updatedCourseNames = [...selectedCourseNames];
-        const unavailableIndex = updatedCourseNames.indexOf(currentUnavailableCourse);
-        if (unavailableIndex !== -1) {
-          updatedCourseNames[unavailableIndex] = alternativeCourse.name;
-        }
-        setSelectedCourseNames(updatedCourseNames);
-        localStorage.setItem('selectedCourseNames', JSON.stringify(updatedCourseNames));
-        
-        setShowAlternativeModal(false);
-        setCurrentUnavailableCourse('');
-        setAvailableAlternatives([]);
-        
-        showNotificationMessage(`Successfully replaced "${currentUnavailableCourse}" with "${alternativeCourse.name}" at ${selectedUniversity.name}`, 'success');
-        return;
+    if (selectedCount < limit) { showNotificationMessage(`Select ${limit - selectedCount} more universit${limit - selectedCount > 1 ? 'ies' : 'y'}.`, 'warning'); return; }
+    if (selectedCount > limit) { showNotificationMessage(`Too many universities. Upgrade or remove some.`, 'warning'); return; }
+    for (const [code, courses] of Object.entries(selectedCourses)) {
+      const uni = universities.find(u => u.code === code);
+      if (uni && courses.length !== getInstitutionCourseLimit(uni.name)) {
+        showNotificationMessage(`${uni.code}: select ${getInstitutionCourseLimit(uni.name)} courses.`, 'warning'); return;
       }
     }
-    
-    if (currentSelections.length >= institutionLimit) {
-      showNotificationMessage(`Maximum ${institutionLimit} courses reached for ${selectedUniversity.name}.`, 'warning');
-      return;
-    }
-    
-    const newSelections = [...currentSelections, alternativeCourse.name];
-    const updated = { ...selectedCourses, [universityCode]: newSelections };
-    setSelectedCourses(updated);
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-    
-    if (!selectedCourseNames.includes(alternativeCourse.name)) {
-      const updatedCourseNames = [...selectedCourseNames, alternativeCourse.name];
-      setSelectedCourseNames(updatedCourseNames);
-      localStorage.setItem('selectedCourseNames', JSON.stringify(updatedCourseNames));
-    }
-    
-    setShowAlternativeModal(false);
-    setCurrentUnavailableCourse('');
-    setAvailableAlternatives([]);
-    
-    showNotificationMessage(`Added "${alternativeCourse.name}" at ${selectedUniversity.name}`, 'success');
-  }, [selectedUniversity, selectedCourses, getInstitutionCourseLimit, currentUnavailableCourse, selectedCourseNames, showNotificationMessage]);
 
-  const handleUniversityDeselect = useCallback((university, e) => {
-    e.stopPropagation();
-    
-    const updated = { ...selectedCourses };
-    delete updated[university.code];
-    setSelectedCourses(updated);
-    
-    setUniversities(prev => prev.map(uni => 
-      uni.id === university.id ? { ...uni, selected: false } : uni
-    ));
-    
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-  }, [selectedCourses]);
+    // 🔥 Save to database first
+    await savePaymentSelectionToDatabase();
 
-  const handleCloseCoursesModal = useCallback(() => {
-    if (selectedUniversity) {
-      const hasCourses = selectedCourses[selectedUniversity.code]?.length > 0;
-      setUniversities(prev => prev.map(uni => 
-        uni.id === selectedUniversity.id ? { 
-          ...uni, 
-          selected: hasCourses
-        } : uni
-      ));
-    }
-    
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(selectedCourses));
-    setSelectedUniversity(null);
-    setShowAlternativeModal(false);
-    setCurrentUnavailableCourse('');
-    setAvailableAlternatives([]);
-  }, [selectedUniversity, selectedCourses]);
-
-  const handlePackageSelect = useCallback((packageType) => {
-    setSelectedPackage(packageType);
-    localStorage.setItem('selectedPackage', packageType);
-    setShowPaymentPopup(false);
-  }, []);
-
-  const handleSwitchToCustom = useCallback(() => {
-    setShowSwitchToCustomPopup(false);
-    if (pendingSelection) {
-      if (pendingSelection.coursesToAdd) {
-        completeAddSuggestion(
-          pendingSelection.university, 
-          pendingSelection.coursesToAdd, 
-          pendingSelection.isNewUniversity
-        );
-        
-        setMaximiseSuggestions(prev => 
-          prev.filter(s => s.university.code !== pendingSelection.university.code)
-        );
-      } else if (pendingSelection.tempSelectedCourses) {
-        completeAddSelection(
-          pendingSelection.university,
-          pendingSelection.university.code,
-          pendingSelection.tempSelectedCourses,
-          pendingSelection.isNewUniversity
-        );
-        
-        setMaximiseSuggestions(prev => 
-          prev.filter(s => s.university.code !== pendingSelection.university.code)
-        );
-      }
-      setPendingSelection(null);
-    }
-  }, [pendingSelection, completeAddSelection, completeAddSuggestion]);
-
-  const handleNewOrder = useCallback(() => {
-    setSelectedCourses({});
-    setSelectedCourseNames([]);
-    setSelectedCourseDetails([]);
-    localStorage.removeItem('selectedUniversityCourses');
-    localStorage.removeItem('selectedCourseNames');
-    localStorage.removeItem('selectedCourseDetails');
-    setIsCreatingNewOrder(true);
-  }, []);
-
-  const usageStats = useMemo(() => getUsageStats(), [getUsageStats]);
-  const selectedUniversities = useMemo(() => getSelectedUniversities(), [getSelectedUniversities]);
-  const totalApplications = useMemo(() => calculateTotalApplications(), [calculateTotalApplications]);
-
-  const totalCost = useMemo(() => {
-    return packagePrices[selectedPackage];
-  }, [selectedPackage]);
-
-  const universityCourses = useMemo(() => {
-    if (!selectedUniversity) return { availableCourses: [], unavailableCourses: [] };
-    return getCoursesForUniversity(selectedUniversity);
-  }, [selectedUniversity, getCoursesForUniversity]);
-
-  const hasUniversityReachedMaxCourses = useCallback((university) => {
-    const currentCount = selectedCourses[university.code]?.length || 0;
-    const maxLimit = getInstitutionCourseLimit(university.name);
-    return currentCount === maxLimit;
-  }, [selectedCourses, getInstitutionCourseLimit]);
-
-  const hasReachedMaxUniversities = useCallback(() => {
-    const currentUniversities = Object.keys(selectedCourses).length;
-    const maxUniversities = packageLimits[selectedPackage].universities;
-    return currentUniversities === maxUniversities;
-  }, [selectedCourses, selectedPackage, packageLimits]);
-
-  const handleApply = useCallback(async () => {
-    const selectedUnis = getSelectedUniversities();
-    const totalCourses = calculateTotalApplications();
-    const totalUniversities = Object.keys(selectedCourses).length;
-    
-    if (totalCourses === 0) {
-      showNotificationMessage('Please select at least one course from any university', 'warning');
-      return;
-    }
-
-    const limits = packageLimits[selectedPackage];
-    
-    if (totalUniversities !== limits.universities) {
-      const remaining = limits.universities - totalUniversities;
-      if (remaining > 0) {
-        showNotificationMessage(`You have selected ${totalUniversities} out of ${limits.universities} universities for your ${selectedPackage} package. Please select ${remaining} more universit${remaining > 1 ? 'ies' : 'y'} to maximize your application.`, 'warning');
-      } else {
-        showNotificationMessage(`You have exceeded your ${selectedPackage} package limit of ${limits.universities} universities. Please upgrade your package.`, 'warning');
-      }
-      return;
-    }
-    
-    const incompleteUniversities = [];
-    for (const uni of selectedUnis) {
-      const currentCourses = selectedCourses[uni.code]?.length || 0;
-      const maxCourses = getInstitutionCourseLimit(uni.name);
-      if (currentCourses !== maxCourses) {
-        incompleteUniversities.push({
-          name: uni.code,
-          current: currentCourses,
-          max: maxCourses,
-          remaining: maxCourses - currentCourses
-        });
-      }
-    }
-    
-    if (incompleteUniversities.length > 0) {
-      let message = `Please maximize your course selections:\n`;
-      incompleteUniversities.forEach(uni => {
-        message += `\n• ${uni.name}: ${uni.current}/${uni.max} courses (add ${uni.remaining} more)`;
-      });
-      showNotificationMessage(message, 'warning');
-      return;
-    }
-
-    const selectedUniversitiesList = selectedUnis.map(u => ({
-      code: u.code,
-      name: u.name,
-      courses: selectedCourses[u.code] || []
-    }));
-
-    const applicationSummary = {
-      package: selectedPackage,
-      universities: selectedUniversitiesList,
-      totalCourses: totalCourses,
-      totalUniversities: totalUniversities,
-      timestamp: new Date().toISOString(),
-      courseDetails: selectedCourseDetails,
-      totalCost: totalCost
-    };
-    
-    sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
+    // Then show payment popup
     setShowPaymentPopup(true);
-    
-  }, [calculateTotalApplications, selectedCourses, selectedPackage, packageLimits, getSelectedUniversities, selectedCourseDetails, totalCost, showNotificationMessage, getInstitutionCourseLimit]);
-  
-  const handlePaymentComplete = useCallback(async (paymentResult) => {
-    if (isProcessingComplete) {
-      console.log('⚠️ Already processing payment completion, ignoring duplicate call');
-      return;
-    }
-    
+  };
+
+  const handlePaymentComplete = async (result) => {
+    if (isProcessingComplete) return;
     setIsProcessingComplete(true);
-    
     try {
-      setPaymentStatus(paymentResult);
       setShowPaymentPopup(false);
-      
-      if (paymentResult.showCredentials) {
-        setAccountUsername(paymentResult.username);
-        setAccountPassword(paymentResult.password);
-        setShowCredentialsModal(true);
-      }
-      
-      if (paymentResult.success) {
-        const selectedUnis = getSelectedUniversities().map(u => ({
-          code: u.code,
-          name: u.name,
-          courses: selectedCourses[u.code]
+      if (result.showCredentials) { setAccountUsername(result.username); setAccountPassword(result.password); setShowCredentialsModal(true); }
+      if (result.success) {
+        localStorage.setItem('userProfile', JSON.stringify({
+          package: selectedPackage, amount: packagePrices[selectedPackage],
+          universities: Object.entries(selectedCourses).map(([code, courses]) => {
+            const uni = universities.find(u => u.code === code);
+            return { code, name: uni?.name, courses };
+          }),
+          courses: selectedCourses, transactionId: result.transactionId
         }));
-
-        let existingDocuments = {};
-        try {
-          const savedProfile = localStorage.getItem('userProfileData');
-          if (savedProfile) {
-            const profile = JSON.parse(savedProfile);
-            existingDocuments = profile.documents || {};
-          }
-          
-          const sessionDocs = sessionStorage.getItem('uploadedDocuments');
-          if (sessionDocs) {
-            const docs = JSON.parse(sessionDocs);
-            existingDocuments = { ...existingDocuments, ...docs };
-          }
-        } catch (error) {
-          console.error('Error getting existing documents:', error);
-        }
-
-        const userData = {
-          firstName: paymentResult.firstName || '',
-          lastName: paymentResult.lastName || '',
-          gender: paymentResult.gender || '',
-          email: paymentResult.email || '',
-          kinName: paymentResult.kinName || '',
-          kinPhone: paymentResult.kinPhone || '',
-          phoneNumber: paymentResult.phoneNumber || paymentResult.phone || '',
-          whatsappNumber: paymentResult.whatsappNumber || '',
-          package: selectedPackage,
-          amount: totalCost,
-          universities: selectedUnis,
-          courses: selectedCourses,
-          transactionId: paymentResult.transactionId,
-          province: paymentResult.province || '',
-          city: paymentResult.city || '',
-          homeLanguage: paymentResult.homeLanguage || '',
-          nationality: paymentResult.nationality || '',
-          idNumber: paymentResult.idNumber || '',
-          dateOfBirth: paymentResult.dateOfBirth || '',
-        };
-
-        console.log('✅ Application data prepared with tracking:', userData.transactionId);
-        
-        const savedTrackingNumber = localStorage.getItem('paymentTrackingNumber');
-        if (savedTrackingNumber && savedTrackingNumber !== userData.transactionId) {
-          console.warn('⚠️ Tracking number mismatch!');
-        }
-        
-        const userProfileData = {
-          ...userData,
-          trackingNumber: userData.transactionId,
-          status: 'Processing',
-          orderDate: new Date().toISOString(),
-          documents: existingDocuments
-        };
-        
-        localStorage.setItem('userProfile', JSON.stringify(userProfileData));
-        
-        const existingProfile = localStorage.getItem('userProfileData');
-        const profileData = existingProfile ? JSON.parse(existingProfile) : {};
-        localStorage.setItem('userProfileData', JSON.stringify({
-          ...profileData,
-          ...userData,
-          trackingNumber: userData.transactionId,
-          documents: existingDocuments
-        }));
-        
-        localStorage.setItem('lastTrackingNumber', userData.transactionId);
-        sessionStorage.setItem('lastTrackingNumber', userData.transactionId);
-        
         localStorage.removeItem('selectedUniversityCourses');
-        localStorage.removeItem('selectedCourseDetails');
-        localStorage.removeItem('selectedCourseNames');
         localStorage.removeItem('selectedPackage');
-        localStorage.removeItem('applicationSummary');
-        
-        sessionStorage.removeItem('uploadedDocuments');
-        sessionStorage.removeItem('pendingApplicationSummary');
-        
-        showNotificationMessage(`Payment successful! Your order number is ${userData.transactionId}. You'll receive a confirmation email shortly.`, 'success');
-        
-        if (!paymentResult.showCredentials) {
-          setTimeout(() => {
-            navigate('/profile');
-          }, 1500);
-        }
+        showNotificationMessage(`Payment successful!`, 'success');
+        setTimeout(() => navigate('/profile'), 1500);
       }
-    } catch (error) {
-      console.error('Error in payment completion:', error);
-      showNotificationMessage('Something went wrong. Please contact support.', 'error');
-    } finally {
-      setTimeout(() => {
-        setIsProcessingComplete(false);
-      }, 2000);
-    }
-  }, [selectedPackage, totalCost, getSelectedUniversities, selectedCourses, navigate, showNotificationMessage]);
+    } catch (e) { showNotificationMessage('Something went wrong.', 'error'); }
+    finally { setTimeout(() => setIsProcessingComplete(false), 2000); }
+  };
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('selectedUniversityCourses');
-    localStorage.removeItem('selectedCourseNames');
-    localStorage.removeItem('selectedCourseDetails');
-    localStorage.removeItem('selectedPackage');
-    localStorage.removeItem('applicationSummary');
-    localStorage.removeItem('userProfile');
-    localStorage.removeItem('userProfileData');
-    sessionStorage.removeItem('paymentTrackingNumber');
-    sessionStorage.removeItem('uploadedDocuments');
-    sessionStorage.removeItem('payment_session_started');
-    
-    navigate('/');
-  }, [navigate]);
+  const progressPercent = 75;
+  const availableForSelected = selectedUniversity ? getAvailableCoursesForUniversity(selectedUniversity) : [];
+  const currentForSelected = selectedUniversity ? (selectedCourses[selectedUniversity.code] || []) : [];
+  const maxForSelected = selectedUniversity ? getInstitutionCourseLimit(selectedUniversity.name) : 0;
+  const remainingToSelect = maxForSelected - currentForSelected.length;
 
-  // Apply button is now ALWAYS enabled
-  const isApplyDisabled = false;
-
-  const getApplyButtonTooltip = "Proceed to payment";
-
-  console.log('🔵 PaymentPage rendering - Apply button enabled: true');
+  const pkg = packageToApply;
+  const pkgLimit = pkg ? packageLimits[pkg].universities : 0;
+  const pkgPrice = pkg ? packagePrices[pkg] : 0;
+  const pkgName = pkg ? packageNames[pkg] : '';
+  const pkgDesc = pkg ? packageDescriptions[pkg] : '';
 
   return (
-    <div className={`payment-page ${pageLoaded ? 'loaded' : ''}`}>
-      <PaymentHeader showProfile={true} />
-      
-      <div className="payment-container">
-        {isCreatingNewOrder && previousSelections.length > 0 && (
-          <div className="new-order-banner">
-            <FaHistory className="new-order-icon" />
-            <div className="new-order-text">
-              <h3>Creating New Order</h3>
-              <p>Universities you've applied to before are disabled. Please select different universities for this new order.</p>
-            </div>
-            <button className="view-previous-btn" onClick={() => navigate('/profile')}>
-              View Previous Orders
-            </button>
-          </div>
-        )}
-
-        <div className="discovery-message">
-          <h2 className="university-count-title">
-            Skolify has found <span className="university-count-blue">{universities.length}</span> Universities you can apply to
-          </h2>
-          <h1 className="main-heading">Select Your Universities & Courses</h1>
+    <div className="simple-payment-page">
+      <div className="progress-bar-wrapper">
+        <div className="progress-bar-track">
+          <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }}></div>
         </div>
-
-        {selectedUniversities.length > 0 && selectedUniversities.length < packageLimits[selectedPackage].universities && (
-          <div className="maximise-options-banner">
-            <div className="maximise-banner-content">
-              <FaLightbulb className="maximise-icon" />
-              <div className="maximise-text">
-                <h3>
-                  You've selected {selectedUniversities.length} out of {packageLimits[selectedPackage].universities} universities
-                </h3>
-                <p>
-                  You have {packageLimits[selectedPackage].universities - selectedUniversities.length} slot(s) left. Add more universities to maximize your chances!
-                </p>
-              </div>
-              <button 
-                className="maximise-btn"
-                onClick={calculateMaximiseOptions}
-                disabled={isCalculatingMaximise}
-              >
-                {isCalculatingMaximise ? (
-                  <>
-                    <FaSpinner className="spinner-icon" /> Finding Options...
-                  </>
-                ) : (
-                  <>
-                    <FaMagic /> Find More Universities
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="loading-state">
-            <FaSpinner className="spinner-large" />
-            <p>Finding universities that offer your selected courses...</p>
-          </div>
-        )}
-
-        {error && !isLoading && (
-          <div className="error-state">
-            <p>⚠️ Error: {error}</p>
-            <p>Please check if the backend server is running.</p>
-            <button 
-              className="retry-btn"
-              onClick={() => fetchUniversities(selectedCourseNames)}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {!isLoading && !error && (
-          <>
-            <div className="usage-limits-simple">
-              <div className="limit-item-simple">
-                <span className="limit-label-simple">Universities:</span>
-                <span className={`limit-value-simple ${usageStats.universities.current > usageStats.universities.limit ? 'exceeded' : ''}`}>
-                  {usageStats.universities.current} / {usageStats.universities.limit}
-                </span>
-              </div>
-            </div>
-            
-            <div className="university-selection-section">
-              <p className="section-subtitle">
-                Click on a university to select your courses (up to {getInstitutionCourseLimit('University')} per university).
-                {selectedCourseNames.length > 0 ? (
-                  <span> Only universities offering your selected courses are shown.</span>
-                ) : (
-                  <span> All universities are shown.</span>
-                )}
-              </p>
-              
-              {universities.length > 0 ? (
-                <div className="university-groups-container">
-                  {groupAUniversities.length > 0 && (
-                    <div className="university-group-card">
-                      <div className="group-header">
-                        <div className="group-header-left">
-                          <span className="group-name">No Application Fee</span>
-                          <FaQuestionCircle 
-                            className="group-info-icon group-info-icon-grey"
-                            onClick={() => {
-                              setFeeInfoGroup('A');
-                              setShowFeeInfoPopup(true);
-                            }}
-                          />
-                        </div>
-                        <span className="group-count">{groupAUniversities.length}</span>
-                      </div>
-                      <div className="universities-grid">
-                        {groupAUniversities.map(university => {
-                          const courseCount = selectedCourses[university.code]?.length || 0;
-                          const isSelected = courseCount > 0;
-                          const isDisabled = !isSelected && 
-                                        (usageStats.universities.current >= usageStats.universities.limit);
-                          const institutionLimit = getInstitutionCourseLimit(university.name);
-                          const isPreviousOrder = isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name);
-                          
-                          const finalDisabled = isDisabled || isPreviousOrder;
-                          
-                          return (
-                            <div 
-                              key={university.id}
-                              className={`university-card 
-                                ${isSelected ? 'selected' : ''} 
-                                ${finalDisabled ? 'disabled' : ''}
-                                ${isPreviousOrder ? 'previous-order' : ''}`}
-                              onClick={() => !finalDisabled && handleUniversityClick(university)}
-                            >
-                              <div className="university-logo-container">
-                                <img 
-                                  src={university.logo} 
-                                  alt={`${university.name} logo`}
-                                  className="university-logo"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextElementSibling.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="university-logo-fallback">
-                                  <FaUniversity />
-                                  <span>{university.code}</span>
-                                </div>
-                              </div>
-                              <div className="university-info">
-                                <h3 className="university-name">{university.code}</h3>
-                                {isSelected && (
-                                  <div className="courses-selected-badge">
-                                    {courseCount} course{courseCount !== 1 ? 's' : ''}
-                                  </div>
-                                )}
-                                {!isSelected && !isPreviousOrder && (
-                                  <div className="courses-limit-badge">
-                                    {institutionLimit} max
-                                  </div>
-                                )}
-                                {isPreviousOrder && (
-                                  <div className="previous-order-badge">
-                                    <FaLock /> Applied Before
-                                  </div>
-                                )}
-                              </div>
-                              {isSelected && (
-                                <div 
-                                  className="selected-check"
-                                  onClick={(e) => handleUniversityDeselect(university, e)}
-                                  title="Deselect university"
-                                >
-                                  <FaTimes />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {groupBUniversities.length > 0 && (
-                    <div className="university-group-card">
-                      <div className="group-header">
-                        <div className="group-header-left">
-                          <span className="group-name">Application Fee Required</span>
-                          <FaQuestionCircle 
-                            className="group-info-icon group-info-icon-orange"
-                            onClick={() => {
-                              setFeeInfoGroup('B');
-                              setShowFeeInfoPopup(true);
-                            }}
-                          />
-                        </div>
-                        <span className="group-count">{groupBUniversities.length}</span>
-                      </div>
-                      <div className="universities-grid">
-                        {groupBUniversities.map(university => {
-                          const courseCount = selectedCourses[university.code]?.length || 0;
-                          const isSelected = courseCount > 0;
-                          const isDisabled = !isSelected && 
-                                        usageStats.universities.current >= usageStats.universities.limit;
-                          const institutionLimit = getInstitutionCourseLimit(university.name);
-                          const isPreviousOrder = isCreatingNewOrder && isUniversityInPreviousOrders(university.code, university.name);
-                          
-                          const finalDisabled = isDisabled || isPreviousOrder;
-                          
-                          return (
-                            <div 
-                              key={university.id}
-                              className={`university-card 
-                                ${isSelected ? 'selected' : ''} 
-                                ${finalDisabled ? 'disabled' : ''}
-                                ${isPreviousOrder ? 'previous-order' : ''}`}
-                              onClick={() => !finalDisabled && handleUniversityClick(university)}
-                            >
-                              <div className="university-logo-container">
-                                <img 
-                                  src={university.logo} 
-                                  alt={`${university.name} logo`}
-                                  className="university-logo"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextElementSibling.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="university-logo-fallback">
-                                  <FaUniversity />
-                                  <span>{university.code}</span>
-                                </div>
-                              </div>
-                              <div className="university-info">
-                                <h3 className="university-name">{university.code}</h3>
-                                {isSelected && (
-                                  <div className="courses-selected-badge">
-                                    {courseCount} course{courseCount !== 1 ? 's' : ''}
-                                  </div>
-                                )}
-                                {!isSelected && !isPreviousOrder && (
-                                  <div className="courses-limit-badge">
-                                    {institutionLimit} max
-                                  </div>
-                                )}
-                                {isPreviousOrder && (
-                                  <div className="previous-order-badge">
-                                    <FaLock /> Applied Before
-                                  </div>
-                                )}
-                              </div>
-                              {isSelected && (
-                                <div 
-                                  className="selected-check"
-                                  onClick={(e) => handleUniversityDeselect(university, e)}
-                                  title="Deselect university"
-                                >
-                                  <FaTimes />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : !isLoading ? (
-                <div className="no-universities-found">
-                  <FaUniversity className="no-universities-icon" />
-                  <h3>No Universities Found</h3>
-                  <p>No universities were found that offer your selected courses.</p>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="selected-universities-minimal">
-              <div className="minimal-header">
-                <h2>Your Selected Applications</h2>
-                <p className="minimal-subtitle">Total: {totalApplications} courses across {selectedUniversities.length} universities</p>
-              </div>
-              
-              {selectedUniversities.length > 0 ? (
-                <div className="minimal-selections">
-                  {selectedUniversities.map(university => {
-                    const institutionLimit = getInstitutionCourseLimit(university.name);
-                    const currentCount = selectedCourses[university.code]?.length || 0;
-                    const isComplete = currentCount === institutionLimit;
-                    
-                    return (
-                      <div key={university.id} className="minimal-university">
-                        <div className="minimal-university-header">
-                          <div className="minimal-university-logo">
-                            <img 
-                              src={university.logo} 
-                              alt={university.name}
-                              className="minimal-logo"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextElementSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div className="minimal-logo-fallback">
-                              <FaUniversity />
-                            </div>
-                          </div>
-                          <div className="minimal-university-info">
-                            <h3>{university.code}</h3>
-                            <span className={`minimal-courses-count ${!isComplete ? 'incomplete' : 'complete'}`}>
-                              {currentCount}/{institutionLimit} courses selected
-                              {!isComplete && ` (${institutionLimit - currentCount} more needed)`}
-                            </span>
-                          </div>
-                          <button 
-                            className="minimal-edit-btn"
-                            onClick={() => handleUniversityClick(university)}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            className="minimal-remove-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUniversityDeselect(university, e);
-                            }}
-                            title="Remove university"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="no-selections-minimal">
-                  <FaUniversity className="no-selections-icon" />
-                  <p>No universities selected yet. Click on a university above to choose your courses.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="package-section">
-              <h2 className="package-section-title">Choose Your Application Package</h2>
-              <div className="packages-inline">
-                <div 
-                  className={`package-inline ${selectedPackage === 'basic' ? 'selected' : ''}`}
-                  onClick={() => handlePackageSelect('basic')}
-                >
-                  <div className="package-inline-header">
-                    <h4>Basic</h4>
-                    <div className="package-price-inline">R{packagePrices.basic}</div>
-                  </div>
-                  <div className="package-features-inline">
-                    <div className="feature-inline">
-                      <span className="feature-count-inline">2</span>
-                      <span className="feature-label-inline">University Applications</span>
-                    </div>
-                    <div className="feature-inline accent-feature">
-                      <span className="feature-label-inline">Standard Processing</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div 
-                  className={`package-inline ${selectedPackage === 'standard' ? 'selected' : ''}`}
-                  onClick={() => handlePackageSelect('standard')}
-                >
-                  <div className="package-inline-header">
-                    <h4>Standard</h4>
-                    <div className="package-price-inline">R{packagePrices.standard}</div>
-                  </div>
-                  <div className="package-features-inline">
-                    <div className="feature-inline">
-                      <span className="feature-count-inline">4</span>
-                      <span className="feature-label-inline">University Applications</span>
-                    </div>
-                    <div className="feature-inline accent-feature">
-                      <span className="feature-label-inline">Faster Processing</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div 
-                  className={`package-inline ${selectedPackage === 'premium' ? 'selected' : ''}`}
-                  onClick={() => handlePackageSelect('premium')}
-                >
-                  <div className="package-inline-header">
-                    <h4>Premium</h4>
-                    <div className="package-price-inline">R{packagePrices.premium}</div>
-                  </div>
-                  <div className="package-features-inline">
-                    <div className="feature-inline">
-                      <span className="feature-count-inline">6</span>
-                      <span className="feature-label-inline">University Applications</span>
-                    </div>
-                    <div className="feature-inline accent-feature">
-                      <span className="feature-label-inline">Priority Processing</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="apply-section">
-              <div className="application-summary">
-                <div className="summary-details">
-                  <div className="summary-item">
-                    <span className="summary-label">Package:</span>
-                    <span className="summary-value package-name">
-                      {selectedPackage.charAt(0).toUpperCase() + selectedPackage.slice(1)}
-                    </span>
-                  </div>
-                  
-                  <div className="summary-item">
-                    <span className="summary-label">Total Cost:</span>
-                    <span className="summary-value total-cost">
-                      R{totalCost}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Apply Now Button - ALWAYS ENABLED */}
-                <button 
-                  className="apply-now-btn"
-                  onClick={handleApply}
-                  disabled={false}
-                  title="Proceed to payment"
-                  style={{
-                    opacity: 1,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Apply Now
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Fee Info Popup Modal */}
-      {showFeeInfoPopup && (
-        <div className="fee-info-modal">
-          <div className="fee-info-overlay" onClick={() => setShowFeeInfoPopup(false)}></div>
-          <div className="fee-info-content">
-            <div className={`fee-info-header ${feeInfoGroup === 'A' ? 'header-green' : 'header-orange'}`}>
-              <h3>
-                {feeInfoGroup === 'A' ? 'No Application Fee' : 'Application Fee Required'}
-              </h3>
-              <button className="close-fee-info" onClick={() => setShowFeeInfoPopup(false)}>
-                <FaTimes />
+      <div className="simple-payment-container">
+        {isCreatingNewOrder && previousSelections.length > 0 && (
+          <div className="previous-orders-banner">
+            <FaHistory className="previous-icon" />
+            <div className="previous-text">
+              <h4>Creating New Order</h4>
+              <p>Previously applied universities are locked.</p>
+            </div>
+            <button className="view-orders-btn" onClick={() => navigate('/profile')}>View Orders</button>
+          </div>
+        )}
+
+        {showMaximiseBanner && (
+          <div className="maximise-banner">
+            <FaLightbulb className="maximise-icon" />
+            <div className="maximise-text">
+              <h4>Maximise your options</h4>
+              <p>Upgrade to add more universities and improve your chances</p>
+            </div>
+            <button className="maximise-btn" onClick={calculateMaximiseOptions} disabled={isCalculatingMaximise}>
+              {isCalculatingMaximise ? <><FaSpinner className="spinner-icon" /> Loading...</> : <><FaMagic /> Upgrade</>}
+            </button>
+          </div>
+        )}
+
+        <div className="simple-hero">
+          <div className="hero-icon-wrapper">
+            <FaCheckCircle className="hero-check-icon" />
+          </div>
+          <h1 className="simple-hero-title">
+            Congratulations<br />
+            <span className="simple-hero-text">Skolify has found <span className="simple-hero-highlight">{totalFound}</span> Universities</span>
+          </h1>
+        </div>
+
+        <div className="simple-selection-section">
+          <p className="simple-selection-label">choose number of universities you want to apply to</p>
+          <div className="simple-number-options">
+            {['basic', 'standard', 'premium'].map(pkgKey => (
+              <button key={pkgKey} className={`simple-number-btn ${selectedPackage === pkgKey ? 'active' : ''}`} onClick={() => handlePackageClick(pkgKey)}>
+                {packageLimits[pkgKey].universities}
               </button>
+            ))}
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="simple-loading"><FaSpinner className="spinner" /><p>Loading universities...</p></div>
+        ) : (
+          <>
+            {noFeeUniversities.length > 0 && (
+              <div className="simple-uni-group">
+                <div className="simple-group-header">
+                  <span className="simple-group-title">No Application Fee</span>
+                  <FaInfoCircle className="simple-group-info" onClick={() => { setFeeInfoGroup('A'); setShowFeeInfo(true); }} />
+                </div>
+                <div className="simple-universities-grid">
+                  {noFeeUniversities.map(uni => {
+                    const isSelected = selectedCourses[uni.code]?.length > 0;
+                    const courseCount = selectedCourses[uni.code]?.length || 0;
+                    const isFull = selectedUniCount >= maxUnis && !isSelected;
+                    const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
+                    const disabled = isFull || isPrev;
+                    return (
+                      <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
+                        <div className="simple-uni-logo">
+                          {uni.logo ? <img src={uni.logo} alt={uni.code} className="uni-logo-img" onError={(e) => { e.target.style.display = 'none'; }} /> : <span>{uni.code?.slice(0, 2)}</span>}
+                        </div>
+                        <div className="simple-uni-name">{uni.code}</div>
+                        {isPrev && <div className="simple-uni-badge prev-badge"><FaLock size={10} /> Applied</div>}
+                        {isSelected && !isPrev && <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>}
+                        {isSelected && <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {feeUniversities.length > 0 && (
+              <div className="simple-uni-group">
+                <div className="simple-group-header">
+                  <span className="simple-group-title">Application Fee Required</span>
+                  <FaInfoCircle className="simple-group-info" onClick={() => { setFeeInfoGroup('B'); setShowFeeInfo(true); }} />
+                </div>
+                <div className="simple-universities-grid">
+                  {feeUniversities.map(uni => {
+                    const isSelected = selectedCourses[uni.code]?.length > 0;
+                    const courseCount = selectedCourses[uni.code]?.length || 0;
+                    const isFull = selectedUniCount >= maxUnis && !isSelected;
+                    const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
+                    const disabled = isFull || isPrev;
+                    return (
+                      <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
+                        <div className="simple-uni-logo">
+                          {uni.logo ? <img src={uni.logo} alt={uni.code} className="uni-logo-img" onError={(e) => { e.target.style.display = 'none'; }} /> : <span>{uni.code?.slice(0, 2)}</span>}
+                        </div>
+                        <div className="simple-uni-name">{uni.code}</div>
+                        {isPrev && <div className="simple-uni-badge prev-badge"><FaLock size={10} /> Applied</div>}
+                        {isSelected && !isPrev && <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>}
+                        {isSelected && <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="simple-usage-stats">
+          <span>Universities: {selectedUniCount}/{maxUnis}</span>
+          <span>Courses: {totalApplications}</span>
+        </div>
+
+        <div className="apply-section-inline">
+          <button className="primary-btn-full" onClick={handleApply} disabled={isSavingSelection}>
+            {isSavingSelection ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Apply'}
+          </button>
+        </div>
+
+        <div className="contact-support">
+          <p className="contact-message">
+            Need help? Contact our support team at{' '}
+            <a href="mailto:skolifyteam@gmail.com" className="support-link">skolifyteam@gmail.com</a>
+          </p>
+        </div>
+
+        <footer className="dashboard-footer">
+          <div className="footer-links">
+            <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
+            <span className="footer-separator">|</span>
+            <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>Privacy Policy</a>
+          </div>
+          <p className="copyright">© {new Date().getFullYear()} Skolify. All rights reserved.</p>
+        </footer>
+      </div>
+
+      {/* PACKAGE POPUP */}
+      {showPackagePopup && (
+        <div className="package-popup-overlay" onClick={() => setShowPackagePopup(false)}>
+          <div className="package-popup-card" onClick={(e) => e.stopPropagation()}>
+            <button className="package-popup-close" onClick={() => setShowPackagePopup(false)}>×</button>
+            <div className="package-popup-hero">
+              <FaCheckCircle className="package-popup-check" />
+              <h2>Congratulations</h2>
+              <p>Skolify found <strong>{totalFound}</strong></p>
             </div>
-            <div className="fee-info-body">
-              {feeInfoGroup === 'A' ? (
-                <p>
-                  These universities do not require an application fee. Skolify will submit your applications at no additional cost. 
-                  However, if a university charges an admission fee upon acceptance, that fee must be paid by the student directly to the university. 
-                  Skolify does not cover admission fees.
-                </p>
-              ) : (
-                <p>
-                  These universities require a non-refundable application fee per submission. Application fees are the student's responsibility 
-                  and are NOT included in any Skolify package. For example, if you apply to the University of Cape Town (UCT) which charges R100, 
-                  you must pay that R100 directly to UCT. Skolify only charges for your selected package (e.g., R329 for Standard), which covers 
-                  our application assistance service, not the university's application fee.
-                </p>
-              )}
-            </div>
-            <div className="fee-info-footer">
-              <button className="got-it-btn" onClick={() => setShowFeeInfoPopup(false)}>
-                Got it
-              </button>
-            </div>
+            <div className="package-popup-number">{pkgLimit}</div>
+            <h3 className="package-popup-name">{pkgName}</h3>
+            <div className="package-popup-price">R{pkgPrice}</div>
+            <p className="package-popup-desc">{pkgDesc}</p>
+            <button className="package-popup-apply" onClick={confirmPackageSelection}>Apply</button>
           </div>
         </div>
       )}
 
+      {/* COURSES MODAL */}
       {selectedUniversity && (
         <div className="courses-modal">
-          <div className="courses-modal-overlay" onClick={handleCloseCoursesModal}></div>
-          <div className="courses-modal-content">
+          <div className="courses-modal-overlay" onClick={() => setSelectedUniversity(null)}></div>
+          <div className="courses-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="courses-modal-header">
-              <div className="modal-university-header">
-                <div className="modal-university-logo">
-                  <img 
-                    src={selectedUniversity.logo} 
-                    alt={selectedUniversity.name}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling.style.display = 'flex';
-                    }}
-                  />
-                  <div className="modal-logo-fallback">
-                    <FaUniversity />
-                  </div>
-                </div>
-                <div className="modal-university-info">
-                  <h3>Select Courses for {selectedUniversity.name}</h3>
-                  <p className="modal-subtitle">
-                    Choose courses (up to {getInstitutionCourseLimit(selectedUniversity.name)} per university)
-                    <br />
-                    <small>You selected {selectedCourseNames.length} courses in total</small>
-                  </p>
-                </div>
+              <div className="modal-university-info">
+                <h3>Select Courses for {selectedUniversity.code}</h3>
+                <p>Choose {maxForSelected} course{maxForSelected > 1 ? 's' : ''} • {currentForSelected.length}/{maxForSelected} selected</p>
               </div>
-              <button 
-                className="close-courses-modal"
-                onClick={handleCloseCoursesModal}
-              >
-                <FaTimes />
-              </button>
+              <button className="close-courses-modal" onClick={() => setSelectedUniversity(null)}><FaTimes /></button>
             </div>
-            
             <div className="courses-modal-body">
-              <div className="courses-section">
-                <h4 className="section-title">
-                  Available Courses at {selectedUniversity.code}
-                  <span className="count-badge available-count">
-                    {universityCourses.availableCourses.length} available
-                  </span>
-                </h4>
-                
-                {universityCourses.availableCourses.length > 0 ? (
+              {availableForSelected.length > 0 || currentForSelected.length > 0 ? (
+                <>
                   <div className="courses-list-grid">
-                    {universityCourses.availableCourses.map((course, index) => {
-                      const selected = isCourseSelected(course.name, selectedUniversity.code);
-                      const isPreviousCourse = isCreatingNewOrder && isCourseInPreviousOrders(selectedUniversity.code, course.name);
-                      
+                    {currentForSelected.map((courseName, idx) => {
+                      const course = availableForSelected.find(c => c.name === courseName) || { name: courseName };
                       return (
-                        <div
-                          key={`available-${index}`}
-                          className={`course-item 
-                            ${selected ? 'selected' : ''} 
-                            ${isPreviousCourse ? 'previous-order-course' : ''}`}
-                          onClick={() => !isPreviousCourse && handleCourseSelection(course)}
-                        >
+                        <div key={`sel-${idx}`} className="course-item selected" onClick={() => handleCourseSelection(course)}>
                           <div className="course-item-content">
                             <FaBook className="course-item-icon" />
-                            <div className="course-details">
-                              <span className="course-item-name">{course.name}</span>
-                              <small className="course-status available">✓ Available at {selectedUniversity.code}</small>
-                              {isPreviousCourse && (
-                                <small className="previous-course-badge">
-                                  <FaLock /> Already applied
-                                </small>
-                              )}
-                            </div>
-                            <div className="course-item-check">
-                              {selected ? <FaCheck /> : (isPreviousCourse ? <FaLock /> : '+')}
-                            </div>
+                            <span className="course-item-name">{course.name}</span>
+                            <div className="course-item-check"><FaCheck /></div>
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-                ) : (
-                  <div className="no-available-courses">
-                    <FaBook className="no-courses-icon" />
-                    <p>None of your selected courses are available at {selectedUniversity.code}</p>
-                  </div>
-                )}
-              </div>
-
-              {universityCourses.unavailableCourses.length > 0 && (
-                <div className="unavailable-courses-section">
-                  <h4 className="section-title unavailable-title">
-                    Courses Not Available at {selectedUniversity.code}
-                    <span className="count-badge unavailable-count">
-                      {universityCourses.unavailableCourses.length} unavailable
-                    </span>
-                  </h4>
-                  <p className="section-subtitle">
-                    These courses from your selection aren't offered here. Switch to alternatives to maximize your applications.
-                  </p>
-                  
-                  <div className="unavailable-courses-list">
-                    {universityCourses.unavailableCourses.map((courseName, index) => {
-                      const isPreviousCourse = isCreatingNewOrder && isCourseInPreviousOrders(selectedUniversity.code, courseName);
-                      
+                    {availableForSelected.filter(c => !currentForSelected.includes(c.name)).map((course, idx) => {
+                      const isMaxed = currentForSelected.length >= maxForSelected;
+                      const isPrev = isCourseInPreviousOrders(selectedUniversity.code, course.name);
                       return (
-                        <div key={`unavailable-${index}`} className="unavailable-course-item">
-                          <div className="unavailable-course-content">
-                            <FaBook className="unavailable-course-icon" />
-                            <div className="course-details">
-                              <span className="course-item-name">{courseName}</span>
-                              <small className="course-status unavailable">✗ Not offered at {selectedUniversity.code}</small>
-                              {isPreviousCourse && (
-                                <small className="previous-course-badge">
-                                  <FaLock /> Already applied
-                                </small>
-                              )}
-                            </div>
-                            {!isPreviousCourse && (
-                              <button 
-                                className="switch-course-btn"
-                                onClick={() => findAlternativeCourses(selectedUniversity, courseName)}
-                              >
-                                Switch Course
-                                <FaExchangeAlt />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {getOtherCoursesAtUniversity(selectedUniversity).length > 0 && (
-                <div className="other-courses-section">
-                  <h4 className="section-title other-title">
-                    Other Courses at {selectedUniversity.code}
-                    <span className="count-badge other-count">
-                      {getOtherCoursesAtUniversity(selectedUniversity).length} more
-                    </span>
-                  </h4>
-                  <p className="section-subtitle">
-                    Additional courses available at this university (not in your original selection)
-                  </p>
-                  
-                  <div className="other-courses-list">
-                    {getOtherCoursesAtUniversity(selectedUniversity).slice(0, 5).map((course, index) => {
-                      const selected = isCourseSelected(course.name, selectedUniversity.code);
-                      const isPreviousCourse = isCreatingNewOrder && isCourseInPreviousOrders(selectedUniversity.code, course.name);
-                      
-                      return (
-                        <div
-                          key={`other-${index}`}
-                          className={`course-item other-course-item 
-                            ${selected ? 'selected' : ''}
-                            ${isPreviousCourse ? 'previous-order-course' : ''}`}
-                          onClick={() => !isPreviousCourse && handleCourseSelection(course)}
-                        >
+                        <div key={`avail-${idx}`} className={`course-item ${(isMaxed || isPrev) ? 'disabled' : ''}`} onClick={() => { if (!isMaxed && !isPrev) handleCourseSelection(course); }}>
                           <div className="course-item-content">
                             <FaBook className="course-item-icon" />
-                            <div className="course-details">
-                              <span className="course-item-name">{course.name}</span>
-                              <small className="course-status other">Available at {selectedUniversity.code}</small>
-                              {isPreviousCourse && (
-                                <small className="previous-course-badge">
-                                  <FaLock /> Already applied
-                                </small>
-                              )}
-                            </div>
-                            <div className="course-item-check">
-                              {selected ? <FaCheck /> : (isPreviousCourse ? <FaLock /> : '+')}
-                            </div>
+                            <span className="course-item-name">{course.name}</span>
+                            <div className="course-item-check">{isPrev ? <FaLock /> : '+'}</div>
                           </div>
+                          {isPrev && <div className="prev-course-note">Already applied</div>}
                         </div>
                       );
                     })}
                   </div>
+                  {remainingToSelect > 0 && (
+                    <div className="select-more-section">
+                      <button className="select-more-btn" onClick={() => { setSelectedUniversity(null); setTimeout(() => findAlternativeCourses(selectedUniversity), 200); }}>
+                        <FaSearch /> Select {remainingToSelect} more Course{remainingToSelect > 1 ? 's' : ''}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="no-courses-message">
+                  <p>None of your selected courses are available at {selectedUniversity.code}.</p>
+                  <button className="alt-courses-btn" onClick={() => findAlternativeCourses(selectedUniversity)}>
+                    <FaExchangeAlt /> Find Alternative Courses
+                  </button>
                 </div>
               )}
             </div>
-            
             <div className="courses-modal-footer">
-              <div className="selected-courses-count">
-                <span>{selectedCourses[selectedUniversity.code]?.length || 0}</span> / {getInstitutionCourseLimit(selectedUniversity.name)} courses selected
-              </div>
-              <div className="available-slots">
-                <span className="slots-available">
-                  {getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} slots remaining
-                </span>
-              </div>
-              <button 
-                className="done-selecting-btn"
-                onClick={handleCloseCoursesModal}
-                disabled={
-                  (selectedCourses[selectedUniversity.code]?.length || 0) !== 
-                  getInstitutionCourseLimit(selectedUniversity.name)
-                }
-                style={{
-                  opacity: (selectedCourses[selectedUniversity.code]?.length || 0) !== 
-                           getInstitutionCourseLimit(selectedUniversity.name) ? 0.5 : 1,
-                  cursor: (selectedCourses[selectedUniversity.code]?.length || 0) !== 
-                           getInstitutionCourseLimit(selectedUniversity.name) ? 'not-allowed' : 'pointer'
-                }}
-                title={
-                  (selectedCourses[selectedUniversity.code]?.length || 0) !== 
-                  getInstitutionCourseLimit(selectedUniversity.name)
-                    ? `Please select ${getInstitutionCourseLimit(selectedUniversity.name) - (selectedCourses[selectedUniversity.code]?.length || 0)} more course(s) to continue`
-                    : "Done"
-                }
-              >
-                {`Select ${getInstitutionCourseLimit(selectedUniversity.name)}/${getInstitutionCourseLimit(selectedUniversity.name)} Courses to Continue`}
+              <div className="selected-courses-count">Selected: {currentForSelected.length}/{maxForSelected}</div>
+              <button className="done-selecting-btn" onClick={() => setSelectedUniversity(null)} disabled={currentForSelected.length !== maxForSelected}>
+                {currentForSelected.length === maxForSelected ? 'Done' : `Select ${remainingToSelect} more`}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ALTERNATIVE COURSES MODAL */}
       {showAlternativeModal && (
-        <div className="alternative-courses-modal">
-          <div className="alternative-modal-overlay" onClick={() => setShowAlternativeModal(false)}></div>
-          <div className="alternative-modal-content">
-            <div className="alternative-modal-header">
-              <button 
-                className="back-button"
-                onClick={() => setShowAlternativeModal(false)}
-              >
-                <FaArrowLeft />
-              </button>
-              <h3>Alternative Courses at {selectedUniversity?.name}</h3>
-              <button 
-                className="close-alternative-modal"
-                onClick={() => setShowAlternativeModal(false)}
-              >
-                <FaTimes />
-              </button>
+        <div className="courses-modal">
+          <div className="courses-modal-overlay" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}></div>
+          <div className="courses-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="courses-modal-header alt-header">
+              <div className="modal-university-info">
+                <h3>More Courses at {alternativeUniversity?.code || selectedUniversity?.code}</h3>
+                <p>Select additional courses you qualify for</p>
+              </div>
+              <button className="close-courses-modal" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}><FaTimes /></button>
             </div>
-            
-            <div className="alternative-modal-body">
-              <p className="alternative-modal-info">
-                <strong>{currentUnavailableCourse}</strong> is not available at {selectedUniversity?.name}.
-                Select an alternative course to replace it:
-              </p>
-              
+            <div className="courses-modal-body">
               {availableAlternatives.length > 0 ? (
-                <div className="alternative-courses-list">
-                  {availableAlternatives.map((course, index) => {
-                    const selected = isCourseSelected(course.name, selectedUniversity?.code);
-                    const isPreviousCourse = isCreatingNewOrder && isCourseInPreviousOrders(selectedUniversity?.code, course.name);
-                    
+                <div className="courses-list-grid">
+                  {availableAlternatives.map((course, idx) => {
+                    const uni = alternativeUniversity || selectedUniversity;
+                    const isSelected = uni && (selectedCourses[uni.code] || []).includes(course.name);
                     return (
-                      <div
-                        key={`alt-${index}`}
-                        className={`alternative-course-item 
-                          ${selected ? 'selected' : ''}
-                          ${isPreviousCourse ? 'previous-order-course' : ''}`}
-                        onClick={() => !isPreviousCourse && handleAlternativeSelect(course)}
-                      >
-                        <div className="alternative-course-content">
-                          <FaBook className="alternative-course-icon" />
-                          <div className="course-details">
+                      <div key={idx} className={`course-item ${isSelected ? 'selected' : ''}`} onClick={() => !isSelected && handleAlternativeSelect(course)}>
+                        <div className="course-item-content">
+                          <FaBook className="course-item-icon" />
+                          <div className="course-name-wrap">
                             <span className="course-item-name">{course.name}</span>
-                            <div className="course-meta">
-                              <small>Faculty: {course.faculty_name || 'N/A'}</small>
-                              <small>Min APS: {course.minAPS || course.min_aps || 'N/A'}</small>
-                              {course.similarity && (
-                                <small className="similarity-info">{course.similarity}</small>
-                              )}
-                            </div>
+                            {course.faculty_name && <div className="course-faculty-name">{course.faculty_name}</div>}
                           </div>
-                          <div className="select-alternative-btn">
-                            {selected ? <FaCheck /> : (isPreviousCourse ? <FaLock /> : 'Replace')}
-                          </div>
+                          <div className="course-item-check">{isSelected ? <FaCheck /> : '+'}</div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="no-alternatives">
-                  <FaBook className="no-alternatives-icon" />
-                  <p>No alternative courses found at {selectedUniversity?.name}</p>
-                  <button 
-                    className="refresh-btn"
-                    onClick={() => findAlternativeCourses(selectedUniversity, currentUnavailableCourse)}
-                  >
-                    Try Again
-                  </button>
+                <div className="no-courses-message"><p>No additional courses found at {alternativeUniversity?.code || selectedUniversity?.code}.</p></div>
+              )}
+            </div>
+            <div className="courses-modal-footer">
+              <button className="done-selecting-btn" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MAXIMISE MODAL */}
+      {showMaximiseModal && (
+        <div className="courses-modal">
+          <div className="courses-modal-overlay" onClick={() => { setShowMaximiseModal(false); setExpandedUniversity(null); }}></div>
+          <div className="courses-modal-content maximise-content" onClick={(e) => e.stopPropagation()}>
+            <div className="courses-modal-header">
+              <div className="modal-university-info">
+                {expandedUniversity ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={() => setExpandedUniversity(null)} className="back-btn"><FaArrowLeft /></button>
+                    <h3>{expandedUniversity.university.name}</h3>
+                  </div>
+                ) : (
+                  <h3><FaMagic style={{ marginRight: '8px' }} />Maximise Your Options</h3>
+                )}
+              </div>
+              <button className="close-courses-modal" onClick={() => { setShowMaximiseModal(false); setExpandedUniversity(null); }}><FaTimes /></button>
+            </div>
+            <div className="courses-modal-body">
+              {expandedUniversity ? (
+                <>
+                  <div className="search-box">
+                    <FaSearch className="search-icon" />
+                    <input type="text" placeholder="Search courses..." value={universitySearchQuery} onChange={(e) => { setUniversitySearchQuery(e.target.value); setFilteredUniversityCourses(expandedUniversity.eligibleCourses.filter(c => c.name.toLowerCase().includes(e.target.value.toLowerCase()))); }} className="search-input" />
+                  </div>
+                  <div className="filter-row">
+                    {['all', 'degree', 'diploma', 'certificate', 'online'].map(type => (
+                      <button key={type} className={`filter-chip ${courseTypeFilter === type ? 'active' : ''}`} onClick={() => setCourseTypeFilter(type)}>
+                        {type === 'all' ? 'All' : type === 'degree' ? 'Degree' : type === 'diploma' ? 'Diploma' : type === 'certificate' ? 'H. Cert' : 'Online'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="courses-list-grid">
+                    {(universitySearchQuery ? filteredUniversityCourses : expandedUniversity.eligibleCourses).filter(c => {
+                      if (courseTypeFilter === 'all') return true;
+                      const n = c.name.toLowerCase();
+                      if (courseTypeFilter === 'degree') return n.includes('bachelor') || n.includes('bcom') || n.includes('bsc');
+                      if (courseTypeFilter === 'diploma') return n.includes('diploma');
+                      if (courseTypeFilter === 'certificate') return n.includes('certificate');
+                      if (courseTypeFilter === 'online') return n.includes('online');
+                      return true;
+                    }).map((course, idx) => {
+                      const sel = tempSelections[expandedUniversity.university.code]?.includes(course.name);
+                      return (
+                        <div key={idx} className={`course-item ${sel ? 'selected' : ''}`} onClick={() => toggleTempCourse(expandedUniversity.university.code, course)}>
+                          <div className="course-item-content">
+                            <FaBook className="course-item-icon" />
+                            <div className="course-name-wrap"><span className="course-item-name">{course.name}</span></div>
+                            <div className="course-item-check">{sel ? <FaCheck /> : '+'}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="save-row">
+                    <span>{(tempSelections[expandedUniversity.university.code]?.length || 0)}/{getInstitutionCourseLimit(expandedUniversity.university.name)}</span>
+                    <button className="done-selecting-btn" onClick={saveTempSelections}>Save</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {isCalculatingMaximise ? (
+                    <div className="loading-state"><FaSpinner className="spinner-icon large" /><p>Finding universities...</p></div>
+                  ) : maximiseSuggestions.length > 0 ? (
+                    maximiseSuggestions.map((s, idx) => (
+                      <div key={idx} className="suggestion-card">
+                        <div className="suggestion-top">
+                          <div className="suggestion-logo">
+                            {s.university.logo ? <img src={s.university.logo} alt="" /> : s.university.code?.slice(0, 2)}
+                          </div>
+                          <div className="suggestion-info">
+                            <h4>{s.university.code}</h4>
+                            <span>{s.courseCount} eligible course{s.courseCount > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                        <div className="suggestion-actions">
+                          <button className="quick-add-btn" onClick={() => applyMaximiseSuggestion(s)}>Quick Add ({s.courseCount})</button>
+                          <button className="choose-btn" onClick={() => handleUniversityClickInMaximise(s)}>Choose Courses</button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">No new universities found with courses you qualify for.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SWITCH POPUP */}
+      {showSwitchPopup && (
+        <div className="simple-fee-modal">
+          <div className="simple-fee-overlay" onClick={() => setShowSwitchPopup(false)}></div>
+          <div className="simple-fee-content" onClick={(e) => e.stopPropagation()}>
+            <div className="simple-fee-header header-orange"><h3>Package Limit</h3><button className="simple-fee-close" onClick={() => setShowSwitchPopup(false)}>×</button></div>
+            <div className="simple-fee-body">
+              <p>You've reached your <strong>{selectedPackage}</strong> package limit of {maxUnis} universities.</p>
+              {selectedPackage !== 'premium' && (
+                <div className="upgrade-option">
+                  <h4>Premium Package</h4>
+                  <p className="upgrade-price">R499</p>
+                  <p className="upgrade-desc">6 Universities • Priority Processing</p>
+                  <button className="upgrade-btn green" onClick={() => { handlePackageSelectConfirm('premium'); setShowSwitchPopup(false); }}>Switch to Premium</button>
+                </div>
+              )}
+              {selectedPackage === 'basic' && (
+                <div className="upgrade-option">
+                  <h4>Standard Package</h4>
+                  <p className="upgrade-price">R329</p>
+                  <p className="upgrade-desc">4 Universities</p>
+                  <button className="upgrade-btn blue" onClick={() => { handlePackageSelectConfirm('standard'); setShowSwitchPopup(false); }}>Switch to Standard</button>
                 </div>
               )}
             </div>
+            <div className="simple-fee-footer"><button className="simple-fee-btn" onClick={() => setShowSwitchPopup(false)}>Cancel</button></div>
           </div>
         </div>
       )}
 
-      {showMaximiseModal && (
-        <div className="maximise-modal">
-          <div className="maximise-modal-overlay" onClick={() => {
-            setShowMaximiseModal(false);
-            setExpandedUniversity(null);
-            setTempSelections({});
-            setMaximiseSuggestions([]);
-          }}></div>
-          <div className="maximise-modal-content">
-            <div className="maximise-modal-header">
-              {expandedUniversity ? (
-                <>
-                  <button 
-                    className="back-button"
-                    onClick={handleBackFromExpanded}
-                  >
-                    <FaArrowLeft />
-                  </button>
-                  <h3>{expandedUniversity.university.name}</h3>
-                </>
-              ) : (
-                <>
-                  <div className="maximise-header-icon">
-                    <FaMagic />
-                  </div>
-                  <h3>Find More Universities</h3>
-                </>
-              )}
-              <button 
-                className="close-maximise-modal"
-                onClick={() => {
-                  setShowMaximiseModal(false);
-                  setExpandedUniversity(null);
-                  setTempSelections({});
-                  setMaximiseSuggestions([]);
-                }}
-              >
-                <FaTimes />
-              </button>
+      {/* FEE INFO MODAL */}
+      {showFeeInfo && (
+        <div className="simple-fee-modal">
+          <div className="simple-fee-overlay" onClick={() => setShowFeeInfo(false)}></div>
+          <div className="simple-fee-content" onClick={(e) => e.stopPropagation()}>
+            <div className={`simple-fee-header ${feeInfoGroup === 'A' ? 'header-green' : 'header-orange'}`}>
+              <h3>{feeInfoGroup === 'A' ? 'No Application Fee' : 'Application Fee Required'}</h3>
+              <button className="simple-fee-close" onClick={() => setShowFeeInfo(false)}>×</button>
             </div>
-            
-            <div className="maximise-modal-body">
-              {expandedUniversity ? (
-                <>
-                  <div className="university-search-container">
-                    <div className="search-input-group">
-                      <FaSearch className="search-icon" />
-                      <input
-                        type="text"
-                        placeholder="Search courses..."
-                        value={universitySearchQuery}
-                        onChange={(e) => handleUniversitySearch(e.target.value, expandedUniversity.eligibleCourses)}
-                        className="university-search-input"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="course-filters">
-                    <button 
-                      className={`filter-btn ${courseTypeFilter === 'all' ? 'active' : ''}`}
-                      onClick={() => setCourseTypeFilter('all')}
-                    >
-                      All
-                    </button>
-                    <button 
-                      className={`filter-btn ${courseTypeFilter === 'degree' ? 'active' : ''}`}
-                      onClick={() => setCourseTypeFilter('degree')}
-                    >
-                      Degree
-                    </button>
-                    <button 
-                      className={`filter-btn ${courseTypeFilter === 'diploma' ? 'active' : ''}`}
-                      onClick={() => setCourseTypeFilter('diploma')}
-                    >
-                      Diploma
-                    </button>
-                    <button 
-                      className={`filter-btn ${courseTypeFilter === 'certificate' ? 'active' : ''}`}
-                      onClick={() => setCourseTypeFilter('certificate')}
-                    >
-                      H. Certificate
-                    </button>
-                    <button 
-                      className={`filter-btn ${courseTypeFilter === 'online' ? 'active' : ''}`}
-                      onClick={() => setCourseTypeFilter('online')}
-                    >
-                      Online
-                    </button>
-                  </div>
-                  
-                  <div className="courses-list-grid">
-                    {(filteredUniversityCourses.length > 0 ? filteredUniversityCourses : expandedUniversity.eligibleCourses)
-                      .filter(course => {
-                        if (courseTypeFilter === 'all') return true;
-                        const name = course.name.toLowerCase();
-                        if (courseTypeFilter === 'degree') return name.includes('bachelor') || name.includes('bcom') || name.includes('bsc') || name.includes('degree');
-                        if (courseTypeFilter === 'diploma') return name.includes('diploma');
-                        if (courseTypeFilter === 'certificate') return name.includes('certificate');
-                        if (courseTypeFilter === 'online') return name.includes('online');
-                        return true;
-                      })
-                      .map((course, index) => {
-                        const isSelected = tempSelections[expandedUniversity.university.code]?.includes(course.name) || false;
-                        return (
-                          <div
-                            key={`course-${index}`}
-                            className={`course-item ${isSelected ? 'selected' : ''}`}
-                            onClick={() => toggleTempCourse(expandedUniversity.university.code, course)}
-                          >
-                            <div className="course-item-content">
-                              <FaBook className="course-item-icon" />
-                              <div className="course-details">
-                                <span className="course-item-name">{course.name}</span>
-                                {course.faculty_name && (
-                                  <small className="course-faculty">{course.faculty_name}</small>
-                                )}
-                              </div>
-                              <div className="course-item-check">
-                                {isSelected ? <FaCheck /> : '+'}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  
-                  <div className="courses-modal-footer">
-                    <div className="selected-courses-count">
-                      Selected: {tempSelections[expandedUniversity.university.code]?.length || 0}/{getInstitutionCourseLimit(expandedUniversity.university.name)}
-                    </div>
-                    <button 
-                      className="done-selecting-btn"
-                      onClick={saveTempSelections}
-                      disabled={
-                        (tempSelections[expandedUniversity.university.code]?.length || 0) !== 
-                        getInstitutionCourseLimit(expandedUniversity.university.name)
-                      }
-                      style={{
-                        opacity: (tempSelections[expandedUniversity.university.code]?.length || 0) !== 
-                                 getInstitutionCourseLimit(expandedUniversity.university.name) ? 0.5 : 1
-                      }}
-                    >
-                      {`Select ${getInstitutionCourseLimit(expandedUniversity.university.name)}/${getInstitutionCourseLimit(expandedUniversity.university.name)} Courses to Continue`}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="maximise-modal-intro">
-                    {maximiseSuggestions.length > 0 
-                      ? `We found ${maximiseSuggestions.length} NEW universit${maximiseSuggestions.length > 1 ? 'ies' : 'y'} where you qualify for courses based on your marks.`
-                      : 'No new universities found with courses you qualify for.'}
-                  </p>
-                  
-                  {maximiseSuggestions.length > 0 ? (
-                    <div className="maximise-suggestions-list">
-                      {maximiseSuggestions.map((suggestion, index) => {
-                        const university = suggestion.university;
-                        
-                        return (
-                          <div 
-                            key={`suggestion-${index}`}
-                            className="maximise-suggestion-item"
-                          >
-                            <div className="suggestion-university-header">
-                              <div className="suggestion-university-logo">
-                                <img 
-                                  src={university.logo} 
-                                  alt={university.name}
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextElementSibling.style.display = 'flex';
-                                  }}
-                                />
-                                <div className="suggestion-logo-fallback">
-                                  <FaUniversity />
-                                </div>
-                              </div>
-                              <div className="suggestion-university-info">
-                                <h4>{university.code}</h4>
-                                <span className="suggestion-courses-count">
-                                  {suggestion.courseCount} eligible course(s)
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="suggestion-courses-preview">
-                              <p className="preview-title">Courses you qualify for:</p>
-                              <div className="preview-courses-list">
-                                {suggestion.eligibleCourses.slice(0, 3).map((course, idx) => (
-                                  <div key={`preview-${idx}`} className="preview-course-item">
-                                    <FaBook className="preview-course-icon" />
-                                    <span>{course.name}</span>
-                                  </div>
-                                ))}
-                                {suggestion.eligibleCourses.length > 3 && (
-                                  <div className="preview-more">
-                                    +{suggestion.eligibleCourses.length - 3} more
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <button 
-                              className="view-courses-btn-full"
-                              onClick={() => handleUniversityClickInMaximise(suggestion)}
-                            >
-                              Add {suggestion.courseCount} Courses
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="no-maximise-suggestions">
-                      <FaUniversity className="no-suggestions-icon" />
-                      <p>No new universities found with courses you qualify for based on your marks.</p>
-                      <p className="suggestion-note">Try improving your marks or adding more subjects on the Dashboard.</p>
-                    </div>
-                  )}
-                </>
-              )}
+            <div className="simple-fee-body">
+              <p>{feeInfoGroup === 'A' ? 'These universities do not require an application fee. Skolify will submit your applications at no additional cost.' : 'These universities require a non-refundable application fee per submission. Application fees are the student\'s responsibility and are NOT included in any Skolify package.'}</p>
             </div>
+            <div className="simple-fee-footer"><button className="simple-fee-btn" onClick={() => setShowFeeInfo(false)}>Got it</button></div>
           </div>
         </div>
       )}
 
-      {showSwitchToCustomPopup && (
-        <div className="switch-custom-popup-modal">
-          <div className="switch-custom-popup-overlay" onClick={() => setShowSwitchToCustomPopup(false)}></div>
-          <div className="switch-custom-popup-content">
-            <div className="switch-custom-header">
-              <h3>Package Limit Reached</h3>
-            </div>
-            
-            <div className="switch-custom-body">
-              {exceededItem?.type === 'university' && (
-                <p>
-                  You are about to exceed your <strong>{exceededItem.package}</strong> package limit of {exceededItem.limit} universities.
-                  {exceededItem.newTotal && (
-                    <span className="exceeded-details"> You'll have {exceededItem.newTotal} universities total.</span>
-                  )}
-                </p>
-              )}
-              
-              <div className="switch-options">
-                <p className="upgrade-title">Upgrade to a higher package to add more:</p>
-                
-                {exceededItem?.current >= 2 && exceededItem?.package !== 'standard' && (
-                  <div className="upgrade-option">
-                    <h4>Standard Package</h4>
-                    <p className="upgrade-price">R329</p>
-                    <p className="upgrade-features">4 Universities • Faster Processing</p>
-                    <button 
-                      className="upgrade-btn"
-                      onClick={() => {
-                        handlePackageSelect('standard');
-                        setShowSwitchToCustomPopup(false);
-                        if (pendingSelection) {
-                          if (pendingSelection.coursesToAdd) {
-                            completeAddSuggestion(pendingSelection.university, pendingSelection.coursesToAdd, pendingSelection.isNewUniversity);
-                          } else if (pendingSelection.tempSelectedCourses) {
-                            completeAddSelection(pendingSelection.university, pendingSelection.university.code, pendingSelection.tempSelectedCourses, pendingSelection.isNewUniversity);
-                          }
-                          setPendingSelection(null);
-                        }
-                      }}
-                    >
-                      Switch to Standard
-                    </button>
-                  </div>
-                )}
-                
-                {exceededItem?.current >= 4 && (
-                  <div className="upgrade-option">
-                    <h4>Premium Package</h4>
-                    <p className="upgrade-price">R499</p>
-                    <p className="upgrade-features">6 Universities • Priority Processing</p>
-                    <button 
-                      className="upgrade-btn premium-btn"
-                      onClick={() => {
-                        handlePackageSelect('premium');
-                        setShowSwitchToCustomPopup(false);
-                        if (pendingSelection) {
-                          if (pendingSelection.coursesToAdd) {
-                            completeAddSuggestion(pendingSelection.university, pendingSelection.coursesToAdd, pendingSelection.isNewUniversity);
-                          } else if (pendingSelection.tempSelectedCourses) {
-                            completeAddSelection(pendingSelection.university, pendingSelection.university.code, pendingSelection.tempSelectedCourses, pendingSelection.isNewUniversity);
-                          }
-                          setPendingSelection(null);
-                        }
-                      }}
-                    >
-                      Switch to Premium
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="switch-custom-footer">
-              <button 
-                className="cancel-switch-btn"
-                onClick={() => {
-                  setShowSwitchToCustomPopup(false);
-                  setPendingSelection(null);
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* NOTIFICATION */}
       {showNotification && (
         <div className="notification-modal">
           <div className="notification-overlay" onClick={() => setShowNotification(false)}></div>
-          <div className={`notification-content notification-${notificationType}`}>
-            <div className="notification-header">
-              <h3>
-                {notificationType === 'success' && '✅ Success'}
-                {notificationType === 'error' && '❌ Error'}
-                {notificationType === 'warning' && '⚠️ Warning'}
-                {notificationType === 'info' && 'ℹ️ Information'}
-              </h3>
-              <button className="close-notification" onClick={() => setShowNotification(false)}>
-                <FaTimes />
-              </button>
-            </div>
-            <div className="notification-body">
-              <p>{notificationMessage}</p>
-            </div>
-            <div className="notification-footer">
-              <button 
-                className="notification-ok-btn"
-                onClick={() => setShowNotification(false)}
-              >
-                OK
-              </button>
-            </div>
+          <div className={`notification-content notification-${notificationType}`} onClick={(e) => e.stopPropagation()}>
+            <div className="notification-header"><h3>{notificationType === 'success' ? 'Success' : notificationType === 'error' ? 'Error' : notificationType === 'warning' ? 'Warning' : 'Info'}</h3><button className="close-notification" onClick={() => setShowNotification(false)}>×</button></div>
+            <div className="notification-body"><p>{notificationMessage}</p></div>
+            <div className="notification-footer"><button className="notification-ok-btn" onClick={() => setShowNotification(false)}>OK</button></div>
           </div>
         </div>
       )}
 
+      {/* CREDENTIALS */}
       {showCredentialsModal && (
         <div className="credentials-modal">
           <div className="credentials-modal-overlay" onClick={() => setShowCredentialsModal(false)}></div>
-          <div className="credentials-modal-content">
-            <div className="credentials-modal-header">
-              <h3>✅ Account Created Successfully!</h3>
-              <button className="close-credentials" onClick={() => setShowCredentialsModal(false)}>
-                <FaTimes />
-              </button>
-            </div>
+          <div className="credentials-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="credentials-modal-header"><h3>Account Created!</h3><button className="close-credentials" onClick={() => setShowCredentialsModal(false)}>×</button></div>
             <div className="credentials-modal-body">
-              <p className="credentials-intro">Please save these credentials to sign in later:</p>
-              
+              <p>Save these credentials:</p>
               <div className="credentials-box">
-                <div className="credential-row">
-                  <span className="credential-label">Username:</span>
-                  <div className="credential-value">
-                    <strong>{accountUsername}</strong>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => {
-                        navigator.clipboard.writeText(accountUsername);
-                        showNotificationMessage('Username copied!', 'success');
-                      }}
-                    >
-                      <FaCopy />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="credential-row">
-                  <span className="credential-label">Password:</span>
-                  <div className="credential-value">
-                    <strong>{accountPassword}</strong>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => {
-                        navigator.clipboard.writeText(accountPassword);
-                        showNotificationMessage('Password copied!', 'success');
-                      }}
-                    >
-                      <FaCopy />
-                    </button>
-                  </div>
-                </div>
+                <div className="credential-row"><span>Username:</span><div className="credential-value"><strong>{accountUsername}</strong><button className="copy-btn" onClick={() => { navigator.clipboard.writeText(accountUsername); showNotificationMessage('Copied!', 'success'); }}><FaCopy /></button></div></div>
+                <div className="credential-row"><span>Password:</span><div className="credential-value"><strong>{accountPassword}</strong><button className="copy-btn" onClick={() => { navigator.clipboard.writeText(accountPassword); showNotificationMessage('Copied!', 'success'); }}><FaCopy /></button></div></div>
               </div>
-              
-              <p className="credentials-warning">
-                ⚠️ Save these credentials now. You won't see them again!
-              </p>
+              <p className="credentials-warning">⚠️ Save these now. You won't see them again!</p>
             </div>
-            <div className="credentials-modal-footer">
-              <button 
-                className="credentials-ok-btn"
-                onClick={() => {
-                  setShowCredentialsModal(false);
-                  setTimeout(() => {
-                    navigate('/profile');
-                  }, 300);
-                }}
-              >
-                I've Saved Them
-              </button>
-            </div>
+            <div className="credentials-modal-footer"><button className="credentials-ok-btn" onClick={() => { setShowCredentialsModal(false); navigate('/profile'); }}>I've Saved Them</button></div>
           </div>
         </div>
       )}
 
-      <Money 
-        isOpen={showPaymentPopup}
-        onClose={() => setShowPaymentPopup(false)}
-        totalAmount={totalCost}
-        selectedPackage={selectedPackage}
-        onPaymentComplete={handlePaymentComplete}
-      />
+      <Money isOpen={showPaymentPopup} onClose={() => setShowPaymentPopup(false)} totalAmount={packagePrices[selectedPackage]} selectedPackage={selectedPackage} onPaymentComplete={handlePaymentComplete} />
 
-      <footer className="payment-footer">
-        <div className="footer-links">
-          <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>Terms & Conditions</a>
-          <span className="footer-separator">|</span>
-          <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>Privacy Policy</a>
-        </div>
-        <p className="copyright">© {new Date().getFullYear()} Skolify. All rights reserved.</p>
-      </footer>
+      <button className="chatbot-floating-btn" onClick={() => window.open('https://wa.me/27822589917', '_blank')} title="Chat with us on WhatsApp">
+        <FaCommentDots className="chatbot-msg-icon" />
+      </button>
     </div>
   );
 };
