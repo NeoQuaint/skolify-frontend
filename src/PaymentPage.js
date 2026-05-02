@@ -413,9 +413,16 @@ const PaymentPage = () => {
     showNotificationMessage(`Added ${uni.code}`, 'success');
   };
 
+  // 🔥 FIXED: Only show ELIGIBLE courses - no fallback
   const findAlternativeCourses = useCallback(async (university) => {
     setAlternativeUniversity(university);
     const marks = getStudentMarks();
+
+    if (marks.length === 0) {
+      showNotificationMessage('No marks found. Please enter your marks first.', 'warning');
+      return;
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/eligible-courses-at-university`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -430,17 +437,17 @@ const PaymentPage = () => {
         if (data.status === 'success' && data.eligible_courses?.length > 0) {
           setAvailableAlternatives(data.eligible_courses);
           setShowAlternativeModal(true);
-          return;
+        } else {
+          showNotificationMessage(`No additional eligible courses found at ${university.code}.`, 'info');
         }
+      } else {
+        showNotificationMessage('Could not check eligibility. Please try again.', 'error');
       }
-    } catch (e) {}
-    const otherCourses = university.courses?.filter(c => !selectedCourseNames.includes(c.name)) || [];
-    const unique = [];
-    const seen = new Set();
-    otherCourses.forEach(c => { if (!seen.has(c.name)) { seen.add(c.name); unique.push(c); } });
-    setAvailableAlternatives(unique.slice(0, 15));
-    setShowAlternativeModal(true);
-  }, [getStudentMarks, selectedCourseNames, selectedCourses]);
+    } catch (e) {
+      console.error('Error finding alternatives:', e);
+      showNotificationMessage('Network error. Please try again.', 'error');
+    }
+  }, [getStudentMarks, selectedCourseNames, selectedCourses, showNotificationMessage]);
 
   const handleAlternativeSelect = (course) => {
     const uni = alternativeUniversity || selectedUniversity;
@@ -534,10 +541,7 @@ const PaymentPage = () => {
       }
     }
 
-    // 🔥 Save to database first
     await savePaymentSelectionToDatabase();
-
-    // Then show payment popup
     setShowPaymentPopup(true);
   };
 
