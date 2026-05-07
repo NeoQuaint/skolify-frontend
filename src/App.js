@@ -1,6 +1,6 @@
 import API_URL from './config';
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import Background from './Background';
 import Dashboard from './Dashboard';
@@ -11,6 +11,15 @@ import Bursary from './Bursary';
 import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
+
+// ==================== PROTECTED ROUTE ====================
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
 
 function Header({ showProfile = true }) {
   const navigate = useNavigate();
@@ -149,7 +158,6 @@ function ResetPasswordPage() {
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
-    // Get token from URL query parameter
     const params = new URLSearchParams(location.search);
     const resetToken = params.get('token');
     
@@ -304,21 +312,38 @@ function ResetPasswordPage() {
 function WelcomeScreen() {
   const navigate = useNavigate();
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [signInData, setSignInData] = useState({
+  const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
-  const [signInError, setSignInError] = useState('');
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      navigate('/dashboard', { replace: true });
+    }
+    setCheckingAuth(false);
+  }, [navigate]);
+
   const handleGetStarted = () => {
     if (termsAccepted) {
-      localStorage.clear();
-      sessionStorage.clear();
-      navigate('/dashboard');
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        sessionStorage.clear();
+        navigate('/dashboard');
+      } else {
+        setShowAuth(true);
+        setIsSignUp(true);
+      }
     }
   };
 
@@ -332,24 +357,23 @@ function WelcomeScreen() {
     navigate('/privacy');
   };
 
-  const handleSignInChange = (e) => {
-    const { name, value } = e.target;
-    setSignInData(prev => ({ ...prev, [name]: value }));
-    setSignInError('');
+  const handleAuthChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setAuthError('');
   };
 
-  const handleSignInSubmit = async (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    setIsSigningIn(true);
-    setSignInError('');
+    setIsAuthLoading(true);
+    setAuthError('');
 
     try {
       const response = await fetch(`${API_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: signInData.email,
-          password: signInData.password
+          email: formData.email,
+          password: formData.password
         })
       });
 
@@ -359,36 +383,85 @@ function WelcomeScreen() {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
-        
-        sessionStorage.removeItem('dashboard_subjects');
-        sessionStorage.removeItem('dashboard_userAPS');
-        sessionStorage.removeItem('dashboard_selectedFaculties');
-        sessionStorage.removeItem('dashboard_selectedCourses');
-        sessionStorage.removeItem('dashboard_eligibleCourses');
-        sessionStorage.removeItem('dashboard_eligibleFaculties');
-        sessionStorage.removeItem('dashboard_showFaculties');
-        
+        sessionStorage.clear();
         navigate('/dashboard');
       } else {
-        setSignInError(data.error || 'Invalid email or password');
+        setAuthError(data.error || 'Invalid email or password');
       }
     } catch (error) {
-      setSignInError('Network error. Please try again.');
+      setAuthError('Network error. Please try again.');
     } finally {
-      setIsSigningIn(false);
+      setIsAuthLoading(false);
     }
   };
 
-  const toggleSignIn = () => {
-    setShowSignIn(!showSignIn);
-    setSignInError('');
-    setSignInData({ email: '', password: '' });
-    setShowPassword(false);
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setIsAuthLoading(true);
+    setAuthError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setAuthError('Passwords do not match');
+      setIsAuthLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setAuthError('Password must be at least 8 characters');
+      setIsAuthLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/create-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.newUser) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        sessionStorage.clear();
+        navigate('/dashboard');
+      } else if (data.existingUser) {
+        setAuthError('An account with this email already exists. Please sign in.');
+        setIsSignUp(false);
+      } else {
+        setAuthError(data.error || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setAuthError('Network error. Please try again.');
+    }
+
+    setIsAuthLoading(false);
+  };
+
+  const handleAuthSubmit = (e) => {
+    if (isSignUp) {
+      handleSignUp(e);
+    } else {
+      handleSignIn(e);
+    }
+  };
+
+  const toggleAuthMode = () => {
+    setIsSignUp(!isSignUp);
+    setAuthError('');
+    setFormData({ email: '', password: '', confirmPassword: '' });
   };
 
   const handleForgotPassword = () => {
     setShowForgotPassword(true);
   };
+
+  if (checkingAuth) return null;
 
   return (
     <div className="app">
@@ -410,136 +483,173 @@ function WelcomeScreen() {
 
             <div className="divider-line"></div>
 
-            {!showSignIn ? (
-              <div className="initial-view">
-                <button 
-                  className={`get-started-btn ${termsAccepted ? 'active' : 'disabled'}`}
-                  onClick={handleGetStarted}
-                  disabled={!termsAccepted}
-                >
-                  Get started
-                </button>
-                
-                <div className="terms-container">
-                  <label className="terms-checkbox">
-                    <input 
-                      type="checkbox"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                    />
-                    <span className="terms-text">
-                      I agree to the{' '}
-                      <a 
-                        href="/terms" 
-                        className="terms-link"
-                        onClick={handleTermsClick}
-                      >
-                        Terms & Conditions
-                      </a>{' '}
-                      and{' '}
-                      <a 
-                        href="/privacy" 
-                        className="terms-link"
-                        onClick={handlePrivacyClick}
-                      >
-                        Privacy Policy
-                      </a>
-                    </span>
-                  </label>
-                </div>
-
-                <div className="signin-wrapper">
-                  <button 
-                    className="signin-trigger"
-                    onClick={toggleSignIn}
-                  >
-                    Already have an account? Sign In
-                  </button>
-                </div>
-
-                <p className="app-footer">
-                  Start exploring universities and courses immediately
-                </p>
+            <div className="initial-view">
+              <button 
+                className={`get-started-btn ${termsAccepted ? 'active' : 'disabled'}`}
+                onClick={handleGetStarted}
+                disabled={!termsAccepted}
+              >
+                Get started
+              </button>
+              
+              <div className="terms-container">
+                <label className="terms-checkbox">
+                  <input 
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                  />
+                  <span className="terms-text">
+                    I agree to the{' '}
+                    <a 
+                      href="/terms" 
+                      className="terms-link"
+                      onClick={handleTermsClick}
+                    >
+                      Terms & Conditions
+                    </a>{' '}
+                    and{' '}
+                    <a 
+                      href="/privacy" 
+                      className="terms-link"
+                      onClick={handlePrivacyClick}
+                    >
+                      Privacy Policy
+                    </a>
+                  </span>
+                </label>
               </div>
-            ) : (
-              <div className="signin-view">
-                <h2 className="signin-title">Welcome Back</h2>
-                <p className="signin-subtitle">Sign in with your email and password</p>
 
-                {signInError && (
-                  <div className="signin-error">{signInError}</div>
-                )}
+              <div className="signin-wrapper">
+                <button 
+                  className="signin-trigger"
+                  onClick={() => { setShowAuth(true); setIsSignUp(false); }}
+                >
+                  Already have an account? Sign In
+                </button>
+              </div>
 
-                <form onSubmit={handleSignInSubmit} className="signin-form">
-                  <div className="signin-group">
-                    <label>Email Address</label>
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="you@example.com"
-                      value={signInData.email}
-                      onChange={handleSignInChange}
-                      required
-                    />
-                  </div>
+              <p className="app-footer">
+                Start exploring universities and courses immediately
+              </p>
+            </div>
 
-                  <div className="signin-group">
-                    <label>Password</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* AUTH MODAL - CENTERED, BLURRED BACKGROUND */}
+            {showAuth && (
+              <div className="auth-overlay" onClick={() => setShowAuth(false)}>
+                <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+                  <button className="auth-modal-close" onClick={() => setShowAuth(false)}>×</button>
+                  
+                  <h2 className="auth-modal-title">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+                  <p className="auth-modal-subtitle">
+                    {isSignUp ? 'Create an account to continue' : 'Sign in with your email and password'}
+                  </p>
+
+                  {authError && (
+                    <div className="auth-modal-error">{authError}</div>
+                  )}
+
+                  <form onSubmit={handleAuthSubmit} className="auth-modal-form">
+                    <div className="auth-modal-group">
+                      <label>Email Address</label>
                       <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        placeholder="Your password"
-                        value={signInData.password}
-                        onChange={handleSignInChange}
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleAuthChange}
                         required
-                        style={{ flex: 1 }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          background: 'none',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          color: '#666',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {showPassword ? 'Hide' : 'Show'}
+                    </div>
+
+                    <div className="auth-modal-group">
+                      <label>Password</label>
+                      <div className="auth-password-wrapper">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          placeholder="Your password"
+                          value={formData.password}
+                          onChange={handleAuthChange}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                              <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isSignUp && (
+                      <div className="auth-modal-group">
+                        <label>Confirm Password</label>
+                        <div className="auth-password-wrapper">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            placeholder="Confirm your password"
+                            value={formData.confirmPassword}
+                            onChange={handleAuthChange}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="auth-password-toggle"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                              </svg>
+                            ) : (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <button 
+                      type="submit" 
+                      className="auth-modal-submit"
+                      disabled={isAuthLoading}
+                    >
+                      {isAuthLoading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                    </button>
+                  </form>
+
+                  {!isSignUp && (
+                    <div className="auth-modal-forgot">
+                      <button onClick={handleForgotPassword} type="button">
+                        Forgot password?
                       </button>
                     </div>
+                  )}
+
+                  <div className="auth-modal-toggle">
+                    <button onClick={toggleAuthMode}>
+                      {isSignUp
+                        ? 'Already have an account? Sign In'
+                        : "Don't have an account? Sign Up"}
+                    </button>
                   </div>
-
-                  <button 
-                    type="submit" 
-                    className="signin-submit-btn"
-                    disabled={isSigningIn}
-                  >
-                    {isSigningIn ? 'Signing in...' : 'Sign In'}
-                  </button>
-                </form>
-
-                <div className="forgot-password-wrapper">
-                  <button 
-                    className="forgot-password-btn"
-                    onClick={handleForgotPassword}
-                    type="button"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-
-                <div className="signin-wrapper" style={{ marginTop: '20px' }}>
-                  <button 
-                    className="signin-trigger"
-                    onClick={toggleSignIn}
-                  >
-                    ← Back to Get Started
-                  </button>
                 </div>
               </div>
             )}
@@ -895,18 +1005,18 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<WelcomeScreen />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/accommodation" element={<Accommodation />} />
         <Route path="/bursary" element={<Bursary />} />
         <Route path="/terms" element={<TermsAndConditions />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<Dashboard />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path="/payment/error" element={<PaymentError />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

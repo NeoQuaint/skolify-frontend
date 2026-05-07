@@ -1,278 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaUserCircle, FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import { FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaTrash, FaInfoCircle } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
-
-// ==================== AUTH-ONLY HEADER ====================
-function AuthHeader() {
-  const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const token = localStorage.getItem('authToken');
-
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate('/');
-  };
-
-  const goToProfile = () => {
-    setDropdownOpen(false);
-    navigate('/profile');
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  if (!token) return null;
-
-  return (
-    <header className="auth-only-header">
-      <div className="auth-header-inner">
-        <div className="auth-header-logo" onClick={() => navigate('/dashboard')}>
-          <img
-            src="/Skolify-Logo.jpeg"
-            alt="Skolify"
-            className="auth-header-logo-img"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
-          />
-          <span className="auth-header-logo-text">Skolify</span>
-        </div>
-
-        <div ref={dropdownRef} className="auth-header-profile">
-          <FaUserCircle 
-            size={28}
-            className="auth-header-icon"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-          />
-          {dropdownOpen && (
-            <div className="auth-header-dropdown">
-              <button onClick={goToProfile} className="auth-dropdown-item">
-                <FaUserCircle size={16} />
-                <span>Profile</span>
-              </button>
-              <button onClick={handleLogout} className="auth-dropdown-item auth-dropdown-logout">
-                <span>Logout</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// ==================== AUTH POPUP ====================
-function AuthPopup({ isOpen, onClose, onSuccess }) {
-  const [isLogin, setIsLogin] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
-  };
-
-  const handleSignIn = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/signin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        onSuccess(data.user);
-        onClose();
-      } else {
-        setError(data.error || 'Invalid email or password');
-      }
-    } catch (err) {
-      console.error('Signin error:', err);
-      setError('Network error. Please try again.');
-    }
-
-    setIsLoading(false);
-  };
-
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/create-account`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.newUser) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        onSuccess(data.user);
-        onClose();
-      } else if (data.existingUser) {
-        setError('An account with this email already exists. Please sign in.');
-        setIsLogin(true);
-      } else {
-        setError(data.error || 'Registration failed. Please try again.');
-      }
-    } catch (err) {
-      console.error('Signup error:', err);
-      setError('Network error. Please try again.');
-    }
-
-    setIsLoading(false);
-  };
-
-  const handleSubmit = (e) => {
-    if (isLogin) {
-      handleSignIn(e);
-    } else {
-      handleSignUp(e);
-    }
-  };
-
-  return (
-    <div className="auth-popup-overlay" onClick={onClose}>
-      <div className="auth-popup-container" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-popup-close" onClick={onClose}>×</button>
-        
-        <div className="auth-popup-header">
-          <h2>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p>{isLogin ? 'Sign in to continue your application' : 'Create an account to continue'}</p>
-        </div>
-
-        {error && <div className="auth-popup-error">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="auth-popup-group">
-            <FaEnvelope className="auth-popup-icon" />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="auth-popup-group">
-            <FaLock className="auth-popup-icon" />
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            <button
-              type="button"
-              className="auth-popup-password-toggle"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </div>
-
-          {!isLogin && (
-            <div className="auth-popup-group">
-              <FaLock className="auth-popup-icon" />
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-              <button
-                type="button"
-                className="auth-popup-password-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          )}
-
-          <button type="submit" className="auth-popup-submit" disabled={isLoading}>
-            {isLoading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
-          </button>
-        </form>
-
-        <div className="auth-popup-footer">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError('');
-              setFormData({ email: '', password: '', confirmPassword: '' });
-            }}
-          >
-            {isLogin
-              ? "Don't have an account? Sign Up"
-              : "Already have an account? Sign In"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Helper function to clean faculty name (remove "Faculty of " prefix)
 const cleanFacultyName = (name) => {
@@ -475,7 +206,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
-  const [showAuthPopup, setShowAuthPopup] = useState(false);
 
   const [backendData, setBackendData] = useState({
     isConnected: false,
@@ -787,12 +517,9 @@ const Dashboard = () => {
     }, 500);
   };
 
-  const handleAuthSuccess = () => proceedToPayment();
-
   const handleApply = () => {
     if (!canProceedToPayment()) { alert('Please select 3 courses from each of your chosen faculties'); return; }
-    const token = localStorage.getItem('authToken');
-    if (!token) { setShowAuthPopup(true); } else { proceedToPayment(); }
+    proceedToPayment();
   };
 
   const handleSubjectChange = (index, field, value) => {
@@ -830,8 +557,6 @@ const Dashboard = () => {
 
   return (
     <div className={`dashboard-app ${isNavigating ? 'page-exit' : ''}`}>
-      <AuthHeader />
-      <AuthPopup isOpen={showAuthPopup} onClose={() => setShowAuthPopup(false)} onSuccess={handleAuthSuccess} />
       {isNavigating && (<div className="navigation-overlay"><div className="navigation-spinner"></div><p>Loading...</p></div>)}
       <div className="background-pattern"></div>
 
