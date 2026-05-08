@@ -5,6 +5,19 @@ import { FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaTrash, FaI
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
+// Tracking helper
+const trackEvent = (eventType, eventData = {}) => {
+  const token = localStorage.getItem('authToken');
+  fetch(`${API_URL}/api/track-event`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify({ eventType, eventData })
+  }).catch(() => {});
+};
+
 // Helper function to clean faculty name (remove "Faculty of " prefix)
 const cleanFacultyName = (name) => {
   return name.replace(/^Faculty of\s+/i, '');
@@ -385,6 +398,11 @@ const Dashboard = () => {
     fetchBackendData();
   }, []);
 
+  // Track page view
+  useEffect(() => {
+    trackEvent('page_view', { page: 'dashboard' });
+  }, []);
+
   const calculateEligibleCourses = async () => {
     setIsCalculatingEligibility(true);
     try {
@@ -432,6 +450,14 @@ const Dashboard = () => {
         });
         setEligibleFaculties(eligibleFacultiesData);
         saveState('eligibleFaculties', eligibleFacultiesData);
+        
+        // Track eligibility checked
+        trackEvent('eligibility_checked', {
+          totalCourses: coursesWithScores.length,
+          totalFaculties: eligibleFacultiesData.length,
+          aps: userAPS
+        });
+        
         return eligibleFacultiesData;
       } else {
         throw new Error(result.error || 'Unknown error');
@@ -449,10 +475,22 @@ const Dashboard = () => {
     const hasMarks = subjects.filter(s => s.subject !== 'Life Orientation').some(s => s.mark && s.mark !== '' && !isNaN(s.mark));
     if (!hasMarks) { alert('Please enter at least one mark to find matches'); return; }
     if (!backendData.isConnected) { alert('Backend not connected.'); return; }
+    
+    // Track marks entered
+    trackEvent('marks_entered', {
+      subjects: subjects.filter(s => s.subject && s.mark).map(s => ({ subject: s.subject, mark: s.mark })),
+      totalAPS: userAPS
+    });
+    
     const eligibleFacultiesData = await calculateEligibleCourses();
     if (eligibleFacultiesData && eligibleFacultiesData.length > 0) {
       setStep(2); setFacultyPage(0); setSelectedFaculties([]);
     } else {
+      // Track eligibility empty
+      trackEvent('eligibility_empty', {
+        aps: userAPS,
+        subjects: subjects.filter(s => s.subject && s.mark).map(s => ({ subject: s.subject, mark: s.mark }))
+      });
       alert('No faculties found that match your subjects.');
     }
   };
@@ -481,11 +519,21 @@ const Dashboard = () => {
     setSelectedFaculties(prev => {
       if (prev.includes(facultyId)) {
         const faculty = eligibleFaculties.find(f => f.id === facultyId);
-        if (faculty) setSelectedCourses(prevCourses => prevCourses.filter(c => c.faculty_name !== faculty.name));
+        if (faculty) {
+          setSelectedCourses(prevCourses => prevCourses.filter(c => c.faculty_name !== faculty.name));
+          // Track faculty deselected
+          trackEvent('faculty_deselected', { faculty: faculty.name });
+        }
         return prev.filter(id => id !== facultyId);
       } else {
-        if (prev.length < 3) return [...prev, facultyId];
-        else { alert('You can only select up to 3 faculties'); return prev; }
+        if (prev.length < 3) {
+          const faculty = eligibleFaculties.find(f => f.id === facultyId);
+          if (faculty) {
+            // Track faculty selected
+            trackEvent('faculty_selected', { faculty: faculty.name });
+          }
+          return [...prev, facultyId];
+        } else { alert('You can only select up to 3 faculties'); return prev; }
       }
     });
   };
@@ -498,6 +546,13 @@ const Dashboard = () => {
     } else {
       if (currentFacultyCount >= 3) { alert(`You can only select up to 3 courses from ${cleanFacultyName(facultyName)}`); return; }
       if (selectedCourses.length >= 9) { alert('You can only select up to 9 courses total'); return; }
+      // Track course selected
+      trackEvent('course_selected', {
+        course: course.name,
+        faculty: facultyName,
+        institution: course.institution_name,
+        minAPS: course.minAPS
+      });
       setSelectedCourses(prev => [...prev, course]);
     }
   };
@@ -519,6 +574,11 @@ const Dashboard = () => {
 
   const handleApply = () => {
     if (!canProceedToPayment()) { alert('Please select 3 courses from each of your chosen faculties'); return; }
+    // Track payment initiated
+    trackEvent('payment_initiated', {
+      faculties: getSelectedFacultyObjects().map(f => f.name),
+      courses: selectedCourses.length
+    });
     proceedToPayment();
   };
 
@@ -534,8 +594,21 @@ const Dashboard = () => {
   const totalFacultyPages = Math.ceil(eligibleFaculties.length / facultiesPerPage);
   const visibleFaculties = eligibleFaculties.slice(facultyPage * facultiesPerPage, (facultyPage + 1) * facultiesPerPage);
 
-  const nextFacultyPage = () => { if (facultyPage < totalFacultyPages - 1) setFacultyPage(prev => prev + 1); };
-  const prevFacultyPage = () => { if (facultyPage > 0) setFacultyPage(prev => prev - 1); };
+  const nextFacultyPage = () => { 
+    if (facultyPage < totalFacultyPages - 1) {
+      setFacultyPage(prev => prev + 1);
+      const grid = document.querySelector('.faculty-grid-2col');
+      if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  const prevFacultyPage = () => { 
+    if (facultyPage > 0) {
+      setFacultyPage(prev => prev - 1);
+      const grid = document.querySelector('.faculty-grid-2col');
+      if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
 
   const getProgressPercent = () => {
     if (step === 1) return 25;
@@ -560,7 +633,37 @@ const Dashboard = () => {
       {isNavigating && (<div className="navigation-overlay"><div className="navigation-spinner"></div><p>Loading...</p></div>)}
       <div className="background-pattern"></div>
 
-      <div className="progress-bar-wrapper">
+      {localStorage.getItem('authToken') && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          maxWidth: '480px',
+          margin: '0 auto',
+          padding: '16px 20px 0'
+        }}>
+          <button
+            onClick={() => {
+              localStorage.clear();
+              sessionStorage.clear();
+              navigate('/');
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: '4px 8px'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      )}
+
+      <div className="progress-bar-wrapper" style={{ paddingTop: '2px' }}>
         <div className="progress-bar-track">
           <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }}></div>
         </div>

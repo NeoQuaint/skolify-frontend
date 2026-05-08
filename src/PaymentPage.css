@@ -1438,3 +1438,149 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
+
+
+
+
+
+
+
+
+
+/* Package Welcome Modal */
+.package-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.package-modal-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+  animation: slideInUp 0.3s ease;
+}
+
+.package-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 26px;
+  color: #999;
+  cursor: pointer;
+}
+
+.package-modal-hero {
+  margin-bottom: 20px;
+}
+
+.package-modal-check {
+  font-size: 48px;
+  color: #22c55e;
+  margin-bottom: 8px;
+}
+
+.package-modal-hero h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px;
+}
+
+.package-modal-hero p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+.package-modal-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+}
+
+.package-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.package-modal-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+
+.package-modal-option:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.package-modal-option.active {
+  border-color: #007bff;
+  background: #e8f0fe;
+}
+
+.package-modal-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: #007bff;
+  min-width: 40px;
+}
+
+.package-modal-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  flex: 1;
+}
+
+.package-modal-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.package-modal-continue {
+  width: 100%;
+  padding: 14px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.package-modal-continue:hover {
+  background: #007bff;
+}

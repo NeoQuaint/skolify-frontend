@@ -5,6 +5,19 @@ import Money from './Money';
 import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaLightbulb, FaCopy, FaHistory, FaLock, FaCommentDots } from 'react-icons/fa';
 import API_URL from './config';
 
+// Tracking helper
+const trackEvent = (eventType, eventData = {}) => {
+  const token = localStorage.getItem('authToken');
+  fetch(`${API_URL}/api/track-event`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify({ eventType, eventData })
+  }).catch(() => {});
+};
+
 const PaymentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +56,7 @@ const PaymentPage = () => {
   const [showPackagePopup, setShowPackagePopup] = useState(false);
   const [packageToApply, setPackageToApply] = useState(null);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const universityLogos = useMemo(() => ({
     'University of Johannesburg': { code: 'UJ', logo: '/UJ.jpeg' },
@@ -98,9 +112,7 @@ const PaymentPage = () => {
   }), []);
 
   const packagePrices = { basic: 169, standard: 329, premium: 499 };
-
   const packageNames = { basic: 'Basic Plan', standard: 'Standard Plan', premium: 'Premium Plan' };
-
   const packageDescriptions = {
     basic: 'Apply to 2 universities of your choice',
     standard: 'Apply to 4 universities of your choice',
@@ -138,6 +150,18 @@ const PaymentPage = () => {
       } catch (error) { console.error('Error loading previous orders:', error); }
     };
     loadPreviousOrders();
+  }, []);
+
+  // Track page view
+  useEffect(() => {
+    trackEvent('page_view', { page: 'payment' });
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcomeModal(true);
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   const isUniversityInPreviousOrders = useCallback((code, name) => {
@@ -231,6 +255,8 @@ const PaymentPage = () => {
   const handlePackageSelectConfirm = (pkg) => {
     setSelectedPackage(pkg);
     localStorage.setItem('selectedPackage', pkg);
+    // Track package changed
+    trackEvent('package_changed', { package: pkg, price: packagePrices[pkg] });
     const current = Object.keys(selectedCourses).length;
     const newLimit = packageLimits[pkg].universities;
     if (current > newLimit) {
@@ -265,6 +291,8 @@ const PaymentPage = () => {
       setShowSwitchPopup(true);
       return;
     }
+    // Track university selected
+    trackEvent('university_selected', { university: university.code, name: university.name });
     setSelectedUniversity(university);
   };
 
@@ -413,7 +441,6 @@ const PaymentPage = () => {
     showNotificationMessage(`Added ${uni.code}`, 'success');
   };
 
-  // 🔥 FIXED: Only show ELIGIBLE courses - no fallback
   const findAlternativeCourses = useCallback(async (university) => {
     setAlternativeUniversity(university);
     const marks = getStudentMarks();
@@ -465,7 +492,6 @@ const PaymentPage = () => {
     showNotificationMessage(`Added "${course.name}" to ${uni.code}`, 'success');
   };
 
-  // 🔥 SAVE PAYMENT SELECTION TO DATABASE
   const savePaymentSelectionToDatabase = async () => {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -484,14 +510,6 @@ const PaymentPage = () => {
       const totalCourses = Object.values(selectedCourses).reduce((sum, courses) => sum + courses.length, 0);
       const totalUniversities = Object.keys(selectedCourses).length;
       const totalCost = packagePrices[selectedPackage];
-
-      console.log('💾 Saving payment selection:', {
-        selectedPackage,
-        totalUniversities,
-        totalCourses,
-        totalCost,
-        universities: universitiesData
-      });
 
       const response = await fetch(`${API_URL}/api/payment/save-selection`, {
         method: 'POST',
@@ -512,16 +530,13 @@ const PaymentPage = () => {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ Payment selection saved to database:', data.trackingNumber);
         localStorage.setItem('trackingNumber', data.trackingNumber);
         return data.trackingNumber;
       } else {
-        console.error('❌ Failed to save selection:', data.error);
         showNotificationMessage('Failed to save your selections. Please try again.', 'error');
         return null;
       }
     } catch (error) {
-      console.error('❌ Error saving payment selection:', error);
       showNotificationMessage('Network error. Please check your connection.', 'error');
       return null;
     } finally {
@@ -574,12 +589,6 @@ const PaymentPage = () => {
   const currentForSelected = selectedUniversity ? (selectedCourses[selectedUniversity.code] || []) : [];
   const maxForSelected = selectedUniversity ? getInstitutionCourseLimit(selectedUniversity.name) : 0;
   const remainingToSelect = maxForSelected - currentForSelected.length;
-
-  const pkg = packageToApply;
-  const pkgLimit = pkg ? packageLimits[pkg].universities : 0;
-  const pkgPrice = pkg ? packagePrices[pkg] : 0;
-  const pkgName = pkg ? packageNames[pkg] : '';
-  const pkgDesc = pkg ? packageDescriptions[pkg] : '';
 
   return (
     <div className="simple-payment-page">
@@ -726,6 +735,39 @@ const PaymentPage = () => {
         </footer>
       </div>
 
+      {/* WELCOME PACKAGE MODAL */}
+      {showWelcomeModal && (
+        <div className="package-modal-overlay" onClick={() => setShowWelcomeModal(false)}>
+          <div className="package-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button className="package-modal-close" onClick={() => setShowWelcomeModal(false)}>×</button>
+            
+            <div className="package-modal-hero">
+              <FaCheckCircle className="package-modal-check" />
+              <h2>Congratulations</h2>
+              <p>Skolify found <strong>{totalFound}</strong></p>
+            </div>
+            
+            <p className="package-modal-question">How many universities would you like to apply to?</p>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '24px' }}>
+              {['basic', 'standard', 'premium'].map(pkgKey => (
+                <button
+                  key={pkgKey}
+                  className={`simple-number-btn ${selectedPackage === pkgKey ? 'active' : ''}`}
+                  onClick={() => handlePackageSelectConfirm(pkgKey)}
+                >
+                  {packageLimits[pkgKey].universities}
+                </button>
+              ))}
+            </div>
+            
+            <button className="package-modal-continue" onClick={() => setShowWelcomeModal(false)}>
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* PACKAGE POPUP */}
       {showPackagePopup && (
         <div className="package-popup-overlay" onClick={() => setShowPackagePopup(false)}>
@@ -736,10 +778,10 @@ const PaymentPage = () => {
               <h2>Congratulations</h2>
               <p>Skolify found <strong>{totalFound}</strong></p>
             </div>
-            <div className="package-popup-number">{pkgLimit}</div>
-            <h3 className="package-popup-name">{pkgName}</h3>
-            <div className="package-popup-price">R{pkgPrice}</div>
-            <p className="package-popup-desc">{pkgDesc}</p>
+            <div className="package-popup-number">{packageLimits[packageToApply]?.universities || ''}</div>
+            <h3 className="package-popup-name">{packageNames[packageToApply] || ''}</h3>
+            <div className="package-popup-price">R{packagePrices[packageToApply] || ''}</div>
+            <p className="package-popup-desc">{packageDescriptions[packageToApply] || ''}</p>
             <button className="package-popup-apply" onClick={confirmPackageSelection}>Apply</button>
           </div>
         </div>

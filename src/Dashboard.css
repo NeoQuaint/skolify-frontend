@@ -1456,3 +1456,48 @@ body {
     right: 20px;
   }
 }
+.progress-bar-wrapper {
+  position: sticky;
+  top: 20px;
+  z-index: 500;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 0 20px 20px;
+}
+/* Bounce hint - pulls slightly to the left then stops */
+.faculty-scroll-inner {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 4px 8px;
+  scrollbar-width: none;
+  animation: bounceHint 1.5s ease-in-out 0.5s;
+}
+
+.faculty-scroll-inner::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes bounceHint {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-30px); }
+  25% { transform: translateX(-15px); }
+  35% { transform: translateX(-30px); }
+  45% { transform: translateX(0); }
+  100% { transform: translateX(0); }
+}
+.faculty-grid-2col {
+  animation: bounceHint 1.5s ease-in-out 0.5s;
+}
+
+@keyframes bounceHint {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-20px); }
+  30% { transform: translateX(0); }
+  45% { transform: translateX(-10px); }
+  60% { transform: translateX(0); }
+  100% { transform: translateX(0); }
+}

@@ -12,6 +12,23 @@ import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
 
+// ==================== EVENT TRACKING ====================
+const trackEvent = async (eventType, eventData = {}) => {
+  const token = localStorage.getItem('authToken');
+  try {
+    await fetch(`${API_URL}/api/track-event`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({ eventType, eventData })
+    });
+  } catch (e) {
+    // Silent fail
+  }
+};
+
 // ==================== PROTECTED ROUTE ====================
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('authToken');
@@ -334,6 +351,11 @@ function WelcomeScreen() {
     setCheckingAuth(false);
   }, [navigate]);
 
+  // Track landing page view
+  useEffect(() => {
+    trackEvent('page_view', { page: 'landing' });
+  }, []);
+
   const handleGetStarted = () => {
     if (termsAccepted) {
       const token = localStorage.getItem('authToken');
@@ -384,6 +406,7 @@ function WelcomeScreen() {
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
         sessionStorage.clear();
+        trackEvent('signin', { email: formData.email });
         navigate('/dashboard');
       } else {
         setAuthError(data.error || 'Invalid email or password');
@@ -429,6 +452,7 @@ function WelcomeScreen() {
         localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.user));
         sessionStorage.clear();
+        trackEvent('signup', { email: formData.email });
         navigate('/dashboard');
       } else if (data.existingUser) {
         setAuthError('An account with this email already exists. Please sign in.');
