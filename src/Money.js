@@ -5,7 +5,7 @@ import {
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
   FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank,
-  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLightbulb
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -22,6 +22,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [pendingTransactionData, setPendingTransactionData] = useState(null);
+  
+  // SmartClass leads
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [needsHelp, setNeedsHelp] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -40,11 +44,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     city: '',
     province: '',
     postalCode: '',
-    // Previous School fields
     previousSchool: '',
     previousSchoolProvince: '',
     previousSchoolYear: '',
-    // Next of Kin fields (enhanced)
     kinName: '',
     kinRelationship: '',
     kinIdNumber: '',
@@ -64,7 +66,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
   };
 
-  // Bank account details
   const bankDetails = {
     accountNumber: '63199178419',
     accountName: 'K2026084461 (South Africa) (pty) Ltd',
@@ -254,6 +255,34 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     return true;
   };
 
+  // Save SmartClass lead to database
+  const saveSmartClassLead = async () => {
+    if (!needsHelp) return;
+    
+    const token = localStorage.getItem('authToken');
+    try {
+      await fetch(`${API_URL}/api/smartclass/lead`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+          isUpgrading: isUpgrading,
+          previousSchool: formData.previousSchool,
+          previousSchoolYear: formData.previousSchoolYear
+        })
+      });
+      console.log('📚 SmartClass lead saved');
+    } catch (e) {
+      console.error('SmartClass lead error:', e);
+    }
+  };
+
   const saveApplicationData = async (transactionId, paymentMethod = 'bank_transfer') => {
     const token = localStorage.getItem('authToken');
     const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
@@ -300,6 +329,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       };
     }
     
+    // Save SmartClass lead first
+    await saveSmartClassLead();
+    
     // Submit order first
     const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
       method: 'POST',
@@ -329,7 +361,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         universities: applicationData.universities,
         courses: applicationData.courseDetails,
         transactionId: transactionId,
-        paymentMethod: paymentMethod
+        paymentMethod: paymentMethod,
+        isUpgrading: isUpgrading,
+        needsHelp: needsHelp
       })
     });
     
@@ -417,11 +451,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         postalCode: formData.postalCode,
         homeLanguage: formData.homeLanguage,
         nationality: formData.nationality,
-        // Previous School
         previousSchool: formData.previousSchool,
         previousSchoolProvince: formData.previousSchoolProvince,
         previousSchoolYear: formData.previousSchoolYear,
-        // Next of Kin (enhanced)
         kinName: formData.kinName,
         kinPhone: formData.kinPhone,
         kinRelationship: formData.kinRelationship,
@@ -826,7 +858,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Section 4: Previous School Attended (NEW) */}
+                {/* Section 4: Previous School Attended + SmartClass Lead Capture */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">4</span>
@@ -879,6 +911,38 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                         required
                       />
                     </div>
+                  </div>
+
+                  {/* SmartClass Lead Capture */}
+                  <div className="smartclass-lead-section">
+                    <div className="smartclass-checkbox-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={isUpgrading}
+                          onChange={(e) => setIsUpgrading(e.target.checked)}
+                        />
+                        <span>Are you currently upgrading your marks?</span>
+                      </label>
+                    </div>
+                    
+                    <div className="smartclass-checkbox-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={needsHelp}
+                          onChange={(e) => setNeedsHelp(e.target.checked)}
+                        />
+                        <span>Do you need help with your studies?</span>
+                      </label>
+                    </div>
+                    
+                    {needsHelp && (
+                      <div className="smartclass-confirmation">
+                        <FaLightbulb className="smartclass-icon" />
+                        <p>We'll connect you with a tutor through <strong>SmartClass</strong> — our virtual tutoring platform. We'll reach out to you via email.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
