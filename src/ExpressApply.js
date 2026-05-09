@@ -1,12 +1,12 @@
-// src/pages/ExpressApply.js
+// src/ExpressApply.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './Money.css';
 import './ExpressApply.css';
 import { 
-  FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap,
-  FaUpload, FaCheck, FaSpinner, FaLightbulb, FaSchool,
-  FaMapMarkerAlt, FaCalendarAlt, FaHome, FaCity, FaBuilding,
-  FaArrowLeft
+  FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
+  FaUpload, FaCheck, FaSpinner, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp,
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLightbulb
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -15,27 +15,127 @@ const ExpressApply = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState('premium');
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
   
+  const packagePrices = { basic: 169, standard: 329, premium: 499 };
+  const packageLimits = { basic: 2, standard: 4, premium: 6 };
+  const packageLinks = {
+    basic: 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage',
+    standard: 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage',
+    premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
+  };
+  
   const [formData, setFormData] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
+    idNumber: '',
+    dateOfBirth: '',
+    gender: '',
+    nationality: '',
+    homeLanguage: '',
     email: '',
     phoneNumber: '',
-    idNumber: '',
+    whatsappNumber: '',
+    address: '',
+    suburb: '',
+    city: '',
+    province: '',
+    postalCode: '',
     previousSchool: '',
     previousSchoolProvince: '',
     previousSchoolYear: '',
-    province: '',
-    city: ''
+    kinName: '',
+    kinRelationship: '',
+    kinIdNumber: '',
+    kinGender: '',
+    kinPhone: '',
+    kinEmail: '',
+  });
+  
+  const [documents, setDocuments] = useState({
+    id: { name: null, uploaded: false, file: null, path: null },
+    results: { name: null, uploaded: false, file: null, path: null }
   });
 
-  const [resultsFile, setResultsFile] = useState(null);
-
-  const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
     setError('');
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileUpload = async (type, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    setError('');
+    setFieldErrors(prev => ({ ...prev, [type]: '' }));
+    
+    const formDataFile = new FormData();
+    formDataFile.append(type, file);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/upload-documents`, { method: 'POST', body: formDataFile });
+      const result = await response.json();
+      
+      if (result.success) {
+        setDocuments(prev => ({
+          ...prev,
+          [type]: { name: file.name, uploaded: true, file: file, path: result.paths[type] }
+        }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, [type]: result.error || 'Upload failed' }));
+      }
+    } catch (err) {
+      setFieldErrors(prev => ({ ...prev, [type]: 'Upload failed. Try again.' }));
+      e.target.value = '';
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const ensureAuth = async () => {
+    const existingToken = localStorage.getItem('authToken');
+    if (existingToken) return existingToken;
+
+    const tempPassword = 'skolify' + Math.random().toString(36).slice(2, 10);
+    
+    try {
+      const createRes = await fetch(`${API_URL}/api/auth/create-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: tempPassword })
+      });
+      const createData = await createRes.json();
+      
+      if (createData.success && createData.newUser) {
+        localStorage.setItem('authToken', createData.token);
+        localStorage.setItem('refreshToken', createData.refreshToken);
+        localStorage.setItem('user', JSON.stringify(createData.user));
+        return createData.token;
+      }
+      
+      const autoRes = await fetch(`${API_URL}/api/auth/auto-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      const autoData = await autoRes.json();
+      
+      if (autoData.success) {
+        localStorage.setItem('authToken', autoData.token);
+        return autoData.token;
+      }
+    } catch (e) {
+      console.error('Auth error:', e);
+    }
+    
+    return null;
   };
 
   const handleSubmit = async (e) => {
@@ -46,110 +146,84 @@ const ExpressApply = () => {
       return;
     }
 
-    if (!resultsFile) {
-      setError('Please upload your matric results');
-      return;
-    }
-
     setIsSubmitting(true);
     setError('');
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = await ensureAuth();
+      if (!token) {
+        setError('Unable to verify your account. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
       
-      // Upload results file
-      const fileFormData = new FormData();
-      fileFormData.append('results', resultsFile);
-      
-      const uploadRes = await fetch(`${API_URL}/api/upload-documents`, {
-        method: 'POST',
-        body: fileFormData
-      });
-      
-      const uploadResult = await uploadRes.json();
-      if (!uploadResult.success) throw new Error('File upload failed');
-      
-      // Save application
       const trackingNumber = `SKL-${Date.now().toString(36).toUpperCase()}`;
       
-      const appRes = await fetch(`${API_URL}/api/applications/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tracking_number: trackingNumber,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          idNumber: formData.idNumber,
-          province: formData.province,
-          city: formData.city,
-          previousSchool: formData.previousSchool,
-          previousSchoolProvince: formData.previousSchoolProvince,
-          previousSchoolYear: formData.previousSchoolYear,
-          documents: { results: uploadResult.paths?.results || null }
-        })
-      });
-      
-      if (!appRes.ok) throw new Error('Application save failed');
-      
-      // Save SmartClass lead if needed
       if (needsHelp) {
         await fetch(`${API_URL}/api/smartclass/lead`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
-            email: formData.email,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            phoneNumber: formData.phoneNumber,
-            isUpgrading: isUpgrading,
-            previousSchool: formData.previousSchool,
+            email: formData.email, firstName: formData.firstName, lastName: formData.lastName,
+            phoneNumber: formData.phoneNumber, isUpgrading, previousSchool: formData.previousSchool,
             previousSchoolYear: formData.previousSchoolYear
           })
         });
       }
       
-      // Track event
-      await fetch(`${API_URL}/api/track-event`, {
+      await fetch(`${API_URL}/api/payment/save-selection`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          eventType: 'express_apply_submitted',
-          eventData: { email: formData.email, needsHelp, isUpgrading }
+          selectedPackage,
+          universities: [],
+          totalCourses: 0,
+          totalUniversities: packageLimits[selectedPackage],
+          totalCost: packagePrices[selectedPackage],
+          courseDetails: {}
         })
       });
       
-      setIsSuccess(true);
+      await fetch(`${API_URL}/api/applications/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          tracking_number: trackingNumber,
+          firstName: formData.firstName, middleName: formData.middleName, lastName: formData.lastName,
+          idNumber: formData.idNumber, dateOfBirth: formData.dateOfBirth || null, gender: formData.gender,
+          email: formData.email, phoneNumber: formData.phoneNumber, whatsappNumber: formData.whatsappNumber,
+          address: formData.address, suburb: formData.suburb, city: formData.city, province: formData.province,
+          postalCode: formData.postalCode, homeLanguage: formData.homeLanguage, nationality: formData.nationality,
+          previousSchool: formData.previousSchool, previousSchoolProvince: formData.previousSchoolProvince,
+          previousSchoolYear: formData.previousSchoolYear,
+          kinName: formData.kinName, kinPhone: formData.kinPhone, kinRelationship: formData.kinRelationship,
+          kinIdNumber: formData.kinIdNumber, kinGender: formData.kinGender, kinEmail: formData.kinEmail,
+          documents: { id: documents.id.path || null, results: documents.results.path || null }
+        })
+      });
+      
+      await fetch(`${API_URL}/api/track-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ eventType: 'express_apply_submitted', eventData: { email: formData.email, package: selectedPackage } })
+      });
+      
+      window.location.href = packageLinks[selectedPackage];
+      
     } catch (err) {
       setError('Something went wrong. Please try again.');
-      console.error(err);
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isSuccess) {
     return (
-      <div className="express-apply-page">
+      <div className="express-page">
         <div className="express-container">
-          <div className="express-success">
-            <div className="success-icon">✅</div>
-            <h2>Application Received!</h2>
-            <p>We'll review your results and WhatsApp you within 24 hours with the courses you qualify for.</p>
-            <p className="success-whatsapp">Make sure you're available on WhatsApp at <strong>{formData.phoneNumber}</strong></p>
-            <button className="express-btn" onClick={() => navigate('/')}>
-              Back to Home
-            </button>
+          <div className="express-success-card">
+            <FaCheck className="express-success-icon" />
+            <h2>Application Submitted!</h2>
+            <p>We'll WhatsApp you at <strong>{formData.phoneNumber}</strong> with your course options within 24 hours.</p>
           </div>
         </div>
       </div>
@@ -157,155 +231,340 @@ const ExpressApply = () => {
   }
 
   return (
-    <div className="express-apply-page">
+    <div className="express-page">
       <div className="express-container">
-        <button className="express-back" onClick={() => navigate('/')}>
-          <FaArrowLeft /> Back
-        </button>
-
-        <div className="express-hero">
-          <h1>Apply to University — We'll Handle the Rest</h1>
-          <p>Fill in your details below and upload your results. We'll find the courses you qualify for and submit your applications.</p>
-          <div className="express-trust">
-            <span>✅ 30,000+ students helped</span>
-            <span>✅ 10+ universities</span>
-            <span>✅ Response within 24 hours</span>
-          </div>
+        <div className="express-logo-row">
+          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="express-logo" />
+        </div>
+        
+        <div className="express-heading">
+          <h1>Fill Form</h1>
         </div>
 
-        {error && <div className="express-error">{error}</div>}
+        {error && <div className="money-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="express-form">
-          <div className="express-row">
-            <div className="express-group">
-              <label><FaUser /> First Name *</label>
-              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="John" required />
+        <form onSubmit={handleSubmit} className="money-form">
+          {/* Section 1: Personal Information */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">1</span>
+              <h3>Personal Information</h3>
             </div>
-            <div className="express-group">
-              <label><FaUser /> Last Name *</label>
-              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Doe" required />
-            </div>
-          </div>
-
-          <div className="express-group">
-            <label><FaEnvelope /> Email Address *</label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" required />
-          </div>
-
-          <div className="express-group">
-            <label><FaPhone /> Phone Number (WhatsApp) *</label>
-            <input type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="+27 81 234 5678" required />
-            <small>We'll WhatsApp you your course options</small>
-          </div>
-
-          <div className="express-group">
-            <label><FaIdCard /> ID Number</label>
-            <input type="text" name="idNumber" value={formData.idNumber} onChange={handleChange} placeholder="000101 5084 089" />
-          </div>
-
-          <div className="express-row">
-            <div className="express-group">
-              <label><FaCity /> City</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Johannesburg" />
-            </div>
-            <div className="express-group">
-              <label><FaMapMarkerAlt /> Province</label>
-              <select name="province" value={formData.province} onChange={handleChange} className="express-select">
-                <option value="">Select</option>
-                <option value="Gauteng">Gauteng</option>
-                <option value="Western Cape">Western Cape</option>
-                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                <option value="Eastern Cape">Eastern Cape</option>
-                <option value="Free State">Free State</option>
-                <option value="Limpopo">Limpopo</option>
-                <option value="Mpumalanga">Mpumalanga</option>
-                <option value="North West">North West</option>
-                <option value="Northern Cape">Northern Cape</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="express-section-title">
-            <FaSchool /> Previous School
-          </div>
-
-          <div className="express-group">
-            <label>School Name</label>
-            <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleChange} placeholder="Parktown High School" />
-          </div>
-
-          <div className="express-row">
-            <div className="express-group">
-              <label>School Province</label>
-              <select name="previousSchoolProvince" value={formData.previousSchoolProvince} onChange={handleChange} className="express-select">
-                <option value="">Select</option>
-                <option value="Gauteng">Gauteng</option>
-                <option value="Western Cape">Western Cape</option>
-                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                <option value="Eastern Cape">Eastern Cape</option>
-                <option value="Free State">Free State</option>
-                <option value="Limpopo">Limpopo</option>
-                <option value="Mpumalanga">Mpumalanga</option>
-                <option value="North West">North West</option>
-                <option value="Northern Cape">Northern Cape</option>
-              </select>
-            </div>
-            <div className="express-group">
-              <label><FaCalendarAlt /> Year Completed</label>
-              <input type="text" name="previousSchoolYear" value={formData.previousSchoolYear} onChange={handleChange} placeholder="2024" />
-            </div>
-          </div>
-
-          <div className="express-section-title">
-            <FaGraduationCap /> Upload Your Results *
-          </div>
-
-          <div className="express-upload">
-            {resultsFile ? (
-              <div className="express-file-selected">
-                <FaCheck className="file-check" />
-                <span>{resultsFile.name}</span>
-                <button type="button" onClick={() => setResultsFile(null)}>Change</button>
+            
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaUser /> First Name *</label>
+                <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="John" required />
               </div>
-            ) : (
-              <label className="express-upload-btn">
-                <FaUpload /> Choose File (PDF or Image)
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setResultsFile(e.target.files[0])}
-                  hidden
-                />
-              </label>
-            )}
-            <small>Upload your matric statement or Grade 11 results</small>
-          </div>
-
-          {/* SmartClass Lead Capture */}
-          <div className="express-checkboxes">
-            <label className="express-checkbox">
-              <input type="checkbox" checked={isUpgrading} onChange={(e) => setIsUpgrading(e.target.checked)} />
-              <span>I'm currently upgrading my marks</span>
-            </label>
-            <label className="express-checkbox">
-              <input type="checkbox" checked={needsHelp} onChange={(e) => setNeedsHelp(e.target.checked)} />
-              <span>I need help with my studies</span>
-            </label>
-          </div>
-
-          {needsHelp && (
-            <div className="express-smartclass-note">
-              <FaLightbulb /> We'll connect you with a tutor through <strong>SmartClass</strong> — our virtual tutoring platform.
+              <div className="money-group">
+                <label>Middle Name</label>
+                <input type="text" name="middleName" value={formData.middleName} onChange={handleInputChange} placeholder="Michael (optional)" />
+              </div>
             </div>
-          )}
 
-          <button type="submit" className="express-submit-btn" disabled={isSubmitting}>
-            {isSubmitting ? <><FaSpinner className="spinner" /> Submitting...</> : 'Submit — We\'ll Handle the Rest'}
+            <div className="money-group">
+              <label><FaUser /> Last Name *</label>
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Doe" required />
+            </div>
+
+            <div className="money-group">
+              <label><FaIdCard /> ID / Passport Number</label>
+              <input type="text" name="idNumber" value={formData.idNumber} onChange={handleInputChange} placeholder="000101 5084 089" />
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label>Date of Birth</label>
+                <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange} />
+              </div>
+              <div className="money-group">
+                <label>Gender</label>
+                <select name="gender" value={formData.gender} onChange={handleInputChange} className="money-select">
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label>Nationality</label>
+                <input type="text" name="nationality" value={formData.nationality} onChange={handleInputChange} placeholder="South African" />
+              </div>
+              <div className="money-group">
+                <label>Home Language</label>
+                <input type="text" name="homeLanguage" value={formData.homeLanguage} onChange={handleInputChange} placeholder="English / IsiZulu" />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Contact Information */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">2</span>
+              <h3>Contact Information</h3>
+            </div>
+            
+            <div className="money-group">
+              <label><FaEnvelope /> Email Address *</label>
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="john@example.com" required />
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaPhone /> Phone Number *</label>
+                <input type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} placeholder="+27 11 123 4567" required />
+              </div>
+              <div className="money-group">
+                <label><FaWhatsapp /> WhatsApp Number</label>
+                <input type="tel" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange} placeholder="+27 11 123 4567" />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Residential Address */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">3</span>
+              <h3>Residential Address</h3>
+            </div>
+            
+            <div className="money-group">
+              <label><FaHome /> Street Address</label>
+              <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main Street" />
+            </div>
+
+            <div className="money-group">
+              <label><FaBuilding /> Suburb / Area</label>
+              <input type="text" name="suburb" value={formData.suburb} onChange={handleInputChange} placeholder="Sandton" />
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaCity /> City / Town</label>
+                <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="Johannesburg" />
+              </div>
+              <div className="money-group">
+                <label><FaMapMarkerAlt /> Province</label>
+                <select name="province" value={formData.province} onChange={handleInputChange} className="money-select">
+                  <option value="">Select</option>
+                  <option value="Gauteng">Gauteng</option>
+                  <option value="Western Cape">Western Cape</option>
+                  <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                  <option value="Eastern Cape">Eastern Cape</option>
+                  <option value="Free State">Free State</option>
+                  <option value="Limpopo">Limpopo</option>
+                  <option value="Mpumalanga">Mpumalanga</option>
+                  <option value="North West">North West</option>
+                  <option value="Northern Cape">Northern Cape</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="money-group">
+              <label>Postal Code</label>
+              <input type="text" name="postalCode" value={formData.postalCode} onChange={handleInputChange} placeholder="2000" />
+            </div>
+          </div>
+
+          {/* Section 4: Previous School + SmartClass */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">4</span>
+              <h3>Previous School Attended</h3>
+            </div>
+            
+            <div className="money-group">
+              <label><FaSchool /> School Name</label>
+              <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleInputChange} placeholder="Parktown High School" />
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaMapMarkerAlt /> School Province</label>
+                <select name="previousSchoolProvince" value={formData.previousSchoolProvince} onChange={handleInputChange} className="money-select">
+                  <option value="">Select</option>
+                  <option value="Gauteng">Gauteng</option>
+                  <option value="Western Cape">Western Cape</option>
+                  <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                  <option value="Eastern Cape">Eastern Cape</option>
+                  <option value="Free State">Free State</option>
+                  <option value="Limpopo">Limpopo</option>
+                  <option value="Mpumalanga">Mpumalanga</option>
+                  <option value="North West">North West</option>
+                  <option value="Northern Cape">Northern Cape</option>
+                </select>
+              </div>
+              <div className="money-group">
+                <label><FaCalendarAlt /> Year Completed</label>
+                <input type="text" name="previousSchoolYear" value={formData.previousSchoolYear} onChange={handleInputChange} placeholder="2024" />
+              </div>
+            </div>
+
+            <div className="smartclass-lead-section">
+              <div className="smartclass-checkbox-row">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={isUpgrading} onChange={(e) => setIsUpgrading(e.target.checked)} />
+                  <span>Are you currently upgrading your marks?</span>
+                </label>
+              </div>
+              <div className="smartclass-checkbox-row">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={needsHelp} onChange={(e) => setNeedsHelp(e.target.checked)} />
+                  <span>Do you need help with your studies?</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Next of Kin */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">5</span>
+              <h3>Next of Kin / Emergency Contact</h3>
+            </div>
+            
+            <div className="money-group">
+              <label><FaUserTie /> Full Name</label>
+              <input type="text" name="kinName" value={formData.kinName} onChange={handleInputChange} placeholder="Jane Doe" />
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaIdCard /> ID Number</label>
+                <input type="text" name="kinIdNumber" value={formData.kinIdNumber} onChange={handleInputChange} placeholder="800505 0187 085" />
+              </div>
+              <div className="money-group">
+                <label>Gender</label>
+                <select name="kinGender" value={formData.kinGender} onChange={handleInputChange} className="money-select">
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="money-group">
+              <label>Relationship</label>
+              <select name="kinRelationship" value={formData.kinRelationship} onChange={handleInputChange} className="money-select">
+                <option value="">Select</option>
+                <option value="Mother">Mother</option>
+                <option value="Father">Father</option>
+                <option value="Guardian">Guardian</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Other Relative">Other Relative</option>
+                <option value="Friend">Friend</option>
+              </select>
+            </div>
+
+            <div className="money-row">
+              <div className="money-group">
+                <label><FaPhoneAlt /> Phone Number</label>
+                <input type="tel" name="kinPhone" value={formData.kinPhone} onChange={handleInputChange} placeholder="+27 11 123 4567" />
+              </div>
+              <div className="money-group">
+                <label><FaEnvelope /> Email</label>
+                <input type="email" name="kinEmail" value={formData.kinEmail} onChange={handleInputChange} placeholder="jane@example.com" />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 6: Package Selection */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">6</span>
+              <h3>How many universities?</h3>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' }}>
+              {['basic', 'standard', 'premium'].map(pkg => (
+                <button
+                  key={pkg}
+                  type="button"
+                  onClick={() => setSelectedPackage(pkg)}
+                  style={{
+                    width: '56px', height: '56px', borderRadius: '50%',
+                    border: `2px solid ${selectedPackage === pkg ? '#ffc107' : '#e0e0e0'}`,
+                    background: selectedPackage === pkg ? '#ffc107' : 'white',
+                    fontSize: '20px', fontWeight: 700, cursor: 'pointer',
+                    color: '#1a1a1a', fontFamily: 'inherit'
+                  }}
+                >
+                  {packageLimits[pkg]}
+                </button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '14px', fontWeight: 600, color: '#475569' }}>
+              R{packagePrices[selectedPackage]} — {packageLimits[selectedPackage]} Universities
+            </div>
+          </div>
+
+          {/* Section 7: Documents */}
+          <div className="money-section-card">
+            <div className="section-title">
+              <span className="section-number">7</span>
+              <h3>Required Documents</h3>
+              <small className="section-hint">Max 5MB per file. PDF or images only.</small>
+            </div>
+            
+            <div className="document-upload-item">
+              <div className="document-info">
+                <FaIdCard className="document-icon" />
+                <div>
+                  <span className="document-name">ID Document / Passport</span>
+                  <small className="document-hint">Certified copy (PDF or Image)</small>
+                </div>
+              </div>
+              <div className="document-actions">
+                {!documents.id.uploaded ? (
+                  <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                    <FaUpload />
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('id', e)} disabled={isUploading} hidden />
+                  </label>
+                ) : (
+                  <div className="uploaded-file">
+                    <FaCheck className="uploaded-icon" />
+                    <span>{documents.id.name}</span>
+                    <button type="button" className="change-file-btn" onClick={() => setDocuments(prev => ({...prev, id: { name: null, uploaded: false, file: null, path: null }}))}>Change</button>
+                  </div>
+                )}
+              </div>
+              {fieldErrors.id && <div className="field-error">{fieldErrors.id}</div>}
+            </div>
+
+            <div className="document-upload-item">
+              <div className="document-info">
+                <FaGraduationCap className="document-icon" />
+                <div>
+                  <span className="document-name">Matric / Grade 11 Results</span>
+                  <small className="document-hint">Latest academic results</small>
+                </div>
+              </div>
+              <div className="document-actions">
+                {!documents.results.uploaded ? (
+                  <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                    <FaUpload />
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('results', e)} disabled={isUploading} hidden />
+                  </label>
+                ) : (
+                  <div className="uploaded-file">
+                    <FaCheck className="uploaded-icon" />
+                    <span>{documents.results.name}</span>
+                    <button type="button" className="change-file-btn" onClick={() => setDocuments(prev => ({...prev, results: { name: null, uploaded: false, file: null, path: null }}))}>Change</button>
+                  </div>
+                )}
+              </div>
+              {fieldErrors.results && <div className="field-error">{fieldErrors.results}</div>}
+            </div>
+          </div>
+
+          <button type="submit" className="pay-now-btn" style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} disabled={isSubmitting}>
+            {isSubmitting ? <><FaSpinner className="spinner-icon" /> Submitting...</> : 'Submit'}
           </button>
-
-          <p className="express-disclaimer">
-            We'll WhatsApp you within 24 hours with the courses you qualify for. No payment required upfront.
-          </p>
         </form>
       </div>
     </div>

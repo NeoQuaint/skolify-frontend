@@ -1,193 +1,74 @@
-/* src/pages/ExpressApply.css */
+/* src/ExpressApply.css */
 
-.express-apply-page {
+.express-page {
   min-height: 100vh;
-  background: #fafbfc;
-  padding: 24px 20px;
+  background: #ffffff;
+  padding: 20px 15px;
 }
 
 .express-container {
-  max-width: 480px;
+  max-width: 420px;
   margin: 0 auto;
 }
 
-.express-back {
-  background: none;
-  border: none;
-  color: #64748b;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: inherit;
-  margin-bottom: 16px;
-}
-
-.express-hero {
+.express-logo-row {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
+  padding-top: 10px;
 }
 
-.express-hero h1 {
-  font-size: 26px;
+.express-logo {
+  width: 55px;
+  height: 55px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.express-heading {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.express-heading h1 {
+  font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 12px;
-  line-height: 1.3;
+  color: #1a1a1a;
+  margin: 0;
 }
 
-.express-hero p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0 0 16px;
+.express-success-card {
+  text-align: center;
+  background: white;
+  border-radius: 24px;
+  padding: 40px 24px;
+  border: 1px solid #e8e8e8;
+  margin-top: 60px;
+}
+
+.express-success-icon {
+  font-size: 56px;
+  color: #28a745;
+  background: #f0fff4;
+  padding: 16px;
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+
+.express-success-card h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 10px;
+}
+
+.express-success-card p {
+  font-size: 14px;
+  color: #666;
   line-height: 1.5;
 }
 
-.express-trust {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: #16a34a;
-  font-weight: 500;
-}
-
-.express-error {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.express-form {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.express-row {
-  display: flex;
-  gap: 12px;
-}
-
-.express-row .express-group {
-  flex: 1;
-}
-
-.express-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.express-group label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.express-group input,
-.express-select {
-  padding: 12px 14px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 15px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-  background: white;
-}
-
-.express-group input:focus,
-.express-select:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-.express-group small {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.express-section-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.express-upload {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.express-upload-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px;
-  border: 2px dashed #cbd5e1;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #64748b;
-  transition: all 0.2s;
-}
-
-.express-upload-btn:hover {
-  border-color: #007bff;
-  color: #007bff;
-  background: #f8fafc;
-}
-
-.express-file-selected {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: #f0fdf4;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-.file-check {
-  color: #16a34a;
-}
-
-.express-file-selected button {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.express-checkboxes {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.express-checkbox {
+/* Checkbox styling */
+.checkbox-label {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -196,120 +77,98 @@
   cursor: pointer;
 }
 
-.express-checkbox input[type="checkbox"] {
+.checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: #007bff;
 }
 
-.express-smartclass-note {
-  background: #fef9c3;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 13px;
-  color: #854d0e;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.smartclass-checkbox-row {
+  margin-top: 10px;
 }
 
-.express-submit-btn {
-  width: 100%;
-  padding: 16px;
-  background: #0f172a;
+.smartclass-lead-section {
+  padding-top: 12px;
+  border-top: 1px solid #e8e8e8;
+  margin-top: 12px;
+}
+
+/* Money.css overrides for ExpressApply standalone page */
+.express-page .money-form {
+  gap: 14px;
+}
+
+.express-page .money-section-card {
+  background: #f8f9fa;
+}
+
+.express-page .section-number {
+  background: #1a1a1a;
+}
+
+.express-page .money-group label svg {
+  color: #1a1a1a;
+}
+
+.express-page .money-group input:focus,
+.express-page .money-select:focus {
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.express-page .pay-now-btn {
+  background: #1a1a1a;
   color: white;
-  border: none;
-  border-radius: 14px;
-  font-size: 16px;
+  border-radius: 30px;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-family: inherit;
-  margin-top: 8px;
+  letter-spacing: 0.3px;
 }
 
-.express-submit-btn:hover:not(:disabled) {
-  background: #007bff;
+.express-page .pay-now-btn:hover:not(:disabled) {
+  background: #333;
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.express-submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.express-page .upload-btn {
+  background: #1a1a1a;
 }
 
-.express-disclaimer {
-  text-align: center;
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
+.express-page .upload-btn:hover:not(.disabled) {
+  background: #333;
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
+.express-page .document-icon {
+  color: #1a1a1a;
+  background: #f0f0f0;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Success state */
-.express-success {
-  text-align: center;
-  padding: 40px 20px;
-}
-
-.success-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.express-success h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 12px;
-}
-
-.express-success p {
-  font-size: 15px;
-  color: #64748b;
-  margin: 0 0 8px;
-  line-height: 1.5;
-}
-
-.success-whatsapp {
-  background: #f0fdf4;
-  padding: 12px 16px;
-  border-radius: 10px;
-  margin: 16px 0 !important;
-}
-
-.express-btn {
-  padding: 14px 32px;
-  background: #0f172a;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  margin-top: 20px;
-}
-
+/* Mobile optimization */
 @media (max-width: 480px) {
-  .express-row {
-    flex-direction: column;
+  .express-page {
+    padding: 15px 10px;
   }
-  
-  .express-hero h1 {
-    font-size: 22px;
+
+  .express-container {
+    max-width: 100%;
   }
-  
-  .express-form {
-    padding: 16px;
+
+  .express-logo {
+    width: 90px;
+    height: 90px;
+  }
+
+  .express-heading h1 {
+    font-size: 18px;
+  }
+
+  .express-page .money-section-card {
+    padding: 14px 12px;
+  }
+
+  .express-page .money-group input,
+  .express-page .money-select {
+    padding: 10px 12px;
+    font-size: 14px;
   }
 }
