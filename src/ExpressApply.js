@@ -1,17 +1,15 @@
 // src/ExpressApply.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import './Money.css';
 import './ExpressApply.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaUpload, FaCheck, FaSpinner, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp,
-  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLightbulb
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt
 } from 'react-icons/fa';
 import API_URL from './config';
 
 const ExpressApply = () => {
-  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -103,7 +101,6 @@ const ExpressApply = () => {
         ...prev, 
         [type]: 'Upload failed. Please try again.' 
       }));
-      e.target.value = '';
     } finally {
       setIsUploading(false);
     }
@@ -112,9 +109,8 @@ const ExpressApply = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber) {
-      setError('Please fill in all required fields');
+      setError('Please fill in all required fields (Name, Email, Phone)');
       return;
     }
 
@@ -122,7 +118,7 @@ const ExpressApply = () => {
     setError('');
 
     try {
-      // Single unified API call to the new express endpoint
+      // Single unified API call to the express endpoint
       const response = await fetch(`${API_URL}/api/express/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,23 +137,18 @@ const ExpressApply = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Store auth tokens returned by the server
-        localStorage.setItem('authToken', data.token);
-        if (data.refreshToken) {
-          localStorage.setItem('refreshToken', data.refreshToken);
-        }
-        localStorage.setItem('user', JSON.stringify({ 
+        // Store the express token
+        localStorage.setItem('expressToken', data.token);
+        localStorage.setItem('expressUser', JSON.stringify({ 
           id: data.userId, 
           email: data.email 
         }));
         
-        // Set success state (optional)
+        // Show success briefly then redirect to payment
         setIsSuccess(true);
-        
-        // Redirect to payment page after a brief delay
         setTimeout(() => {
           window.location.href = data.redirectUrl;
-        }, 1000);
+        }, 1500);
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
         setIsSubmitting(false);
@@ -212,68 +203,32 @@ const ExpressApply = () => {
             <div className="money-row">
               <div className="money-group">
                 <label><FaUser /> First Name *</label>
-                <input 
-                  type="text" 
-                  name="firstName" 
-                  value={formData.firstName} 
-                  onChange={handleInputChange} 
-                  placeholder="John" 
-                  required 
-                />
+                <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="John" required />
               </div>
               <div className="money-group">
                 <label>Middle Name</label>
-                <input 
-                  type="text" 
-                  name="middleName" 
-                  value={formData.middleName} 
-                  onChange={handleInputChange} 
-                  placeholder="Michael (optional)" 
-                />
+                <input type="text" name="middleName" value={formData.middleName} onChange={handleInputChange} placeholder="Michael (optional)" />
               </div>
             </div>
 
             <div className="money-group">
               <label><FaUser /> Last Name *</label>
-              <input 
-                type="text" 
-                name="lastName" 
-                value={formData.lastName} 
-                onChange={handleInputChange} 
-                placeholder="Doe" 
-                required 
-              />
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Doe" required />
             </div>
 
             <div className="money-group">
               <label><FaIdCard /> ID / Passport Number</label>
-              <input 
-                type="text" 
-                name="idNumber" 
-                value={formData.idNumber} 
-                onChange={handleInputChange} 
-                placeholder="000101 5084 089" 
-              />
+              <input type="text" name="idNumber" value={formData.idNumber} onChange={handleInputChange} placeholder="000101 5084 089" />
             </div>
 
             <div className="money-row">
               <div className="money-group">
                 <label>Date of Birth</label>
-                <input 
-                  type="date" 
-                  name="dateOfBirth" 
-                  value={formData.dateOfBirth} 
-                  onChange={handleInputChange} 
-                />
+                <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleInputChange} />
               </div>
               <div className="money-group">
                 <label>Gender</label>
-                <select 
-                  name="gender" 
-                  value={formData.gender} 
-                  onChange={handleInputChange} 
-                  className="money-select"
-                >
+                <select name="gender" value={formData.gender} onChange={handleInputChange} className="money-select">
                   <option value="">Select</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -285,23 +240,11 @@ const ExpressApply = () => {
             <div className="money-row">
               <div className="money-group">
                 <label>Nationality</label>
-                <input 
-                  type="text" 
-                  name="nationality" 
-                  value={formData.nationality} 
-                  onChange={handleInputChange} 
-                  placeholder="South African" 
-                />
+                <input type="text" name="nationality" value={formData.nationality} onChange={handleInputChange} placeholder="South African" />
               </div>
               <div className="money-group">
                 <label>Home Language</label>
-                <input 
-                  type="text" 
-                  name="homeLanguage" 
-                  value={formData.homeLanguage} 
-                  onChange={handleInputChange} 
-                  placeholder="English / IsiZulu" 
-                />
+                <input type="text" name="homeLanguage" value={formData.homeLanguage} onChange={handleInputChange} placeholder="English / IsiZulu" />
               </div>
             </div>
           </div>
@@ -315,37 +258,17 @@ const ExpressApply = () => {
             
             <div className="money-group">
               <label><FaEnvelope /> Email Address *</label>
-              <input 
-                type="email" 
-                name="email" 
-                value={formData.email} 
-                onChange={handleInputChange} 
-                placeholder="john@example.com" 
-                required 
-              />
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="john@example.com" required />
             </div>
 
             <div className="money-row">
               <div className="money-group">
                 <label><FaPhone /> Phone Number *</label>
-                <input 
-                  type="tel" 
-                  name="phoneNumber" 
-                  value={formData.phoneNumber} 
-                  onChange={handleInputChange} 
-                  placeholder="+27 11 123 4567" 
-                  required 
-                />
+                <input type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} placeholder="+27 11 123 4567" required />
               </div>
               <div className="money-group">
                 <label><FaWhatsapp /> WhatsApp Number</label>
-                <input 
-                  type="tel" 
-                  name="whatsappNumber" 
-                  value={formData.whatsappNumber} 
-                  onChange={handleInputChange} 
-                  placeholder="+27 11 123 4567" 
-                />
+                <input type="tel" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleInputChange} placeholder="+27 11 123 4567" />
               </div>
             </div>
           </div>
@@ -359,45 +282,22 @@ const ExpressApply = () => {
             
             <div className="money-group">
               <label><FaHome /> Street Address</label>
-              <input 
-                type="text" 
-                name="address" 
-                value={formData.address} 
-                onChange={handleInputChange} 
-                placeholder="123 Main Street" 
-              />
+              <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="123 Main Street" />
             </div>
 
             <div className="money-group">
               <label><FaBuilding /> Suburb / Area</label>
-              <input 
-                type="text" 
-                name="suburb" 
-                value={formData.suburb} 
-                onChange={handleInputChange} 
-                placeholder="Sandton" 
-              />
+              <input type="text" name="suburb" value={formData.suburb} onChange={handleInputChange} placeholder="Sandton" />
             </div>
 
             <div className="money-row">
               <div className="money-group">
                 <label><FaCity /> City / Town</label>
-                <input 
-                  type="text" 
-                  name="city" 
-                  value={formData.city} 
-                  onChange={handleInputChange} 
-                  placeholder="Johannesburg" 
-                />
+                <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="Johannesburg" />
               </div>
               <div className="money-group">
                 <label><FaMapMarkerAlt /> Province</label>
-                <select 
-                  name="province" 
-                  value={formData.province} 
-                  onChange={handleInputChange} 
-                  className="money-select"
-                >
+                <select name="province" value={formData.province} onChange={handleInputChange} className="money-select">
                   <option value="">Select</option>
                   <option value="Gauteng">Gauteng</option>
                   <option value="Western Cape">Western Cape</option>
@@ -414,17 +314,11 @@ const ExpressApply = () => {
 
             <div className="money-group">
               <label>Postal Code</label>
-              <input 
-                type="text" 
-                name="postalCode" 
-                value={formData.postalCode} 
-                onChange={handleInputChange} 
-                placeholder="2000" 
-              />
+              <input type="text" name="postalCode" value={formData.postalCode} onChange={handleInputChange} placeholder="2000" />
             </div>
           </div>
 
-          {/* Section 4: Previous School + SmartClass */}
+          {/* Section 4: Previous School */}
           <div className="money-section-card">
             <div className="section-title">
               <span className="section-number">4</span>
@@ -433,24 +327,13 @@ const ExpressApply = () => {
             
             <div className="money-group">
               <label><FaSchool /> School Name</label>
-              <input 
-                type="text" 
-                name="previousSchool" 
-                value={formData.previousSchool} 
-                onChange={handleInputChange} 
-                placeholder="Parktown High School" 
-              />
+              <input type="text" name="previousSchool" value={formData.previousSchool} onChange={handleInputChange} placeholder="Parktown High School" />
             </div>
 
             <div className="money-row">
               <div className="money-group">
                 <label><FaMapMarkerAlt /> School Province</label>
-                <select 
-                  name="previousSchoolProvince" 
-                  value={formData.previousSchoolProvince} 
-                  onChange={handleInputChange} 
-                  className="money-select"
-                >
+                <select name="previousSchoolProvince" value={formData.previousSchoolProvince} onChange={handleInputChange} className="money-select">
                   <option value="">Select</option>
                   <option value="Gauteng">Gauteng</option>
                   <option value="Western Cape">Western Cape</option>
@@ -465,34 +348,20 @@ const ExpressApply = () => {
               </div>
               <div className="money-group">
                 <label><FaCalendarAlt /> Year Completed</label>
-                <input 
-                  type="text" 
-                  name="previousSchoolYear" 
-                  value={formData.previousSchoolYear} 
-                  onChange={handleInputChange} 
-                  placeholder="2024" 
-                />
+                <input type="text" name="previousSchoolYear" value={formData.previousSchoolYear} onChange={handleInputChange} placeholder="2024" />
               </div>
             </div>
 
             <div className="smartclass-lead-section">
               <div className="smartclass-checkbox-row">
                 <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={isUpgrading} 
-                    onChange={(e) => setIsUpgrading(e.target.checked)} 
-                  />
+                  <input type="checkbox" checked={isUpgrading} onChange={(e) => setIsUpgrading(e.target.checked)} />
                   <span>Are you currently upgrading your marks?</span>
                 </label>
               </div>
               <div className="smartclass-checkbox-row">
                 <label className="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    checked={needsHelp} 
-                    onChange={(e) => setNeedsHelp(e.target.checked)} 
-                  />
+                  <input type="checkbox" checked={needsHelp} onChange={(e) => setNeedsHelp(e.target.checked)} />
                   <span>Do you need help with your studies?</span>
                 </label>
               </div>
@@ -508,34 +377,17 @@ const ExpressApply = () => {
             
             <div className="money-group">
               <label><FaUserTie /> Full Name</label>
-              <input 
-                type="text" 
-                name="kinName" 
-                value={formData.kinName} 
-                onChange={handleInputChange} 
-                placeholder="Jane Doe" 
-              />
+              <input type="text" name="kinName" value={formData.kinName} onChange={handleInputChange} placeholder="Jane Doe" />
             </div>
 
             <div className="money-row">
               <div className="money-group">
                 <label><FaIdCard /> ID Number</label>
-                <input 
-                  type="text" 
-                  name="kinIdNumber" 
-                  value={formData.kinIdNumber} 
-                  onChange={handleInputChange} 
-                  placeholder="800505 0187 085" 
-                />
+                <input type="text" name="kinIdNumber" value={formData.kinIdNumber} onChange={handleInputChange} placeholder="800505 0187 085" />
               </div>
               <div className="money-group">
                 <label>Gender</label>
-                <select 
-                  name="kinGender" 
-                  value={formData.kinGender} 
-                  onChange={handleInputChange} 
-                  className="money-select"
-                >
+                <select name="kinGender" value={formData.kinGender} onChange={handleInputChange} className="money-select">
                   <option value="">Select</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -546,12 +398,7 @@ const ExpressApply = () => {
 
             <div className="money-group">
               <label>Relationship</label>
-              <select 
-                name="kinRelationship" 
-                value={formData.kinRelationship} 
-                onChange={handleInputChange} 
-                className="money-select"
-              >
+              <select name="kinRelationship" value={formData.kinRelationship} onChange={handleInputChange} className="money-select">
                 <option value="">Select</option>
                 <option value="Mother">Mother</option>
                 <option value="Father">Father</option>
@@ -566,23 +413,11 @@ const ExpressApply = () => {
             <div className="money-row">
               <div className="money-group">
                 <label><FaPhoneAlt /> Phone Number</label>
-                <input 
-                  type="tel" 
-                  name="kinPhone" 
-                  value={formData.kinPhone} 
-                  onChange={handleInputChange} 
-                  placeholder="+27 11 123 4567" 
-                />
+                <input type="tel" name="kinPhone" value={formData.kinPhone} onChange={handleInputChange} placeholder="+27 11 123 4567" />
               </div>
               <div className="money-group">
                 <label><FaEnvelope /> Email</label>
-                <input 
-                  type="email" 
-                  name="kinEmail" 
-                  value={formData.kinEmail} 
-                  onChange={handleInputChange} 
-                  placeholder="jane@example.com" 
-                />
+                <input type="email" name="kinEmail" value={formData.kinEmail} onChange={handleInputChange} placeholder="jane@example.com" />
               </div>
             </div>
           </div>
@@ -601,17 +436,11 @@ const ExpressApply = () => {
                   type="button"
                   onClick={() => setSelectedPackage(pkg)}
                   style={{
-                    width: '56px', 
-                    height: '56px', 
-                    borderRadius: '50%',
+                    width: '56px', height: '56px', borderRadius: '50%',
                     border: `2px solid ${selectedPackage === pkg ? '#ffc107' : '#e0e0e0'}`,
                     background: selectedPackage === pkg ? '#ffc107' : 'white',
-                    fontSize: '20px', 
-                    fontWeight: 700, 
-                    cursor: 'pointer',
-                    color: '#1a1a1a', 
-                    fontFamily: 'inherit',
-                    transition: 'all 0.2s ease'
+                    fontSize: '20px', fontWeight: 700, cursor: 'pointer',
+                    color: '#1a1a1a', fontFamily: 'inherit'
                   }}
                 >
                   {packageLimits[pkg]}
@@ -643,28 +472,13 @@ const ExpressApply = () => {
                 {!documents.id.uploaded ? (
                   <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
                     <FaUpload />
-                    <input 
-                      type="file" 
-                      accept=".pdf,.jpg,.jpeg,.png" 
-                      onChange={(e) => handleFileUpload('id', e)} 
-                      disabled={isUploading} 
-                      hidden 
-                    />
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('id', e)} disabled={isUploading} hidden />
                   </label>
                 ) : (
                   <div className="uploaded-file">
                     <FaCheck className="uploaded-icon" />
                     <span>{documents.id.name}</span>
-                    <button 
-                      type="button" 
-                      className="change-file-btn" 
-                      onClick={() => setDocuments(prev => ({
-                        ...prev, 
-                        id: { name: null, uploaded: false, file: null, path: null }
-                      }))}
-                    >
-                      Change
-                    </button>
+                    <button type="button" className="change-file-btn" onClick={() => setDocuments(prev => ({...prev, id: { name: null, uploaded: false, file: null, path: null }}))}>Change</button>
                   </div>
                 )}
               </div>
@@ -683,28 +497,13 @@ const ExpressApply = () => {
                 {!documents.results.uploaded ? (
                   <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
                     <FaUpload />
-                    <input 
-                      type="file" 
-                      accept=".pdf,.jpg,.jpeg,.png" 
-                      onChange={(e) => handleFileUpload('results', e)} 
-                      disabled={isUploading} 
-                      hidden 
-                    />
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('results', e)} disabled={isUploading} hidden />
                   </label>
                 ) : (
                   <div className="uploaded-file">
                     <FaCheck className="uploaded-icon" />
                     <span>{documents.results.name}</span>
-                    <button 
-                      type="button" 
-                      className="change-file-btn" 
-                      onClick={() => setDocuments(prev => ({
-                        ...prev, 
-                        results: { name: null, uploaded: false, file: null, path: null }
-                      }))}
-                    >
-                      Change
-                    </button>
+                    <button type="button" className="change-file-btn" onClick={() => setDocuments(prev => ({...prev, results: { name: null, uploaded: false, file: null, path: null }}))}>Change</button>
                   </div>
                 )}
               </div>
@@ -715,19 +514,10 @@ const ExpressApply = () => {
           <button 
             type="submit" 
             className="pay-now-btn" 
-            style={{ 
-              width: '100%', 
-              padding: '16px', 
-              fontSize: '16px', 
-              marginTop: '8px' 
-            }} 
+            style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} 
             disabled={isSubmitting}
           >
-            {isSubmitting ? (
-              <><FaSpinner className="spinner-icon" /> Submitting...</>
-            ) : (
-              'Submit'
-            )}
+            {isSubmitting ? <><FaSpinner className="spinner-icon" /> Submitting...</> : 'Submit'}
           </button>
         </form>
       </div>
