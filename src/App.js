@@ -6,6 +6,7 @@ import Background from './Background';
 import Dashboard from './Dashboard';
 import PaymentPage from './PaymentPage';
 import ProfilePage from './ProfilePage';
+import ExpressApply from './ExpressApply';
 import Accommodation from './Accommodation';
 import Bursary from './Bursary';
 import PaymentSuccess from './Pages/PaymentSuccess';
@@ -1032,6 +1033,7 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/apply" element={<ExpressApply />} />
         <Route path="/accommodation" element={<Accommodation />} />
         <Route path="/bursary" element={<Bursary />} />
         <Route path="/terms" element={<TermsAndConditions />} />

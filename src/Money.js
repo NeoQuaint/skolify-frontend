@@ -937,12 +937,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                       </label>
                     </div>
                     
-                    {needsHelp && (
-                      <div className="smartclass-confirmation">
-                        <FaLightbulb className="smartclass-icon" />
-                        <p>We'll connect you with a tutor through <strong>SmartClass</strong> — our virtual tutoring platform. We'll reach out to you via email.</p>
-                      </div>
-                    )}
+                
                   </div>
                 </div>
 
