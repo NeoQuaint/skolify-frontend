@@ -109,8 +109,16 @@ const ExpressApply = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate required fields
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber) {
       setError('Please fill in all required fields (Name, Email, Phone)');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -118,7 +126,6 @@ const ExpressApply = () => {
     setError('');
 
     try {
-      // Single unified API call to the express endpoint
       const response = await fetch(`${API_URL}/api/express/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,18 +144,23 @@ const ExpressApply = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Store the express token
+        // Store the express token and user data
         localStorage.setItem('expressToken', data.token);
         localStorage.setItem('expressUser', JSON.stringify({ 
           id: data.userId, 
-          email: data.email 
+          email: data.email,
+          trackingNumber: data.trackingNumber
         }));
         
-        // Show success briefly then redirect to payment
+        // Show success state
         setIsSuccess(true);
+        
+        // Redirect to payment page after short delay
         setTimeout(() => {
-          window.location.href = data.redirectUrl;
-        }, 1500);
+          if (data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+          }
+        }, 2000);
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
         setIsSubmitting(false);
@@ -170,7 +182,7 @@ const ExpressApply = () => {
             <h2>Application Submitted!</h2>
             <p>We'll WhatsApp you at <strong>{formData.phoneNumber}</strong> with your course options within 24 hours.</p>
             <p style={{ marginTop: '12px', fontSize: '14px', color: '#64748b' }}>
-              Redirecting to payment...
+              Redirecting to payment page...
             </p>
           </div>
         </div>
@@ -188,6 +200,7 @@ const ExpressApply = () => {
         
         <div className="express-heading">
           <h1>Fill Form</h1>
+          <p className="express-subtitle">Complete your application in minutes</p>
         </div>
 
         {error && <div className="money-error">{error}</div>}
@@ -437,10 +450,12 @@ const ExpressApply = () => {
                   onClick={() => setSelectedPackage(pkg)}
                   style={{
                     width: '56px', height: '56px', borderRadius: '50%',
-                    border: `2px solid ${selectedPackage === pkg ? '#ffc107' : '#e0e0e0'}`,
+                    border: selectedPackage === pkg ? '3px solid #ffc107' : '2px solid #e0e0e0',
                     background: selectedPackage === pkg ? '#ffc107' : 'white',
                     fontSize: '20px', fontWeight: 700, cursor: 'pointer',
-                    color: '#1a1a1a', fontFamily: 'inherit'
+                    color: '#1a1a1a', fontFamily: 'inherit',
+                    transition: 'all 0.2s ease',
+                    transform: selectedPackage === pkg ? 'scale(1.1)' : 'scale(1)'
                   }}
                 >
                   {packageLimits[pkg]}
@@ -471,7 +486,7 @@ const ExpressApply = () => {
               <div className="document-actions">
                 {!documents.id.uploaded ? (
                   <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                    <FaUpload />
+                    <FaUpload /> Upload
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('id', e)} disabled={isUploading} hidden />
                   </label>
                 ) : (
@@ -496,7 +511,7 @@ const ExpressApply = () => {
               <div className="document-actions">
                 {!documents.results.uploaded ? (
                   <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                    <FaUpload />
+                    <FaUpload /> Upload
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => handleFileUpload('results', e)} disabled={isUploading} hidden />
                   </label>
                 ) : (
@@ -515,9 +530,15 @@ const ExpressApply = () => {
             type="submit" 
             className="pay-now-btn" 
             style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} 
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploading}
           >
-            {isSubmitting ? <><FaSpinner className="spinner-icon" /> Submitting...</> : 'Submit'}
+            {isSubmitting ? (
+              <><FaSpinner className="spinner-icon" /> Submitting...</>
+            ) : isUploading ? (
+              <><FaSpinner className="spinner-icon" /> Uploading documents...</>
+            ) : (
+              'Submit Application'
+            )}
           </button>
         </form>
       </div>
