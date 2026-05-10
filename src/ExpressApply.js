@@ -109,13 +109,11 @@ const ExpressApply = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phoneNumber) {
       setError('Please fill in all required fields (Name, Email, Phone)');
       return;
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
@@ -144,18 +142,12 @@ const ExpressApply = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Store the express token and user data
-        localStorage.setItem('expressToken', data.token);
-        localStorage.setItem('expressUser', JSON.stringify({ 
-          id: data.userId, 
-          email: data.email,
-          trackingNumber: data.trackingNumber
-        }));
+        localStorage.setItem('expressId', data.expressId);
+        localStorage.setItem('expressEmail', data.email);
+        localStorage.setItem('expressTracking', data.trackingNumber);
         
-        // Show success state
         setIsSuccess(true);
         
-        // Redirect to payment page after short delay
         setTimeout(() => {
           if (data.redirectUrl) {
             window.location.href = data.redirectUrl;
@@ -172,7 +164,6 @@ const ExpressApply = () => {
     }
   };
 
-  // Success view
   if (isSuccess) {
     return (
       <div className="express-page">
@@ -190,7 +181,6 @@ const ExpressApply = () => {
     );
   }
 
-  // Main form view
   return (
     <div className="express-page">
       <div className="express-container">
