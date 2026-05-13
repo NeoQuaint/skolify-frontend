@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import { FaChevronRight, FaChevronLeft, FaBook, FaTimes, FaSpinner, FaTrash, FaInfoCircle, FaArrowLeft } from 'react-icons/fa';
 import RadialPulseLoader from './RadialPulseLoader';
 import API_URL from './config';
 
@@ -112,14 +112,14 @@ function CourseDetailModal({ course, onClose }) {
 }
 
 // ==================== COURSE SELECTION MODAL ====================
-function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCourse, getSelectedCountForFaculty }) {
+function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCourse }) {
   const [detailCourse, setDetailCourse] = useState(null);
 
   if (!faculty) return null;
 
-  const selectedCount = getSelectedCountForFaculty(faculty.name);
-  const maxForFaculty = Math.min(3, faculty.courses.length);
-  const isMaxReached = selectedCount >= 3;
+  const MAX_TOTAL_COURSES = 6;
+  const selectedCount = selectedCourses.length;
+  const isMaxReached = selectedCount >= MAX_TOTAL_COURSES;
   
   const sortedCourses = [...faculty.courses].sort((a, b) => {
     const aIsRecommended = (a.matchScore && a.matchScore >= 80) || (a.recommended_subjects && a.recommended_subjects.length > 0);
@@ -195,7 +195,7 @@ function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCours
 
           <div className="courses-modal-footer">
             <div className="courses-modal-counter">
-              {selectedCount}/{maxForFaculty} selected
+              {selectedCount}/{MAX_TOTAL_COURSES} total courses selected
             </div>
             <button className="courses-modal-done" onClick={onClose}>
               Done
@@ -211,6 +211,30 @@ function CourseSelectionModal({ faculty, onClose, selectedCourses, onToggleCours
         />
       )}
     </>
+  );
+}
+
+// ==================== MINIMUM COURSES POPUP ====================
+function MinimumCoursesPopup({ onClose, selectedCount, requiredCount }) {
+  return (
+    <div className="courses-modal-overlay" onClick={onClose}>
+      <div className="courses-modal-container minimum-popup" onClick={(e) => e.stopPropagation()}>
+        <div className="courses-modal-header">
+          <h3 className="courses-modal-title">Minimum Courses Required</h3>
+          <button className="courses-modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="minimum-popup-body">
+          <p>A minimum of <strong>{requiredCount} courses</strong> is required to proceed.</p>
+          <p>You currently have <strong>{selectedCount}</strong> course{selectedCount !== 1 ? 's' : ''} selected.</p>
+          <p className="minimum-popup-hint">Please select at least {requiredCount - selectedCount} more course{requiredCount - selectedCount !== 1 ? 's' : ''} to continue.</p>
+        </div>
+        <div className="courses-modal-footer">
+          <button className="courses-modal-done" onClick={onClose}>
+            OK, I'll add more
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -242,11 +266,6 @@ const Dashboard = () => {
     return saved ? JSON.parse(saved) : 0;
   });
 
-  const [selectedFaculties, setSelectedFaculties] = useState(() => {
-    const saved = sessionStorage.getItem('dashboard_selectedFaculties');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [selectedCourses, setSelectedCourses] = useState(() => {
     const saved = sessionStorage.getItem('dashboard_selectedCourses');
     return saved ? JSON.parse(saved) : [];
@@ -265,23 +284,15 @@ const Dashboard = () => {
   const [activeFacultyModal, setActiveFacultyModal] = useState(null);
   const [isCalculatingEligibility, setIsCalculatingEligibility] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showMinimumPopup, setShowMinimumPopup] = useState(false);
   
   const [facultyPage, setFacultyPage] = useState(0);
   const facultiesPerPage = 6;
 
-  const hiddenInstitutions = [
-    'Nelson Mandela University',
-    'Sol Plaatje University'
-  ];
+  const MAX_TOTAL_COURSES = 6;
+  const MIN_REQUIRED_COURSES = 4;
 
-  const filterHiddenInstitutions = (courses) => {
-    return courses.filter(course => 
-      !hiddenInstitutions.some(institution => 
-        course.institution_name?.toLowerCase().includes(institution.toLowerCase())
-      )
-    );
-  };
-
+  // Original subject categories (restored)
   const subjectCategories = {
     mathematics: ['Mathematics', 'Technical Mathematics', 'Mathematical Literacy'],
     sciences: ['Physical Sciences', 'Technical Sciences', 'Life Sciences', 'Agricultural Sciences'],
@@ -306,6 +317,19 @@ const Dashboard = () => {
     'Home Language': subjectCategories.homeLanguages,
     'Additional Language': subjectCategories.additionalLanguages,
     'Life Orientation': subjectCategories.lifeOrientation
+  };
+
+  const hiddenInstitutions = [
+    'Nelson Mandela University',
+    'Sol Plaatje University'
+  ];
+
+  const filterHiddenInstitutions = (courses) => {
+    return courses.filter(course => 
+      !hiddenInstitutions.some(institution => 
+        course.institution_name?.toLowerCase().includes(institution.toLowerCase())
+      )
+    );
   };
 
   const facultyPriority = [
@@ -369,7 +393,6 @@ const Dashboard = () => {
   }, [subjects, calculateAPS, saveState]);
 
   useEffect(() => { saveState('subjects', subjects); }, [subjects, saveState]);
-  useEffect(() => { saveState('selectedFaculties', selectedFaculties); }, [selectedFaculties, saveState]);
   useEffect(() => { saveState('selectedCourses', selectedCourses); }, [selectedCourses, saveState]);
   useEffect(() => { saveState('eligibleCourses', eligibleCourses); }, [eligibleCourses, saveState]);
   useEffect(() => { saveState('eligibleFaculties', eligibleFaculties); }, [eligibleFaculties, saveState]);
@@ -398,7 +421,6 @@ const Dashboard = () => {
     fetchBackendData();
   }, []);
 
-  // Track page view
   useEffect(() => {
     trackEvent('page_view', { page: 'dashboard' });
   }, []);
@@ -451,7 +473,6 @@ const Dashboard = () => {
         setEligibleFaculties(eligibleFacultiesData);
         saveState('eligibleFaculties', eligibleFacultiesData);
         
-        // Track eligibility checked
         trackEvent('eligibility_checked', {
           totalCourses: coursesWithScores.length,
           totalFaculties: eligibleFacultiesData.length,
@@ -476,7 +497,6 @@ const Dashboard = () => {
     if (!hasMarks) { alert('Please enter at least one mark to find matches'); return; }
     if (!backendData.isConnected) { alert('Backend not connected.'); return; }
     
-    // Track marks entered
     trackEvent('marks_entered', {
       subjects: subjects.filter(s => s.subject && s.mark).map(s => ({ subject: s.subject, mark: s.mark })),
       totalAPS: userAPS
@@ -484,9 +504,8 @@ const Dashboard = () => {
     
     const eligibleFacultiesData = await calculateEligibleCourses();
     if (eligibleFacultiesData && eligibleFacultiesData.length > 0) {
-      setStep(2); setFacultyPage(0); setSelectedFaculties([]);
+      setStep(2); setFacultyPage(0); setSelectedCourses([]);
     } else {
-      // Track eligibility empty
       trackEvent('eligibility_empty', {
         aps: userAPS,
         subjects: subjects.filter(s => s.subject && s.mark).map(s => ({ subject: s.subject, mark: s.mark }))
@@ -495,58 +514,19 @@ const Dashboard = () => {
     }
   };
 
-  const getSelectedFacultyObjects = () => eligibleFaculties.filter(f => selectedFaculties.includes(f.id));
-  const getSelectedCountForFaculty = (facultyName) => selectedCourses.filter(c => c.faculty_name === facultyName).length;
-
-  const isFacultySelectionComplete = (faculty) => {
-    const selectedCount = getSelectedCountForFaculty(faculty.name);
-    const availableCourses = faculty.courses.length;
-    return selectedCount === 3 || (selectedCount > 0 && selectedCount === availableCourses);
-  };
-
-  const canProceedToPayment = () => {
-    const selectedFacultiesObjects = getSelectedFacultyObjects();
-    for (const faculty of selectedFacultiesObjects) {
-      const selectedCount = getSelectedCountForFaculty(faculty.name);
-      const availableCourses = faculty.courses.length;
-      if (availableCourses < 3 && selectedCount !== availableCourses) return false;
-      if (availableCourses >= 3 && selectedCount !== 3) return false;
-    }
-    return selectedCourses.length > 0;
-  };
-
-  const toggleFacultySelection = (facultyId) => {
-    setSelectedFaculties(prev => {
-      if (prev.includes(facultyId)) {
-        const faculty = eligibleFaculties.find(f => f.id === facultyId);
-        if (faculty) {
-          setSelectedCourses(prevCourses => prevCourses.filter(c => c.faculty_name !== faculty.name));
-          // Track faculty deselected
-          trackEvent('faculty_deselected', { faculty: faculty.name });
-        }
-        return prev.filter(id => id !== facultyId);
-      } else {
-        if (prev.length < 3) {
-          const faculty = eligibleFaculties.find(f => f.id === facultyId);
-          if (faculty) {
-            // Track faculty selected
-            trackEvent('faculty_selected', { faculty: faculty.name });
-          }
-          return [...prev, facultyId];
-        } else { alert('You can only select up to 3 faculties'); return prev; }
-      }
-    });
+  const getSelectedCoursesForFaculty = (facultyName) => {
+    return selectedCourses.filter(c => c.faculty_name === facultyName);
   };
 
   const toggleCourseSelection = (course, facultyName) => {
-    const currentFacultyCount = getSelectedCountForFaculty(facultyName);
     const isSelected = selectedCourses.some(c => c.id === course.id);
     if (isSelected) {
       setSelectedCourses(prev => prev.filter(c => c.id !== course.id));
     } else {
-      if (currentFacultyCount >= 3) { alert(`You can only select up to 3 courses from ${cleanFacultyName(facultyName)}`); return; }
-      if (selectedCourses.length >= 9) { alert('You can only select up to 9 courses total'); return; }
-      // Track course selected
+      if (selectedCourses.length >= MAX_TOTAL_COURSES) { 
+        alert(`You can only select up to ${MAX_TOTAL_COURSES} courses total`); 
+        return; 
+      }
       trackEvent('course_selected', {
         course: course.name,
         faculty: facultyName,
@@ -555,6 +535,10 @@ const Dashboard = () => {
       });
       setSelectedCourses(prev => [...prev, course]);
     }
+  };
+
+  const removeCourseFromReview = (course) => {
+    setSelectedCourses(prev => prev.filter(c => c.id !== course.id));
   };
 
   const proceedToPayment = () => {
@@ -572,11 +556,16 @@ const Dashboard = () => {
     }, 500);
   };
 
-  const handleApply = () => {
-    if (!canProceedToPayment()) { alert('Please select 3 courses from each of your chosen faculties'); return; }
-    // Track payment initiated
+  const handleContinue = () => {
+    if (selectedCourses.length < MIN_REQUIRED_COURSES) { 
+      setShowMinimumPopup(true);
+      return;
+    }
+    setStep(3);
+  };
+
+  const handleProceedToPayment = () => {
     trackEvent('payment_initiated', {
-      faculties: getSelectedFacultyObjects().map(f => f.name),
       courses: selectedCourses.length
     });
     proceedToPayment();
@@ -613,16 +602,7 @@ const Dashboard = () => {
   const getProgressPercent = () => {
     if (step === 1) return 25;
     if (step === 2) return 50;
-    if (step === 3) {
-      const selectedFacultiesObjects = getSelectedFacultyObjects();
-      if (selectedFacultiesObjects.length === 0) return 50;
-      let completedCount = 0;
-      for (const faculty of selectedFacultiesObjects) {
-        if (isFacultySelectionComplete(faculty)) completedCount++;
-      }
-      const progressPerFaculty = 25 / selectedFacultiesObjects.length;
-      return 50 + (completedCount * progressPerFaculty);
-    }
+    if (step === 3) return 75;
     return 100;
   };
 
@@ -672,6 +652,7 @@ const Dashboard = () => {
       <main className="app-main dashboard-main">
         <div className="app-container">
 
+          {/* ==================== STEP 1: ENTER MARKS ==================== */}
           {step === 1 && (
             <div className="wizard-step step-marks">
               <div className="marks-header-row">
@@ -727,18 +708,32 @@ const Dashboard = () => {
             </div>
           )}
 
+          {/* ==================== STEP 2: FACULTIES + COURSES ==================== */}
           {step === 2 && eligibleFaculties.length > 0 && (
             <div className="wizard-step step-faculties">
-              <h1 className="step-heading-large">CHOOSE 3 FACULTIES</h1>
-              <p className="step-subtitle-large">Select up to 3 faculties to see available courses</p>
+              <h1 className="step-heading-large">CHOOSE YOUR COURSES</h1>
+              <p className="step-subtitle-large">Click a faculty to view its courses. Select between {MIN_REQUIRED_COURSES} and {MAX_TOTAL_COURSES} courses.</p>
+
               <div className="faculty-grid-2col">
-                {visibleFaculties.map((faculty) => (
-                  <div key={faculty.id} className={`faculty-card-square ${selectedFaculties.includes(faculty.id) ? 'selected' : ''}`} onClick={() => toggleFacultySelection(faculty.id)}>
-                    <span className="faculty-card-name">{cleanFacultyName(faculty.name)}</span>
-                    {selectedFaculties.includes(faculty.id) && (<span className="faculty-card-check">✓</span>)}
-                  </div>
-                ))}
+                {visibleFaculties.map((faculty) => {
+                  const facultySelectedCourses = getSelectedCoursesForFaculty(faculty.name);
+                  const hasSelections = facultySelectedCourses.length > 0;
+                  
+                  return (
+                    <div 
+                      key={faculty.id} 
+                      className={`faculty-card-square ${hasSelections ? 'has-courses' : ''}`} 
+                      onClick={() => setActiveFacultyModal(faculty)}
+                    >
+                      <span className="faculty-card-name">{cleanFacultyName(faculty.name)}</span>
+                      {hasSelections && (
+                        <div className="faculty-card-badge">{facultySelectedCourses.length}</div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+
               {totalFacultyPages > 1 && (
                 <div className="faculty-pagination">
                   <button className="page-arrow" onClick={prevFacultyPage} disabled={facultyPage === 0}><FaChevronLeft /></button>
@@ -750,40 +745,77 @@ const Dashboard = () => {
                   <button className="page-arrow" onClick={nextFacultyPage} disabled={facultyPage === totalFacultyPages - 1}><FaChevronRight /></button>
                 </div>
               )}
-              <button className="primary-btn-full" onClick={() => { if (selectedFaculties.length === 0) { alert('Please select at least one faculty'); return; } setStep(3); }} disabled={selectedFaculties.length === 0}>
-                Continue to Select Courses
+
+              <button 
+                className="primary-btn-full" 
+                onClick={handleContinue}
+              >
+                Continue
               </button>
-              <button className="text-btn" onClick={() => setStep(1)}>← Back to marks</button>
+              <button className="text-btn" onClick={() => { setStep(1); setSelectedCourses([]); }}>← Back to marks</button>
             </div>
           )}
 
+          {/* ==================== STEP 3: REVIEW SELECTED COURSES ==================== */}
           {step === 3 && (
-            <div className="wizard-step step-choose-courses">
-              <h1 className="step-heading-large">Choose 9 courses</h1>
-              <p className="step-subtitle-large">This will be used to calibrate your courses</p>
-              <div className="faculty-courses-list">
-                {getSelectedFacultyObjects().map((faculty) => {
-                  const selectedCount = getSelectedCountForFaculty(faculty.name);
-                  const maxForFaculty = Math.min(3, faculty.courses.length);
-                  const isComplete = isFacultySelectionComplete(faculty);
-                  return (
-                    <div key={faculty.id} className={`faculty-selection-card ${isComplete ? 'complete' : ''}`} onClick={() => setActiveFacultyModal(faculty)}>
-                      <div className="faculty-selection-info"><span className="faculty-selection-name">{cleanFacultyName(faculty.name)}</span></div>
-                      <div className="faculty-selection-right">
-                        <span className="faculty-selection-count">{selectedCount}/{maxForFaculty}</span>
-                        <FaChevronRight className="faculty-selection-arrow" />
+            <div className="wizard-step step-review">
+              <button className="back-arrow-btn" onClick={() => setStep(2)}>
+                <FaArrowLeft /> Back to faculties
+              </button>
+
+              <h1 className="step-heading-large">Review Your Courses</h1>
+              <p className="step-subtitle-large step-subtitle-centered">
+                You've selected {selectedCourses.length} course{selectedCourses.length !== 1 ? 's' : ''}.
+              </p>
+
+              <div className="review-courses-list">
+                {selectedCourses.map((course, idx) => (
+                  <div key={idx} className="review-course-card">
+                    <div className="review-course-info">
+                      <FaBook className="review-course-icon" />
+                      <div className="review-course-details">
+                        <span className="review-course-name">{course.name}</span>
+                        <span className="review-course-institution">{course.institution_name || 'N/A'}</span>
                       </div>
                     </div>
-                  );
-                })}
+                    <button 
+                      className="review-course-remove" 
+                      onClick={() => removeCourseFromReview(course)}
+                      title="Remove course"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                ))}
               </div>
-              <button className="primary-btn-full" onClick={handleApply} disabled={!canProceedToPayment()}>Continue</button>
-              <button className="text-btn" onClick={() => setStep(2)}>← Back to faculties</button>
+
+              <button 
+                className="primary-btn-full review-continue-btn" 
+                onClick={handleProceedToPayment}
+              >
+                Continue
+              </button>
             </div>
           )}
 
-          <CourseSelectionModal faculty={activeFacultyModal} onClose={() => setActiveFacultyModal(null)} selectedCourses={selectedCourses} onToggleCourse={toggleCourseSelection} getSelectedCountForFaculty={getSelectedCountForFaculty} />
+          {/* Course Selection Modal */}
+          <CourseSelectionModal 
+            faculty={activeFacultyModal} 
+            onClose={() => setActiveFacultyModal(null)} 
+            selectedCourses={selectedCourses} 
+            onToggleCourse={toggleCourseSelection} 
+          />
 
+          {/* Minimum Courses Popup */}
+          {showMinimumPopup && (
+            <MinimumCoursesPopup 
+              onClose={() => setShowMinimumPopup(false)} 
+              selectedCount={selectedCourses.length} 
+              requiredCount={MIN_REQUIRED_COURSES} 
+            />
+          )}
+
+          {/* No faculties found */}
           {step === 2 && eligibleFaculties.length === 0 && subjects.some(s => s.mark && !isNaN(s.mark)) && (
             <div className="no-faculties">
               <h3>No Eligible Faculties Found</h3>

@@ -1501,3 +1501,145 @@ body {
   60% { transform: translateX(0); }
   100% { transform: translateX(0); }
 }
+/* Step 3 - Review Page */
+/* Faculty card badge */
+.faculty-card-square {
+  position: relative;
+}
+
+.faculty-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #007bff;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Step 3 - Review Page */
+.step-review {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.back-arrow-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.back-arrow-btn:hover {
+  color: #007bff;
+}
+
+.step-subtitle-centered {
+  text-align: center;
+}
+
+.review-courses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 32px;
+}
+
+.review-course-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.review-course-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.review-course-icon {
+  color: #007bff;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.review-course-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.review-course-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.review-course-institution {
+  font-size: 11px;
+  color: #888;
+}
+
+.review-course-remove {
+  background: none;
+  border: none;
+  color: #cbd5e0;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.review-course-remove:hover {
+  color: #e53e3e;
+  background: #fff5f5;
+}
+
+.review-continue-btn {
+  margin-top: 0;
+}
+
+/* Minimum courses popup */
+.minimum-popup {
+  max-width: 400px !important;
+}
+
+.minimum-popup-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.minimum-popup-body p {
+  margin-bottom: 10px;
+  font-size: 15px;
+  color: #2d3748;
+}
+
+.minimum-popup-hint {
+  color: #888 !important;
+  font-size: 13px !important;
+  margin-top: 16px !important;
+}

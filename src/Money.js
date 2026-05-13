@@ -5,7 +5,8 @@ import {
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
   FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank,
-  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLightbulb
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLaptop,
+  FaMoneyBillWave
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -26,6 +27,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   // SmartClass leads
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
+  const [hasLaptop, setHasLaptop] = useState(false);
+  const [requiresNsfas, setRequiresNsfas] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -220,22 +223,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   };
 
   const validateForm = () => {
-    if (hasCompletedPaymentBefore) {
-      return true;
-    }
-    
-    if (!formData.firstName || formData.firstName.trim().length < 2) {
-      setError('Please enter your first name');
-      return false;
-    }
-    if (!formData.lastName || formData.lastName.trim().length < 2) {
-      setError('Please enter your last name');
-      return false;
-    }
-    if (!formData.idNumber || formData.idNumber.trim().length < 6) {
-      setError('Please enter a valid ID/Passport number');
-      return false;
-    }
     if (!formData.email || !formData.email.includes('@')) {
       setError('Please enter a valid email address');
       return false;
@@ -244,12 +231,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       setError('Please enter a valid phone number');
       return false;
     }
-    if (!documents.id.uploaded) {
-      setFieldErrors(prev => ({ ...prev, id: 'Please upload your ID document' }));
-      return false;
-    }
-    if (!documents.results.uploaded) {
-      setFieldErrors(prev => ({ ...prev, results: 'Please upload your Matric/Grade 11 results' }));
+    if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
+      setError('Please enter a valid WhatsApp number');
       return false;
     }
     return true;
@@ -257,7 +240,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
   // Save SmartClass lead to database
   const saveSmartClassLead = async () => {
-    if (!needsHelp) return;
+    if (!needsHelp && !isUpgrading && !hasLaptop && !requiresNsfas) return;
     
     const token = localStorage.getItem('authToken');
     try {
@@ -273,6 +256,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
           lastName: formData.lastName,
           phoneNumber: formData.phoneNumber,
           isUpgrading: isUpgrading,
+          needsHelp: needsHelp,
+          hasLaptop: hasLaptop,
+          requiresNsfas: requiresNsfas,
           previousSchool: formData.previousSchool,
           previousSchoolYear: formData.previousSchoolYear
         })
@@ -316,6 +302,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         kinGender: formData.kinGender,
         kinPhone: formData.kinPhone,
         kinEmail: formData.kinEmail,
+        requiresNsfas: requiresNsfas,
         documents: {
           id: documents.id.path || null,
           results: documents.results.path || null
@@ -356,6 +343,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         kinPhone: formData.kinPhone,
         kinIdNumber: formData.kinIdNumber,
         kinGender: formData.kinGender,
+        requiresNsfas: requiresNsfas,
         package: applicationData.package,
         amount: totalAmount,
         universities: applicationData.universities,
@@ -363,7 +351,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         transactionId: transactionId,
         paymentMethod: paymentMethod,
         isUpgrading: isUpgrading,
-        needsHelp: needsHelp
+        needsHelp: needsHelp,
+        hasLaptop: hasLaptop
       })
     });
     
@@ -460,6 +449,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         kinIdNumber: formData.kinIdNumber,
         kinGender: formData.kinGender,
         kinEmail: formData.kinEmail,
+        requiresNsfas: requiresNsfas,
         documents: {
           id: documents.id.path || null,
           results: documents.results.path || null
@@ -588,7 +578,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             <p>
               {hasCompletedPaymentBefore 
                 ? 'Welcome back! Your information is already saved. Complete your payment below.' 
-                : 'Please provide all your details for the university applications'}
+                : 'Please provide your details for the university applications'}
             </p>
           </div>
 
@@ -627,14 +617,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   
                   <div className="money-row">
                     <div className="money-group">
-                      <label><FaUser /> First Name *</label>
+                      <label><FaUser /> First Name</label>
                       <input
                         type="text"
                         name="firstName"
                         placeholder="John"
                         value={formData.firstName}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
@@ -651,49 +640,45 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
 
                   <div className="money-group">
-                    <label><FaUser /> Last Name *</label>
+                    <label><FaUser /> Last Name</label>
                     <input
                       type="text"
                       name="lastName"
                       placeholder="Doe"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      required
                     />
                   </div>
 
                   <div className="money-group">
-                    <label><FaIdCard /> ID / Passport Number *</label>
+                    <label><FaIdCard /> ID / Passport Number</label>
                     <input
                       type="text"
                       name="idNumber"
                       placeholder="000101 5084 089"
                       value={formData.idNumber}
                       onChange={handleInputChange}
-                      required
                     />
                     <small className="field-note">This will be used for verification and payment reference</small>
                   </div>
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label>Date of Birth *</label>
+                      <label>Date of Birth</label>
                       <input
                         type="date"
                         name="dateOfBirth"
                         value={formData.dateOfBirth}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
                     <div className="money-group">
-                      <label>Gender *</label>
+                      <label>Gender</label>
                       <select
                         name="gender"
                         value={formData.gender}
                         onChange={handleInputChange}
-                        required
                         className="money-select"
                       >
                         <option value="">Select</option>
@@ -706,14 +691,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label>Nationality *</label>
+                      <label>Nationality</label>
                       <input
                         type="text"
                         name="nationality"
                         placeholder="South African"
                         value={formData.nationality}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
@@ -777,58 +761,54 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                 </div>
 
-                {/* Section 3: Detailed Residential Address */}
+                {/* Section 3: Residential Address */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">3</span>
-                    <h3>Detailed Residential Address</h3>
+                    <h3>Residential Address</h3>
                   </div>
                   
                   <div className="money-group">
-                    <label><FaHome /> Street Address *</label>
+                    <label><FaHome /> Street Address</label>
                     <input
                       type="text"
                       name="address"
                       placeholder="123 Main Street, Unit 4B"
                       value={formData.address}
                       onChange={handleInputChange}
-                      required
                     />
                     <small className="field-note">Include house/unit number and street name</small>
                   </div>
 
                   <div className="money-group">
-                    <label><FaBuilding /> Suburb / Area *</label>
+                    <label><FaBuilding /> Suburb / Area</label>
                     <input
                       type="text"
                       name="suburb"
                       placeholder="Sandton"
                       value={formData.suburb}
                       onChange={handleInputChange}
-                      required
                     />
                   </div>
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label><FaCity /> City / Town *</label>
+                      <label><FaCity /> City / Town</label>
                       <input
                         type="text"
                         name="city"
                         placeholder="Johannesburg"
                         value={formData.city}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
                     <div className="money-group">
-                      <label><FaMapMarkerAlt /> Province *</label>
+                      <label><FaMapMarkerAlt /> Province</label>
                       <select
                         name="province"
                         value={formData.province}
                         onChange={handleInputChange}
-                        required
                         className="money-select"
                       >
                         <option value="">Select Province</option>
@@ -846,14 +826,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
 
                   <div className="money-group">
-                    <label>Postal Code *</label>
+                    <label>Postal Code</label>
                     <input
                       type="text"
                       name="postalCode"
                       placeholder="2000"
                       value={formData.postalCode}
                       onChange={handleInputChange}
-                      required
                     />
                   </div>
                 </div>
@@ -866,25 +845,23 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                   
                   <div className="money-group">
-                    <label><FaSchool /> School Name *</label>
+                    <label><FaSchool /> School Name</label>
                     <input
                       type="text"
                       name="previousSchool"
                       placeholder="e.g. Parktown High School"
                       value={formData.previousSchool}
                       onChange={handleInputChange}
-                      required
                     />
                   </div>
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label><FaMapMarkerAlt /> School Province *</label>
+                      <label><FaMapMarkerAlt /> School Province</label>
                       <select
                         name="previousSchoolProvince"
                         value={formData.previousSchoolProvince}
                         onChange={handleInputChange}
-                        required
                         className="money-select"
                       >
                         <option value="">Select Province</option>
@@ -901,14 +878,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                     </div>
 
                     <div className="money-group">
-                      <label><FaCalendarAlt /> Year Completed/Attended *</label>
+                      <label><FaCalendarAlt /> Year Completed/Attended</label>
                       <input
                         type="text"
                         name="previousSchoolYear"
                         placeholder="2023"
                         value={formData.previousSchoolYear}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
                   </div>
@@ -936,12 +912,32 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                         <span>Do you need help with your studies?</span>
                       </label>
                     </div>
-                    
-                
+
+                    <div className="smartclass-checkbox-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={hasLaptop}
+                          onChange={(e) => setHasLaptop(e.target.checked)}
+                        />
+                        <span><FaLaptop style={{ marginRight: '4px' }} />Do you have access to a laptop/computer?</span>
+                      </label>
+                    </div>
+
+                    <div className="smartclass-checkbox-row">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={requiresNsfas}
+                          onChange={(e) => setRequiresNsfas(e.target.checked)}
+                        />
+                        <span><FaMoneyBillWave style={{ marginRight: '4px' }} />Do you require NSFAS funding?</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
 
-                {/* Section 5: Next of Kin / Emergency Contact (ENHANCED) */}
+                {/* Section 5: Next of Kin / Emergency Contact */}
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">5</span>
@@ -949,37 +945,34 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
                   
                   <div className="money-group">
-                    <label><FaUserTie /> Full Name *</label>
+                    <label><FaUserTie /> Full Name</label>
                     <input
                       type="text"
                       name="kinName"
                       placeholder="Jane Doe"
                       value={formData.kinName}
                       onChange={handleInputChange}
-                      required
                     />
                   </div>
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label><FaIdCard /> ID Number *</label>
+                      <label><FaIdCard /> ID Number</label>
                       <input
                         type="text"
                         name="kinIdNumber"
                         placeholder="800505 0187 085"
                         value={formData.kinIdNumber}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
                     <div className="money-group">
-                      <label>Gender *</label>
+                      <label>Gender</label>
                       <select
                         name="kinGender"
                         value={formData.kinGender}
                         onChange={handleInputChange}
-                        required
                         className="money-select"
                       >
                         <option value="">Select</option>
@@ -991,12 +984,11 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   </div>
 
                   <div className="money-group">
-                    <label>Relationship *</label>
+                    <label>Relationship</label>
                     <select
                       name="kinRelationship"
                       value={formData.kinRelationship}
                       onChange={handleInputChange}
-                      required
                       className="money-select"
                     >
                       <option value="">Select Relationship</option>
@@ -1012,14 +1004,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
                   <div className="money-row">
                     <div className="money-group">
-                      <label><FaPhoneAlt /> Phone Number *</label>
+                      <label><FaPhoneAlt /> Phone Number</label>
                       <input
                         type="tel"
                         name="kinPhone"
                         placeholder="+27 11 123 4567"
                         value={formData.kinPhone}
                         onChange={handleInputChange}
-                        required
                       />
                     </div>
 
@@ -1040,7 +1031,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                 <div className="money-section-card">
                   <div className="section-title">
                     <span className="section-number">6</span>
-                    <h3>Required Documents</h3>
+                    <h3>Documents</h3>
                     <small className="section-hint">Max 5MB per file. PDF or images only.</small>
                   </div>
                   

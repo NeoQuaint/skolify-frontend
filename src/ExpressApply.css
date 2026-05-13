@@ -172,3 +172,31 @@
     font-size: 14px;
   }
 }
+
+.express-logo-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  min-height: 80px;
+}
+
+
+.express-logo {
+  position: relative;
+  z-index: 2;
+}
+.express-sticky-row {
+  display: flex;
+  justify-content: center;
+  margin-top: -40px;
+  margin-bottom: 20px;
+}
+
+.express-sticky-note {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  transform: rotate(-12deg);
+}

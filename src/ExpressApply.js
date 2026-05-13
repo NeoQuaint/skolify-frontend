@@ -184,13 +184,16 @@ const ExpressApply = () => {
   return (
     <div className="express-page">
       <div className="express-container">
-        <div className="express-logo-row">
-          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="express-logo" />
-        </div>
-        
+  <div className="express-logo-row">
+  <img src="/Skolify-Logo.jpeg" alt="Skolify" className="express-logo" />
+</div>
+<div className="express-sticky-row">
+  <img src="/SN.png" alt="Sticky Note" className="express-sticky-note" />
+</div>
+
         <div className="express-heading">
           <h1>Fill Form</h1>
-          <p className="express-subtitle">Complete your application in minutes</p>
+          <p className="express-subtitle">Stuck on your application? Hand it over.</p>
         </div>
 
         {error && <div className="money-error">{error}</div>}

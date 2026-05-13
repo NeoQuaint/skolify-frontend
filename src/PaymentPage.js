@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
@@ -27,7 +27,10 @@ const PaymentPage = () => {
   const [selectedCourses, setSelectedCourses] = useState({});
   const [selectedCourseNames, setSelectedCourseNames] = useState([]);
   const [showPaymentPopup, setShowPaymentPopup] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState('premium');
+  const [selectedPackage, setSelectedPackage] = useState(() => {
+    const saved = localStorage.getItem('selectedPackage');
+    return saved || null;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -57,6 +60,7 @@ const PaymentPage = () => {
   const [packageToApply, setPackageToApply] = useState(null);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showPackageRequiredPopup, setShowPackageRequiredPopup] = useState(false);
 
   const universityLogos = useMemo(() => ({
     'University of Johannesburg': { code: 'UJ', logo: '/UJ.jpeg' },
@@ -134,6 +138,11 @@ const PaymentPage = () => {
     return [];
   }, [location.state, studentMarks]);
 
+  // Scroll to top on load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   useEffect(() => {
     const loadPreviousOrders = async () => {
       const token = localStorage.getItem('authToken');
@@ -152,7 +161,6 @@ const PaymentPage = () => {
     loadPreviousOrders();
   }, []);
 
-  // Track page view
   useEffect(() => {
     trackEvent('page_view', { page: 'payment' });
   }, []);
@@ -191,8 +199,6 @@ const PaymentPage = () => {
     if (savedMarks) { try { const m = JSON.parse(savedMarks); if (m.length > 0) setStudentMarks(m); } catch (e) {} }
     const savedCourses = localStorage.getItem('selectedUniversityCourses');
     if (savedCourses) { try { setSelectedCourses(JSON.parse(savedCourses)); } catch (e) { setSelectedCourses({}); } }
-    const savedPackage = localStorage.getItem('selectedPackage');
-    if (savedPackage) setSelectedPackage(savedPackage);
   }, [location.state]);
 
   useEffect(() => {
@@ -248,14 +254,13 @@ const PaymentPage = () => {
   }, [selectedCourseNames]);
 
   const selectedUniCount = Object.keys(selectedCourses).length;
-  const maxUnis = packageLimits[selectedPackage].universities;
+  const maxUnis = selectedPackage ? packageLimits[selectedPackage].universities : 0;
   const totalApplications = Object.values(selectedCourses).reduce((sum, courses) => sum + (courses?.length || 0), 0);
-  const showMaximiseBanner = selectedUniCount > 0 && selectedUniCount === maxUnis && maxUnis < 6;
+  const showMaximiseBanner = selectedPackage && selectedUniCount > 0 && selectedUniCount === maxUnis && maxUnis < 6;
 
   const handlePackageSelectConfirm = (pkg) => {
     setSelectedPackage(pkg);
     localStorage.setItem('selectedPackage', pkg);
-    // Track package changed
     trackEvent('package_changed', { package: pkg, price: packagePrices[pkg] });
     const current = Object.keys(selectedCourses).length;
     const newLimit = packageLimits[pkg].universities;
@@ -282,6 +287,11 @@ const PaymentPage = () => {
   };
 
   const handleUniversityClick = (university) => {
+    if (!selectedPackage) {
+      trackEvent('package_required_popup_shown', { university: university.code });
+      setShowPackageRequiredPopup(true);
+      return;
+    }
     if (isUniversityInPreviousOrders(university.code, university.name)) {
       showNotificationMessage(`You've already applied to ${university.code} in a previous order.`, 'warning');
       return;
@@ -291,7 +301,6 @@ const PaymentPage = () => {
       setShowSwitchPopup(true);
       return;
     }
-    // Track university selected
     trackEvent('university_selected', { university: university.code, name: university.name });
     setSelectedUniversity(university);
   };
@@ -416,8 +425,6 @@ const PaymentPage = () => {
     const uni = expandedUniversity.university;
     const code = uni.code;
     const temp = tempSelections[code] || [];
-    const limit = getInstitutionCourseLimit(uni.name);
-    if (temp.length !== limit) { showNotificationMessage(`Select exactly ${limit} courses for ${uni.name}`, 'warning'); return; }
     const isNew = !selectedCourses[code];
     const newTotal = Object.keys(selectedCourses).length + (isNew ? 1 : 0);
     if (isNew && newTotal > maxUnis) { setShowSwitchPopup(true); setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({}); return; }
@@ -425,7 +432,9 @@ const PaymentPage = () => {
     setSelectedCourses(updated);
     localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
     setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({});
-    showNotificationMessage(`Saved ${uni.code}`, 'success');
+    if (temp.length > 0) {
+      showNotificationMessage(`Saved ${uni.code}`, 'success');
+    }
   };
 
   const applyMaximiseSuggestion = (suggestion) => {
@@ -487,9 +496,12 @@ const PaymentPage = () => {
     const updated = { ...selectedCourses, [code]: [...current, course.name] };
     setSelectedCourses(updated);
     localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
+    showNotificationMessage(`Added "${course.name}" to ${uni.code}`, 'success');
+  };
+
+  const handleAlternativeDone = () => {
     setShowAlternativeModal(false);
     setAlternativeUniversity(null);
-    showNotificationMessage(`Added "${course.name}" to ${uni.code}`, 'success');
   };
 
   const savePaymentSelectionToDatabase = async () => {
@@ -545,16 +557,31 @@ const PaymentPage = () => {
   };
 
   const handleApply = async () => {
+    if (!selectedPackage) {
+      setShowPackageRequiredPopup(true);
+      return;
+    }
+    
     const selectedCount = Object.keys(selectedCourses).length;
     const limit = packageLimits[selectedPackage].universities;
-    if (selectedCount < limit) { showNotificationMessage(`Select ${limit - selectedCount} more universit${limit - selectedCount > 1 ? 'ies' : 'y'}.`, 'warning'); return; }
-    if (selectedCount > limit) { showNotificationMessage(`Too many universities. Upgrade or remove some.`, 'warning'); return; }
-    for (const [code, courses] of Object.entries(selectedCourses)) {
-      const uni = universities.find(u => u.code === code);
-      if (uni && courses.length !== getInstitutionCourseLimit(uni.name)) {
-        showNotificationMessage(`${uni.code}: select ${getInstitutionCourseLimit(uni.name)} courses.`, 'warning'); return;
-      }
+    
+    if (selectedCount === 0) {
+      showNotificationMessage('Please select at least one university.', 'warning');
+      return;
     }
+    
+    if (selectedCount > limit) { 
+      showNotificationMessage(`You've selected ${selectedCount} universities but your ${selectedPackage} package only allows ${limit}. Remove some or upgrade.`, 'warning'); 
+      return; 
+    }
+
+    trackEvent('payment_initiated', {
+      package: selectedPackage,
+      price: packagePrices[selectedPackage],
+      universityCount: selectedUniCount,
+      courseCount: totalApplications,
+      maxAllowed: packageLimits[selectedPackage].universities
+    });
 
     await savePaymentSelectionToDatabase();
     setShowPaymentPopup(true);
@@ -610,6 +637,27 @@ const PaymentPage = () => {
           </div>
         )}
 
+        <div className="simple-hero">
+          <div className="hero-icon-wrapper">
+            <FaCheckCircle className="hero-check-icon" />
+          </div>
+          <h1 className="simple-hero-title">
+            Congratulations<br />
+            <span className="simple-hero-text">Skolify has found <span className="simple-hero-highlight">{totalFound}</span> Universities</span>
+          </h1>
+        </div>
+
+        <div className="simple-selection-section">
+          <p className="simple-selection-label">Choose number of universities you want to apply to</p>
+          <div className="simple-number-options">
+            {['basic', 'standard', 'premium'].map(pkgKey => (
+              <button key={pkgKey} className={`simple-number-btn ${selectedPackage === pkgKey ? 'active' : ''}`} onClick={() => handlePackageClick(pkgKey)}>
+                {packageLimits[pkgKey].universities}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {showMaximiseBanner && (
           <div className="maximise-banner">
             <FaLightbulb className="maximise-icon" />
@@ -622,27 +670,6 @@ const PaymentPage = () => {
             </button>
           </div>
         )}
-
-        <div className="simple-hero">
-          <div className="hero-icon-wrapper">
-            <FaCheckCircle className="hero-check-icon" />
-          </div>
-          <h1 className="simple-hero-title">
-            Congratulations<br />
-            <span className="simple-hero-text">Skolify has found <span className="simple-hero-highlight">{totalFound}</span> Universities</span>
-          </h1>
-        </div>
-
-        <div className="simple-selection-section">
-          <p className="simple-selection-label">choose number of universities you want to apply to</p>
-          <div className="simple-number-options">
-            {['basic', 'standard', 'premium'].map(pkgKey => (
-              <button key={pkgKey} className={`simple-number-btn ${selectedPackage === pkgKey ? 'active' : ''}`} onClick={() => handlePackageClick(pkgKey)}>
-                {packageLimits[pkgKey].universities}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {isLoading ? (
           <div className="simple-loading"><FaSpinner className="spinner" /><p>Loading universities...</p></div>
@@ -658,9 +685,9 @@ const PaymentPage = () => {
                   {noFeeUniversities.map(uni => {
                     const isSelected = selectedCourses[uni.code]?.length > 0;
                     const courseCount = selectedCourses[uni.code]?.length || 0;
-                    const isFull = selectedUniCount >= maxUnis && !isSelected;
+                    const isFull = selectedPackage && selectedUniCount >= maxUnis && !isSelected;
                     const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
-                    const disabled = isFull || isPrev;
+                    const disabled = !selectedPackage || isFull || isPrev;
                     return (
                       <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
                         <div className="simple-uni-logo">
@@ -686,9 +713,9 @@ const PaymentPage = () => {
                   {feeUniversities.map(uni => {
                     const isSelected = selectedCourses[uni.code]?.length > 0;
                     const courseCount = selectedCourses[uni.code]?.length || 0;
-                    const isFull = selectedUniCount >= maxUnis && !isSelected;
+                    const isFull = selectedPackage && selectedUniCount >= maxUnis && !isSelected;
                     const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
-                    const disabled = isFull || isPrev;
+                    const disabled = !selectedPackage || isFull || isPrev;
                     return (
                       <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
                         <div className="simple-uni-logo">
@@ -707,14 +734,16 @@ const PaymentPage = () => {
           </>
         )}
 
-        <div className="simple-usage-stats">
-          <span>Universities: {selectedUniCount}/{maxUnis}</span>
-          <span>Courses: {totalApplications}</span>
-        </div>
+        {selectedPackage && (
+          <div className="simple-usage-stats">
+            <span>Universities: {selectedUniCount}/{maxUnis}</span>
+            <span>Courses: {totalApplications}</span>
+          </div>
+        )}
 
         <div className="apply-section-inline">
-          <button className="primary-btn-full" onClick={handleApply} disabled={isSavingSelection}>
-            {isSavingSelection ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Apply'}
+          <button className="primary-btn-full" onClick={handleApply} disabled={isSavingSelection || !selectedPackage}>
+            {!selectedPackage ? 'Select a package to continue' : isSavingSelection ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Apply'}
           </button>
         </div>
 
@@ -763,6 +792,63 @@ const PaymentPage = () => {
             
             <button className="package-modal-continue" onClick={() => setShowWelcomeModal(false)}>
               Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* PACKAGE REQUIRED POPUP */}
+      {showPackageRequiredPopup && (
+        <div className="package-popup-overlay" onClick={() => setShowPackageRequiredPopup(false)}>
+          <div className="package-popup-card" onClick={(e) => e.stopPropagation()}>
+            <button className="package-popup-close" onClick={() => setShowPackageRequiredPopup(false)}>×</button>
+            <div className="package-popup-hero">
+              <FaCheckCircle className="package-popup-check" />
+              <h2>Choose Your Package</h2>
+              <p>Select how many universities you'd like to apply to</p>
+            </div>
+            <p className="package-popup-desc" style={{ textAlign: 'center', marginBottom: '20px' }}>
+              Please select a package before choosing universities.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {['basic', 'standard', 'premium'].map(pkgKey => (
+                <button
+                  key={pkgKey}
+                  className="package-option-card"
+                  onClick={() => {
+                    handlePackageSelectConfirm(pkgKey);
+                    setShowPackageRequiredPopup(false);
+                  }}
+                  style={{
+                    padding: '16px 20px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '12px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    minWidth: '120px',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
+                    fontFamily: 'inherit'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#007bff';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#007bff' }}>{packageLimits[pkgKey].universities}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748', marginTop: '4px' }}>{packageNames[pkgKey]}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#2d3748', marginTop: '4px' }}>R{packagePrices[pkgKey]}</div>
+                </button>
+              ))}
+            </div>
+            <button className="package-popup-apply" onClick={() => setShowPackageRequiredPopup(false)}>
+              Close
             </button>
           </div>
         </div>
@@ -832,7 +918,12 @@ const PaymentPage = () => {
                   </div>
                   {remainingToSelect > 0 && (
                     <div className="select-more-section">
-                      <button className="select-more-btn" onClick={() => { setSelectedUniversity(null); setTimeout(() => findAlternativeCourses(selectedUniversity), 200); }}>
+                      <button className="select-more-btn" onClick={(e) => { 
+                        e.stopPropagation(); 
+                        const uni = selectedUniversity;
+                        setSelectedUniversity(null); 
+                        setTimeout(() => findAlternativeCourses(uni), 200); 
+                      }}>
                         <FaSearch /> Select {remainingToSelect} more Course{remainingToSelect > 1 ? 's' : ''}
                       </button>
                     </div>
@@ -849,8 +940,8 @@ const PaymentPage = () => {
             </div>
             <div className="courses-modal-footer">
               <div className="selected-courses-count">Selected: {currentForSelected.length}/{maxForSelected}</div>
-              <button className="done-selecting-btn" onClick={() => setSelectedUniversity(null)} disabled={currentForSelected.length !== maxForSelected}>
-                {currentForSelected.length === maxForSelected ? 'Done' : `Select ${remainingToSelect} more`}
+              <button className="done-selecting-btn" onClick={() => setSelectedUniversity(null)}>
+                Done
               </button>
             </div>
           </div>
@@ -860,14 +951,14 @@ const PaymentPage = () => {
       {/* ALTERNATIVE COURSES MODAL */}
       {showAlternativeModal && (
         <div className="courses-modal">
-          <div className="courses-modal-overlay" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}></div>
+          <div className="courses-modal-overlay" onClick={handleAlternativeDone}></div>
           <div className="courses-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="courses-modal-header alt-header">
               <div className="modal-university-info">
                 <h3>More Courses at {alternativeUniversity?.code || selectedUniversity?.code}</h3>
                 <p>Select additional courses you qualify for</p>
               </div>
-              <button className="close-courses-modal" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}><FaTimes /></button>
+              <button className="close-courses-modal" onClick={handleAlternativeDone}><FaTimes /></button>
             </div>
             <div className="courses-modal-body">
               {availableAlternatives.length > 0 ? (
@@ -894,7 +985,7 @@ const PaymentPage = () => {
               )}
             </div>
             <div className="courses-modal-footer">
-              <button className="done-selecting-btn" onClick={() => { setShowAlternativeModal(false); setAlternativeUniversity(null); }}>Done</button>
+              <button className="done-selecting-btn" onClick={handleAlternativeDone}>Done</button>
             </div>
           </div>
         </div>
@@ -1069,7 +1160,7 @@ const PaymentPage = () => {
         </div>
       )}
 
-      <Money isOpen={showPaymentPopup} onClose={() => setShowPaymentPopup(false)} totalAmount={packagePrices[selectedPackage]} selectedPackage={selectedPackage} onPaymentComplete={handlePaymentComplete} />
+      <Money isOpen={showPaymentPopup} onClose={() => setShowPaymentPopup(false)} totalAmount={selectedPackage ? packagePrices[selectedPackage] : 0} selectedPackage={selectedPackage} onPaymentComplete={handlePaymentComplete} />
 
       <button className="chatbot-floating-btn" onClick={() => window.open('https://wa.me/27822589917', '_blank')} title="Chat with us on WhatsApp">
         <FaCommentDots className="chatbot-msg-icon" />
