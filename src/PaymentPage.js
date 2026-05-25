@@ -427,27 +427,20 @@ const PaymentPage = () => {
     const temp = tempSelections[code] || [];
     const isNew = !selectedCourses[code];
     const newTotal = Object.keys(selectedCourses).length + (isNew ? 1 : 0);
-    if (isNew && newTotal > maxUnis) { setShowSwitchPopup(true); setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({}); return; }
+    if (isNew && newTotal > maxUnis) {
+      // Show switch popup but KEEP the maximise modal open
+      setShowSwitchPopup(true);
+      return;
+    }
     const updated = { ...selectedCourses, [code]: temp };
     setSelectedCourses(updated);
     localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-    setShowMaximiseModal(false); setExpandedUniversity(null); setTempSelections({});
+    // Go back to suggestion list, don't close the whole modal
+    setExpandedUniversity(null);
+    setTempSelections({});
     if (temp.length > 0) {
       showNotificationMessage(`Saved ${uni.code}`, 'success');
     }
-  };
-
-  const applyMaximiseSuggestion = (suggestion) => {
-    const uni = suggestion.university;
-    const courses = suggestion.eligibleCourses.slice(0, getInstitutionCourseLimit(uni.name));
-    const isNew = !selectedCourses[uni.code];
-    const newTotal = Object.keys(selectedCourses).length + (isNew ? 1 : 0);
-    if (isNew && newTotal > maxUnis) { setShowSwitchPopup(true); setShowMaximiseModal(false); return; }
-    const updated = { ...selectedCourses, [uni.code]: courses.map(c => c.name) };
-    setSelectedCourses(updated);
-    localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
-    setShowMaximiseModal(false);
-    showNotificationMessage(`Added ${uni.code}`, 'success');
   };
 
   const findAlternativeCourses = useCallback(async (university) => {
@@ -611,6 +604,14 @@ const PaymentPage = () => {
     finally { setTimeout(() => setIsProcessingComplete(false), 2000); }
   };
 
+  // Handler for switching package FROM the maximise modal (keeps modal open)
+  const handleSwitchFromMaximise = (pkg) => {
+    handlePackageSelectConfirm(pkg);
+    setShowSwitchPopup(false);
+    // Modal stays open - user can continue selecting
+    showNotificationMessage(`Switched to ${packageNames[pkg]}!`, 'success');
+  };
+
   const progressPercent = 75;
   const availableForSelected = selectedUniversity ? getAvailableCoursesForUniversity(selectedUniversity) : [];
   const currentForSelected = selectedUniversity ? (selectedCourses[selectedUniversity.code] || []) : [];
@@ -662,11 +663,11 @@ const PaymentPage = () => {
           <div className="maximise-banner">
             <FaLightbulb className="maximise-icon" />
             <div className="maximise-text">
-              <h4>Maximise your options</h4>
-              <p>Upgrade to add more universities and improve your chances</p>
+              <h4>Explore all qualifying universities</h4>
+              <p>See all other universities where you qualify for courses</p>
             </div>
             <button className="maximise-btn" onClick={calculateMaximiseOptions} disabled={isCalculatingMaximise}>
-              {isCalculatingMaximise ? <><FaSpinner className="spinner-icon" /> Loading...</> : <><FaMagic /> Upgrade</>}
+              {isCalculatingMaximise ? <><FaSpinner className="spinner-icon" /> Loading...</> : <><FaMagic /> Explore</>}
             </button>
           </div>
         )}
@@ -1004,7 +1005,7 @@ const PaymentPage = () => {
                     <h3>{expandedUniversity.university.name}</h3>
                   </div>
                 ) : (
-                  <h3><FaMagic style={{ marginRight: '8px' }} />Maximise Your Options</h3>
+                  <h3><FaMagic style={{ marginRight: '8px' }} />Explore All Qualifying Universities</h3>
                 )}
               </div>
               <button className="close-courses-modal" onClick={() => { setShowMaximiseModal(false); setExpandedUniversity(null); }}><FaTimes /></button>
@@ -1045,15 +1046,11 @@ const PaymentPage = () => {
                       );
                     })}
                   </div>
-                  <div className="save-row">
-                    <span>{(tempSelections[expandedUniversity.university.code]?.length || 0)}/{getInstitutionCourseLimit(expandedUniversity.university.name)}</span>
-                    <button className="done-selecting-btn" onClick={saveTempSelections}>Save</button>
-                  </div>
                 </>
               ) : (
                 <>
                   {isCalculatingMaximise ? (
-                    <div className="loading-state"><FaSpinner className="spinner-icon large" /><p>Finding universities...</p></div>
+                    <div className="loading-state"><FaSpinner className="spinner-icon large" /><p>Finding universities where you qualify...</p></div>
                   ) : maximiseSuggestions.length > 0 ? (
                     maximiseSuggestions.map((s, idx) => (
                       <div key={idx} className="suggestion-card">
@@ -1067,7 +1064,6 @@ const PaymentPage = () => {
                           </div>
                         </div>
                         <div className="suggestion-actions">
-                          <button className="quick-add-btn" onClick={() => applyMaximiseSuggestion(s)}>Quick Add ({s.courseCount})</button>
                           <button className="choose-btn" onClick={() => handleUniversityClickInMaximise(s)}>Choose Courses</button>
                         </div>
                       </div>
@@ -1078,16 +1074,27 @@ const PaymentPage = () => {
                 </>
               )}
             </div>
+            {/* STICKY FOOTER - always visible */}
+            <div className="courses-modal-footer maximise-footer">
+              {expandedUniversity ? (
+                <>
+                  <span>{(tempSelections[expandedUniversity.university.code]?.length || 0)}/{getInstitutionCourseLimit(expandedUniversity.university.name)} selected</span>
+                  <button className="done-selecting-btn" onClick={saveTempSelections}>Save</button>
+                </>
+              ) : (
+                <button className="done-selecting-btn" onClick={() => { setShowMaximiseModal(false); setExpandedUniversity(null); }}>Done</button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* SWITCH POPUP */}
-      {showSwitchPopup && (
+      {/* SWITCH POPUP - regular version (closes on switch, used outside maximise) */}
+      {showSwitchPopup && !showMaximiseModal && (
         <div className="simple-fee-modal">
           <div className="simple-fee-overlay" onClick={() => setShowSwitchPopup(false)}></div>
           <div className="simple-fee-content" onClick={(e) => e.stopPropagation()}>
-            <div className="simple-fee-header header-orange"><h3>Package Limit</h3><button className="simple-fee-close" onClick={() => setShowSwitchPopup(false)}>×</button></div>
+            <div className="simple-fee-header header-orange"><h3>Package Limit Reached</h3><button className="simple-fee-close" onClick={() => setShowSwitchPopup(false)}>×</button></div>
             <div className="simple-fee-body">
               <p>You've reached your <strong>{selectedPackage}</strong> package limit of {maxUnis} universities.</p>
               {selectedPackage !== 'premium' && (
@@ -1104,6 +1111,36 @@ const PaymentPage = () => {
                   <p className="upgrade-price">R329</p>
                   <p className="upgrade-desc">4 Universities</p>
                   <button className="upgrade-btn blue" onClick={() => { handlePackageSelectConfirm('standard'); setShowSwitchPopup(false); }}>Switch to Standard</button>
+                </div>
+              )}
+            </div>
+            <div className="simple-fee-footer"><button className="simple-fee-btn" onClick={() => setShowSwitchPopup(false)}>Cancel</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* SWITCH POPUP - from maximise modal (keeps modal open after switch) */}
+      {showSwitchPopup && showMaximiseModal && (
+        <div className="simple-fee-modal" style={{ zIndex: 10001 }}>
+          <div className="simple-fee-overlay" onClick={() => setShowSwitchPopup(false)}></div>
+          <div className="simple-fee-content" onClick={(e) => e.stopPropagation()}>
+            <div className="simple-fee-header header-orange"><h3>Upgrade Required</h3><button className="simple-fee-close" onClick={() => setShowSwitchPopup(false)}>×</button></div>
+            <div className="simple-fee-body">
+              <p>Adding this university will exceed your <strong>{selectedPackage}</strong> package limit ({maxUnis} universities). Upgrade to continue adding.</p>
+              {selectedPackage !== 'premium' && (
+                <div className="upgrade-option">
+                  <h4>Premium Package</h4>
+                  <p className="upgrade-price">R499</p>
+                  <p className="upgrade-desc">6 Universities • Priority Processing</p>
+                  <button className="upgrade-btn green" onClick={() => handleSwitchFromMaximise('premium')}>Switch to Premium</button>
+                </div>
+              )}
+              {selectedPackage === 'basic' && (
+                <div className="upgrade-option">
+                  <h4>Standard Package</h4>
+                  <p className="upgrade-price">R329</p>
+                  <p className="upgrade-desc">4 Universities</p>
+                  <button className="upgrade-btn blue" onClick={() => handleSwitchFromMaximise('standard')}>Switch to Standard</button>
                 </div>
               )}
             </div>

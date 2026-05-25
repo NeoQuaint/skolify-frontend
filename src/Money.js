@@ -6,7 +6,7 @@ import {
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
   FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank,
   FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLaptop,
-  FaMoneyBillWave
+  FaMoneyBillWave, FaSave, FaArrowRight
 } from 'react-icons/fa';
 import API_URL from './config';
 
@@ -23,6 +23,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [copiedBank, setCopiedBank] = useState(false);
   const [pendingTransactionData, setPendingTransactionData] = useState(null);
+  const [showSaveForLaterPopup, setShowSaveForLaterPopup] = useState(false);
+  const [isSavingForLater, setIsSavingForLater] = useState(false);
   
   // SmartClass leads
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -471,6 +473,95 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     return trackingNumber;
   };
 
+  // Save profile without payment (for "Save for Later")
+  const saveProfileForLater = async () => {
+    setIsSavingForLater(true);
+    const token = localStorage.getItem('authToken');
+    
+    try {
+      // Save user profile data
+      const profileResponse = await fetch(`${API_URL}/api/user/update-profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          homeLanguage: formData.homeLanguage,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          address: formData.address,
+          suburb: formData.suburb,
+          city: formData.city,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          previousSchool: formData.previousSchool,
+          previousSchoolProvince: formData.previousSchoolProvince,
+          previousSchoolYear: formData.previousSchoolYear,
+          kinName: formData.kinName,
+          kinRelationship: formData.kinRelationship,
+          kinIdNumber: formData.kinIdNumber,
+          kinGender: formData.kinGender,
+          kinPhone: formData.kinPhone,
+          kinEmail: formData.kinEmail,
+          documents: {
+            id: documents.id.path || null,
+            results: documents.results.path || null
+          }
+        })
+      });
+      
+      if (profileResponse.ok) {
+        console.log('✅ Profile saved for later');
+      }
+      
+      // Save SmartClass leads if any
+      await saveSmartClassLead();
+      
+      // Save payment selection as pending
+      const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+      if (pendingSummary) {
+        const summary = JSON.parse(pendingSummary);
+        const paymentSelectionData = {
+          selectedPackage: summary.package,
+          universities: summary.universities,
+          totalCourses: summary.totalCourses,
+          totalUniversities: summary.totalUniversities,
+          totalCost: summary.totalCost,
+          courseDetails: summary.courseDetails,
+          status: 'pending_payment'
+        };
+        
+        await fetch(`${API_URL}/api/payment/save-selection`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(paymentSelectionData)
+        });
+      }
+      
+      setShowSaveForLaterPopup(false);
+      onClose();
+      navigate('/profile');
+      
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setError('Failed to save. Please try again.');
+    } finally {
+      setIsSavingForLater(false);
+    }
+  };
+
   const handleProceedToPayment = async () => {
     if (!validateForm()) {
       return;
@@ -553,6 +644,15 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     }
   };
 
+  // Handle close button - show save for later popup
+  const handleCloseClick = () => {
+    if (!hasCompletedPaymentBefore) {
+      setShowSaveForLaterPopup(true);
+    } else {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   if (isLoadingCheck) {
@@ -569,7 +669,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     <>
       <div className="money-overlay">
         <div className="money-container narrow" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-          <button className="money-close" onClick={onClose}>
+          <button className="money-close" onClick={handleCloseClick}>
             <FaTimes />
           </button>
 
@@ -1262,15 +1362,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                 className="payment-option-simple yoco"
                 onClick={() => {
                   setShowPaymentModal(false);
-                  let paymentLink = '';
-                  
-                  if (selectedPackage === 'basic') {
-                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage';
-                  } else if (selectedPackage === 'standard') {
-                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage';
-                  } else if (selectedPackage === 'premium') {
-                    paymentLink = 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage';
-                  }
+                  const paymentLink = packageLinks[selectedPackage];
                   
                   if (paymentLink) {
                     window.location.href = paymentLink;
@@ -1289,6 +1381,52 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
             <p className="payment-modal-footer-simple">
               Your ID: <strong>{formData.idNumber || 'Not provided'}</strong> • Payment reference
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* SAVE FOR LATER POPUP */}
+      {showSaveForLaterPopup && (
+        <div className="save-for-later-overlay" onClick={() => setShowSaveForLaterPopup(false)}>
+          <div className="save-for-later-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="save-for-later-close" onClick={() => setShowSaveForLaterPopup(false)}>
+              <FaTimes />
+            </button>
+            
+            <div className="save-for-later-icon">
+              <FaSave />
+            </div>
+            
+            <h3>Not ready to pay?</h3>
+            <p>No worries! We'll save your profile and selections so you can come back anytime to complete your payment.</p>
+            
+            <div className="save-for-later-actions">
+              <button 
+                className="save-for-later-btn primary"
+                onClick={saveProfileForLater}
+                disabled={isSavingForLater}
+              >
+                {isSavingForLater ? (
+                  <><FaSpinner className="spinner-icon" /> Saving...</>
+                ) : (
+                  <><FaSave /> Save & Continue Later</>
+                )}
+              </button>
+              
+              <button 
+                className="save-for-later-btn secondary"
+                onClick={() => {
+                  setShowSaveForLaterPopup(false);
+                  onClose();
+                }}
+              >
+                <FaTimes /> Exit Without Saving
+              </button>
+            </div>
+            
+            <p className="save-for-later-note">
+              Your data helps us prepare your applications faster when you're ready.
             </p>
           </div>
         </div>
