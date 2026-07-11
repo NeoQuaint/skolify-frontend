@@ -1,0 +1,381 @@
+/* src/FreemiumFriday.css */
+
+/* ============================================================ */
+/* CONFETTI                                                      */
+/* ============================================================ */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  left: var(--left);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 2px;
+  animation: confetti-fall 3.5s ease-in var(--delay) forwards;
+  opacity: 0;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift)) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* ============================================================ */
+/* PARTY DECORATION — animated celebration rings & emojis       */
+/* ============================================================ */
+.party-decoration {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 8px;
+}
+
+.party-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transform: translate(-50%, -50%);
+  animation: ring-pulse 2s ease-out infinite;
+}
+
+.party-ring--1 {
+  width: 60px;
+  height: 60px;
+  border-color: #f59e0b;
+  animation-delay: 0s;
+}
+
+.party-ring--2 {
+  width: 90px;
+  height: 90px;
+  border-color: #7c3aed;
+  animation-delay: 0.4s;
+}
+
+.party-ring--3 {
+  width: 120px;
+  height: 120px;
+  border-color: #ec4899;
+  animation-delay: 0.8s;
+}
+
+@keyframes ring-pulse {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+.party-poppers {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 40px;
+}
+
+.popper {
+  position: absolute;
+  font-size: 28px;
+  animation: popper-bounce 0.6s ease-in-out infinite alternate;
+}
+
+.popper--left {
+  left: 0;
+  top: 0;
+  animation-delay: 0s;
+}
+
+.popper--right {
+  right: 0;
+  top: 0;
+  animation-delay: 0.3s;
+}
+
+@keyframes popper-bounce {
+  0% {
+    transform: translateY(0) rotate(-10deg);
+  }
+  100% {
+    transform: translateY(-10px) rotate(10deg);
+  }
+}
+
+.party-sparkles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.sparkle {
+  position: absolute;
+  font-size: 14px;
+  animation: sparkle-float 1.5s ease-in-out infinite;
+}
+
+.sparkle--1 {
+  top: 0;
+  left: 50%;
+  animation-delay: 0s;
+}
+
+.sparkle--2 {
+  top: 50%;
+  right: 0;
+  animation-delay: 0.3s;
+}
+
+.sparkle--3 {
+  bottom: 0;
+  left: 50%;
+  animation-delay: 0.6s;
+}
+
+.sparkle--4 {
+  top: 50%;
+  left: 0;
+  animation-delay: 0.9s;
+}
+
+@keyframes sparkle-float {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ============================================================ */
+/* SLIM TOP BANNER                                               */
+/* ============================================================ */
+.freemium-banner {
+  background: #1a1a1a;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.freemium-banner-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.freemium-banner-text {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+/* ============================================================ */
+/* HERO / OFFER                                                  */
+/* ============================================================ */
+.freemium-hero {
+  text-align: center;
+  padding: 20px 16px 16px;
+  margin-bottom: 12px;
+}
+
+.freemium-hero-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 6px;
+}
+
+.freemium-hero-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.freemium-price-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.freemium-price {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.freemium-price-old {
+  font-size: 18px;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.freemium-price-save {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.freemium-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.freemium-perks span {
+  font-size: 13px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.freemium-perks span svg {
+  color: #16a34a;
+  font-size: 12px;
+}
+
+.freemium-deadline {
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ============================================================ */
+/* OFFER CARD IN FORM                                            */
+/* ============================================================ */
+.freemium-offer-card {
+  background: #faf5ff !important;
+  border: 1px solid #e9d5ff !important;
+}
+
+.freemium-offer-card .section-number {
+  background: #7c3aed !important;
+}
+
+.freemium-offer-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.freemium-offer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #374151;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3e8ff;
+}
+
+.freemium-offer-check {
+  color: #16a34a;
+}
+
+.freemium-offer-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  padding-top: 4px;
+}
+
+.freemium-offer-price {
+  font-size: 20px;
+  font-weight: 800;
+  color: #7c3aed;
+}
+
+.freemium-offer-price small {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 6px;
+}
+
+/* ============================================================ */
+/* SUBMIT BUTTON                                                 */
+/* ============================================================ */
+.freemium-submit-btn {
+  background: #7c3aed !important;
+}
+
+.freemium-submit-btn:hover:not(:disabled) {
+  background: #6d28d9 !important;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3) !important;
+}
+
+/* ============================================================ */
+/* MOBILE                                                        */
+/* ============================================================ */
+@media (max-width: 480px) {
+  .freemium-banner {
+    border-radius: 8px;
+    padding: 10px 16px;
+  }
+
+  .freemium-hero-title {
+    font-size: 22px;
+  }
+
+  .freemium-price {
+    font-size: 30px;
+  }
+
+  .freemium-perks span {
+    font-size: 12px;
+  }
+
+  .party-decoration {
+    width: 100px;
+    height: 100px;
+  }
+
+  .party-ring--1 { width: 50px; height: 50px; }
+  .party-ring--2 { width: 75px; height: 75px; }
+  .party-ring--3 { width: 100px; height: 100px; }
+
+  .popper { font-size: 22px; }
+  .sparkle { font-size: 12px; }
+}

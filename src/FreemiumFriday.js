@@ -1,7 +1,8 @@
-// src/ExpressApply.js
-import React, { useState } from 'react';
+// src/FreemiumFriday.js
+import React, { useState, useEffect } from 'react';
 import './Money.css';
 import './ExpressApply.css';
+import './FreemiumFriday.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaUpload, FaCheck, FaSpinner, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp,
@@ -9,22 +10,78 @@ import {
 } from 'react-icons/fa';
 import API_URL from './config';
 
-const ExpressApply = () => {
+/* ============================================================
+   CONFETTI
+   ============================================================ */
+const Confetti = ({ active }) => {
+  if (!active) return null;
+  const pieces = Array.from({ length: 60 });
+  return (
+    <div className="confetti-container" aria-hidden="true">
+      {pieces.map((_, i) => {
+        const color = ['#7c3aed','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#ffffff'][i % 7];
+        const left = Math.random() * 100;
+        const delay = Math.random() * 2;
+        const size = 6 + Math.random() * 8;
+        const drift = (Math.random() - 0.5) * 120;
+        return (
+          <div
+            key={i}
+            className="confetti-piece"
+            style={{
+              '--left': `${left}%`,
+              '--delay': `${delay}s`,
+              '--size': `${size}px`,
+              '--drift': `${drift}px`,
+              backgroundColor: color,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+/* ============================================================
+   PARTY DECORATION
+   ============================================================ */
+const PartyDecoration = () => {
+  return (
+    <div className="party-decoration" aria-hidden="true">
+      <div className="party-ring party-ring--1"></div>
+      <div className="party-ring party-ring--2"></div>
+      <div className="party-ring party-ring--3"></div>
+      <div className="party-poppers">
+        <span className="popper popper--left">🎉</span>
+        <span className="popper popper--right">🎊</span>
+      </div>
+      <div className="party-sparkles">
+        <span className="sparkle sparkle--1">✨</span>
+        <span className="sparkle sparkle--2">✨</span>
+        <span className="sparkle sparkle--3">✨</span>
+        <span className="sparkle sparkle--4">✨</span>
+      </div>
+    </div>
+  );
+};
+
+/* ============================================================
+   MAIN COMPONENT
+   ============================================================ */
+const FreemiumFriday = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
-  const [universityCount, setUniversityCount] = useState(3);
-  const [isTermSale, setIsTermSale] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
+  const [needsNsfas, setNeedsNsfas] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   
-  const PRICE_PER_UNI = 49;
-  const TERM_SALE_PRICE = 199;
-  const TERM_SALE_COUNT = 4;
-  
-  const totalPrice = isTermSale ? TERM_SALE_PRICE : universityCount * PRICE_PER_UNI;
+  const selectedPackage = 'freemium-friday';
+  const universityCount = 1;
+  const totalPrice = 0;
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -59,17 +116,16 @@ const ExpressApply = () => {
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
+  useEffect(() => {
+    setShowConfetti(true);
+    const timer = setTimeout(() => setShowConfetti(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setError('');
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleTermSaleToggle = () => {
-    setIsTermSale(!isTermSale);
-    if (!isTermSale) {
-      setUniversityCount(TERM_SALE_COUNT);
-    }
   };
 
   const handleFileUpload = async (type, e) => {
@@ -140,12 +196,13 @@ const ExpressApply = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          selectedPackage: isTermSale ? 'term_sale' : `${universityCount} Universities`,
-          isTermSale,
-          universityCount: isTermSale ? TERM_SALE_COUNT : universityCount,
+          selectedPackage,
+          isJuneSpecial: false,
+          universityCount,
           totalPrice,
           isUpgrading,
           needsHelp,
+          needsNsfas,
           documents: {
             id: documents.id.path || null,
             results: documents.results.path || null
@@ -160,19 +217,14 @@ const ExpressApply = () => {
         localStorage.setItem('expressEmail', data.email);
         localStorage.setItem('expressTracking', data.trackingNumber);
         
+        setShowConfetti(true);
         setIsSuccess(true);
-        
-        setTimeout(() => {
-          if (data.redirectUrl) {
-            window.location.href = data.redirectUrl;
-          }
-        }, 2000);
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
         setIsSubmitting(false);
       }
     } catch (err) {
-      console.error('Express apply error:', err);
+      console.error('Freemium Friday apply error:', err);
       setError('Network error. Please check your connection and try again.');
       setIsSubmitting(false);
     }
@@ -180,15 +232,18 @@ const ExpressApply = () => {
 
   if (isSuccess) {
     return (
-      <div className="express-page">
+      <div className="express-page freemium-page">
+        <Confetti active={showConfetti} />
         <div className="express-container">
+          <div className="freemium-banner">
+            <img src="/Skolify-Logo.jpeg" alt="Skolify" className="freemium-banner-logo" />
+            <span className="freemium-banner-text">Freemium Friday</span>
+          </div>
+
           <div className="express-success-card">
             <FaCheck className="express-success-icon" />
             <h2>Application Submitted!</h2>
             <p>We'll WhatsApp you at <strong>{formData.phoneNumber}</strong> with your course options within 24 hours.</p>
-            <p style={{ marginTop: '12px', fontSize: '14px', color: '#64748b' }}>
-              Redirecting to payment page...
-            </p>
           </div>
         </div>
       </div>
@@ -196,18 +251,43 @@ const ExpressApply = () => {
   }
 
   return (
-    <div className="express-page">
+    <div className="express-page freemium-page">
+      <Confetti active={showConfetti} />
       <div className="express-container">
-        <div className="express-logo-row">
-          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="express-logo" />
-        </div>
-        <div className="express-sticky-row">
-          <img src="/SN.png" alt="Sticky Note" className="express-sticky-note" />
+        
+        {/* SLIM BANNER */}
+        <div className="freemium-banner">
+          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="freemium-banner-logo" />
+          <span className="freemium-banner-text">Freemium Friday</span>
         </div>
 
+        {/* HERO / OFFER */}
+        <div className="freemium-hero">
+          <PartyDecoration />
+          <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 600, color: '#7c3aed' }}>1 university application</p>
+          <h1 className="freemium-hero-title">We Apply For You</h1>
+          <p className="freemium-hero-subtitle">
+            One university. All administration handled. Limited to 10 students.
+          </p>
+          
+          <div className="freemium-price-block">
+            <span className="freemium-price">FREE</span>
+            <span className="freemium-price-old">R49</span>
+            <span className="freemium-price-save">Save R49</span>
+          </div>
+
+          <div className="freemium-perks">
+            <span><FaCheck /> Apply to 1 university</span>
+            <span><FaCheck /> We do everything for you</span>
+          </div>
+
+          <p className="freemium-deadline">Limited to only 10 students</p>
+        </div>
+
+        {/* FORM */}
         <div className="express-heading">
           <h1>Fill Form</h1>
-          <p className="express-subtitle">Stuck on your application? Hand it over.</p>
+          <p className="express-subtitle">We'll handle the rest. Takes less than 3 minutes.</p>
         </div>
 
         {error && <div className="money-error">{error}</div>}
@@ -385,6 +465,12 @@ const ExpressApply = () => {
                   <span>Do you need help with your studies?</span>
                 </label>
               </div>
+              <div className="smartclass-checkbox-row">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={needsNsfas} onChange={(e) => setNeedsNsfas(e.target.checked)} />
+                  <span>Do you need help with your NSFAS application?</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -442,57 +528,25 @@ const ExpressApply = () => {
             </div>
           </div>
 
-          {/* Section 6: University Count Stepper + 3rd Term Sale */}
-          <div className="money-section-card">
+          {/* Section 6: Offer Summary */}
+          <div className="money-section-card freemium-offer-card">
             <div className="section-title">
-              <span className="section-number">6</span>
-              <h3>How many universities?</h3>
+              <span className="section-number"><FaTag /></span>
+              <h3>Freemium Friday Offer</h3>
             </div>
             
-            {/* Plus/Minus Stepper */}
-            <div className="express-stepper">
-              <button 
-                type="button" 
-                className="express-stepper-btn"
-                onClick={() => setUniversityCount(Math.max(1, universityCount - 1))}
-                disabled={isTermSale}
-              >
-                −
-              </button>
-              <div className="express-stepper-value">
-                <span className="express-stepper-number">{isTermSale ? TERM_SALE_COUNT : universityCount}</span>
-                <span className="express-stepper-label">Universities</span>
+            <div className="freemium-offer-summary">
+              <div className="freemium-offer-row">
+                <span>1 university application</span>
+                <span className="freemium-offer-check"><FaCheck /></span>
               </div>
-              <button 
-                type="button" 
-                className="express-stepper-btn"
-                onClick={() => setUniversityCount(Math.min(10, universityCount + 1))}
-                disabled={isTermSale}
-              >
-                +
-              </button>
-            </div>
-
-            <div className="express-price-display">
-              R{totalPrice}
-            </div>
-
-            <p className="express-fee-notice">N.B Skolify does not cover application fees</p>
-
-            {/* 3rd Term Sale Toggle */}
-            <div 
-              className={`express-term-toggle ${isTermSale ? 'active' : ''}`}
-              onClick={handleTermSaleToggle}
-            >
-              <div className="express-term-toggle-content">
-                <FaTag className="express-term-toggle-icon" />
-                <div className="express-term-toggle-text">
-                  <span className="express-term-toggle-label">3rd Term Sale</span>
-                  <span className="express-term-toggle-desc">4 universities + free NSFAS — R{TERM_SALE_PRICE}</span>
-                </div>
+              <div className="freemium-offer-row">
+                <span>We handle everything</span>
+                <span className="freemium-offer-check"><FaCheck /></span>
               </div>
-              <div className={`express-term-toggle-indicator ${isTermSale ? 'on' : ''}`}>
-                <FaCheck />
+              <div className="freemium-offer-total">
+                <span>Total</span>
+                <span className="freemium-offer-price">FREE <small><s>R49</s></small></span>
               </div>
             </div>
           </div>
@@ -558,7 +612,7 @@ const ExpressApply = () => {
 
           <button 
             type="submit" 
-            className="pay-now-btn" 
+            className="pay-now-btn freemium-submit-btn" 
             style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} 
             disabled={isSubmitting || isUploading}
           >
@@ -567,7 +621,7 @@ const ExpressApply = () => {
             ) : isUploading ? (
               <><FaSpinner className="spinner-icon" /> Uploading documents...</>
             ) : (
-              `Submit Application — R${totalPrice}`
+              'Apply'
             )}
           </button>
         </form>
@@ -576,4 +630,4 @@ const ExpressApply = () => {
   );
 };
 
-export default ExpressApply;
+export default FreemiumFriday;

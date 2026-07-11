@@ -6,17 +6,22 @@ import './PaymentResult.css';
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(3);
   
   const transactionReference = searchParams.get('TransactionReference');
   const status = searchParams.get('Status');
   
   useEffect(() => {
+    // Mark R19 as paid immediately
+    localStorage.setItem('r19_paid', 'true');
+    localStorage.removeItem('r19_payment_pending');
+    localStorage.removeItem('r19_checkout_id');
+    
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          navigate('/profile');
+          navigate('/payment');
           return 0;
         }
         return prev - 1;
@@ -36,44 +41,21 @@ const PaymentSuccess = () => {
         <h1>Payment Successful!</h1>
         
         <div className="result-message">
-          <p>Thank you for your payment. Your transaction has been completed successfully.</p>
-        </div>
-        
-        <div className="result-details">
-          {transactionReference && (
-            <div className="detail-row">
-              <span className="detail-label">Transaction Reference:</span>
-              <span className="detail-value">{transactionReference}</span>
-            </div>
-          )}
-          
-          {status && (
-            <div className="detail-row">
-              <span className="detail-label">Status:</span>
-              <span className="detail-value status-badge success">Completed</span>
-            </div>
-          )}
+          <p>Your payment was successful. Returning to your results...</p>
         </div>
         
         <div className="result-actions">
           <button 
             className="primary-btn"
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/payment')}
           >
-            View My Applications
-          </button>
-          
-          <button 
-            className="secondary-btn"
-            onClick={() => navigate('/dashboard')}
-          >
-            Back to Dashboard
+            View My Results
           </button>
         </div>
         
         <div className="redirect-message">
           <FaSpinner className="spinner-icon" />
-          <p>Redirecting to your profile in {countdown} seconds...</p>
+          <p>Redirecting in {countdown} seconds...</p>
         </div>
       </div>
     </div>

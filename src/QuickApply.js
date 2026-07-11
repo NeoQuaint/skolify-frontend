@@ -1,30 +1,23 @@
-// src/ExpressApply.js
+// src/QuickApply.js
 import React, { useState } from 'react';
 import './Money.css';
 import './ExpressApply.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaUpload, FaCheck, FaSpinner, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp,
-  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaTag
+  FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt
 } from 'react-icons/fa';
 import API_URL from './config';
 
-const ExpressApply = () => {
+const QuickApply = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
   const [universityCount, setUniversityCount] = useState(3);
-  const [isTermSale, setIsTermSale] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
-  
-  const PRICE_PER_UNI = 49;
-  const TERM_SALE_PRICE = 199;
-  const TERM_SALE_COUNT = 4;
-  
-  const totalPrice = isTermSale ? TERM_SALE_PRICE : universityCount * PRICE_PER_UNI;
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -63,13 +56,6 @@ const ExpressApply = () => {
     const { name, value } = e.target;
     setError('');
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleTermSaleToggle = () => {
-    setIsTermSale(!isTermSale);
-    if (!isTermSale) {
-      setUniversityCount(TERM_SALE_COUNT);
-    }
   };
 
   const handleFileUpload = async (type, e) => {
@@ -140,12 +126,13 @@ const ExpressApply = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          selectedPackage: isTermSale ? 'term_sale' : `${universityCount} Universities`,
-          isTermSale,
-          universityCount: isTermSale ? TERM_SALE_COUNT : universityCount,
-          totalPrice,
+          selectedPackage: 'quick-apply',
+          isJuneSpecial: false,
+          universityCount,
+          totalPrice: 0,
           isUpgrading,
           needsHelp,
+          skipPayment: true,
           documents: {
             id: documents.id.path || null,
             results: documents.results.path || null
@@ -161,18 +148,12 @@ const ExpressApply = () => {
         localStorage.setItem('expressTracking', data.trackingNumber);
         
         setIsSuccess(true);
-        
-        setTimeout(() => {
-          if (data.redirectUrl) {
-            window.location.href = data.redirectUrl;
-          }
-        }, 2000);
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
         setIsSubmitting(false);
       }
     } catch (err) {
-      console.error('Express apply error:', err);
+      console.error('Quick apply error:', err);
       setError('Network error. Please check your connection and try again.');
       setIsSubmitting(false);
     }
@@ -184,10 +165,10 @@ const ExpressApply = () => {
         <div className="express-container">
           <div className="express-success-card">
             <FaCheck className="express-success-icon" />
-            <h2>Application Submitted!</h2>
-            <p>We'll WhatsApp you at <strong>{formData.phoneNumber}</strong> with your course options within 24 hours.</p>
+            <h2>Application Received!</h2>
+            <p>We've saved your application. We'll WhatsApp you at <strong>{formData.phoneNumber}</strong> to finalize everything.</p>
             <p style={{ marginTop: '12px', fontSize: '14px', color: '#64748b' }}>
-              Redirecting to payment page...
+              No payment was required. We'll be in touch within 24 hours.
             </p>
           </div>
         </div>
@@ -206,8 +187,8 @@ const ExpressApply = () => {
         </div>
 
         <div className="express-heading">
-          <h1>Fill Form</h1>
-          <p className="express-subtitle">Stuck on your application? Hand it over.</p>
+          <h1>Quick Apply</h1>
+          <p className="express-subtitle">Fill in your details and we'll handle the rest. No payment needed right now.</p>
         </div>
 
         {error && <div className="money-error">{error}</div>}
@@ -442,59 +423,35 @@ const ExpressApply = () => {
             </div>
           </div>
 
-          {/* Section 6: University Count Stepper + 3rd Term Sale */}
+          {/* Section 6: University Count Stepper */}
           <div className="money-section-card">
             <div className="section-title">
               <span className="section-number">6</span>
               <h3>How many universities?</h3>
             </div>
             
-            {/* Plus/Minus Stepper */}
             <div className="express-stepper">
               <button 
                 type="button" 
                 className="express-stepper-btn"
                 onClick={() => setUniversityCount(Math.max(1, universityCount - 1))}
-                disabled={isTermSale}
               >
                 −
               </button>
               <div className="express-stepper-value">
-                <span className="express-stepper-number">{isTermSale ? TERM_SALE_COUNT : universityCount}</span>
+                <span className="express-stepper-number">{universityCount}</span>
                 <span className="express-stepper-label">Universities</span>
               </div>
               <button 
                 type="button" 
                 className="express-stepper-btn"
                 onClick={() => setUniversityCount(Math.min(10, universityCount + 1))}
-                disabled={isTermSale}
               >
                 +
               </button>
             </div>
 
-            <div className="express-price-display">
-              R{totalPrice}
-            </div>
-
-            <p className="express-fee-notice">N.B Skolify does not cover application fees</p>
-
-            {/* 3rd Term Sale Toggle */}
-            <div 
-              className={`express-term-toggle ${isTermSale ? 'active' : ''}`}
-              onClick={handleTermSaleToggle}
-            >
-              <div className="express-term-toggle-content">
-                <FaTag className="express-term-toggle-icon" />
-                <div className="express-term-toggle-text">
-                  <span className="express-term-toggle-label">3rd Term Sale</span>
-                  <span className="express-term-toggle-desc">4 universities + free NSFAS — R{TERM_SALE_PRICE}</span>
-                </div>
-              </div>
-              <div className={`express-term-toggle-indicator ${isTermSale ? 'on' : ''}`}>
-                <FaCheck />
-              </div>
-            </div>
+            <p className="express-fee-notice">N.B Skolify does not cover application fees. We'll contact you to arrange payment.</p>
           </div>
 
           {/* Section 7: Documents */}
@@ -563,11 +520,11 @@ const ExpressApply = () => {
             disabled={isSubmitting || isUploading}
           >
             {isSubmitting ? (
-              <><FaSpinner className="spinner-icon" /> Submitting...</>
+              <><FaSpinner className="spinner-icon" /> Saving your application...</>
             ) : isUploading ? (
               <><FaSpinner className="spinner-icon" /> Uploading documents...</>
             ) : (
-              `Submit Application — R${totalPrice}`
+              'Submit Application — No Payment Required'
             )}
           </button>
         </form>
@@ -576,4 +533,4 @@ const ExpressApply = () => {
   );
 };
 
-export default ExpressApply;
+export default QuickApply;

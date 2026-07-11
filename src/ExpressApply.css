@@ -200,3 +200,235 @@
   object-fit: contain;
   transform: rotate(-12deg);
 }
+
+/* Slider Styles */
+.express-slider-container {
+  padding: 16px 0 4px;
+}
+
+.express-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.express-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #16a34a;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.express-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.express-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #16a34a;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.express-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.express-slider:disabled::-webkit-slider-thumb {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.express-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 2px 0;
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.express-count-display {
+  text-align: center;
+  margin: 8px 0 4px;
+}
+
+.express-count-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.express-count-label {
+  font-size: 16px;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+.express-price-display {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #16a34a;
+  margin-bottom: 16px;
+}
+
+/* 3rd Term Sale Toggle */
+.express-term-toggle {
+  background: #f0fdf4;
+  border: 2px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.express-term-toggle:hover {
+  border-color: #16a34a;
+}
+
+.express-term-toggle.active {
+  background: #dcfce7;
+  border-color: #16a34a;
+  box-shadow: 0 0 16px rgba(22, 163, 74, 0.2);
+}
+
+.express-term-toggle-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.express-term-toggle-icon {
+  font-size: 20px;
+  color: #16a34a;
+}
+
+.express-term-toggle-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.express-term-toggle-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.express-term-toggle-desc {
+  font-size: 12px;
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.express-term-toggle-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.express-term-toggle-indicator.on {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: white;
+}
+
+/* ===== STEPPER ===== */
+.express-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 10px 0;
+}
+
+.express-stepper-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  background: white;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.express-stepper-btn:hover:not(:disabled) {
+  border-color: #1a1a1a;
+  background: #f5f5f5;
+}
+
+.express-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.express-stepper-value {
+  text-align: center;
+  min-width: 80px;
+}
+
+.express-stepper-number {
+  font-size: 40px;
+  font-weight: 800;
+  color: #1a1a1a;
+  display: block;
+  line-height: 1;
+}
+
+.express-stepper-label {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Price Display */
+.express-price-display {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #16a34a;
+  margin: 12px 0 4px;
+}
+
+/* Fee Notice */
+.express-fee-notice {
+  text-align: center;
+  font-size: 12px;
+  color: #c2410c;
+  background: #fff8f0;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0 16px;
+}

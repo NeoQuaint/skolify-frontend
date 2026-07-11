@@ -1,7 +1,8 @@
-// src/ExpressApply.js
+// src/JuneSpecial.js
 import React, { useState } from 'react';
 import './Money.css';
 import './ExpressApply.css';
+import './JuneSpecial.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaUpload, FaCheck, FaSpinner, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp,
@@ -9,22 +10,17 @@ import {
 } from 'react-icons/fa';
 import API_URL from './config';
 
-const ExpressApply = () => {
+const JuneSpecial = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
-  const [universityCount, setUniversityCount] = useState(3);
-  const [isTermSale, setIsTermSale] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
   
-  const PRICE_PER_UNI = 49;
-  const TERM_SALE_PRICE = 199;
-  const TERM_SALE_COUNT = 4;
-  
-  const totalPrice = isTermSale ? TERM_SALE_PRICE : universityCount * PRICE_PER_UNI;
+  const selectedPackage = 'june-special';
+  const packagePrice = 299;
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -63,13 +59,6 @@ const ExpressApply = () => {
     const { name, value } = e.target;
     setError('');
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleTermSaleToggle = () => {
-    setIsTermSale(!isTermSale);
-    if (!isTermSale) {
-      setUniversityCount(TERM_SALE_COUNT);
-    }
   };
 
   const handleFileUpload = async (type, e) => {
@@ -140,10 +129,7 @@ const ExpressApply = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          selectedPackage: isTermSale ? 'term_sale' : `${universityCount} Universities`,
-          isTermSale,
-          universityCount: isTermSale ? TERM_SALE_COUNT : universityCount,
-          totalPrice,
+          selectedPackage,
           isUpgrading,
           needsHelp,
           documents: {
@@ -172,7 +158,7 @@ const ExpressApply = () => {
         setIsSubmitting(false);
       }
     } catch (err) {
-      console.error('Express apply error:', err);
+      console.error('June special apply error:', err);
       setError('Network error. Please check your connection and try again.');
       setIsSubmitting(false);
     }
@@ -180,8 +166,13 @@ const ExpressApply = () => {
 
   if (isSuccess) {
     return (
-      <div className="express-page">
+      <div className="express-page june-special-page">
         <div className="express-container">
+          <div className="june-banner">
+            <img src="/Skolify-Logo.jpeg" alt="Skolify" className="june-banner-logo" />
+            <span className="june-banner-text">June Special</span>
+          </div>
+
           <div className="express-success-card">
             <FaCheck className="express-success-icon" />
             <h2>Application Submitted!</h2>
@@ -196,18 +187,42 @@ const ExpressApply = () => {
   }
 
   return (
-    <div className="express-page">
+    <div className="express-page june-special-page">
       <div className="express-container">
-        <div className="express-logo-row">
-          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="express-logo" />
-        </div>
-        <div className="express-sticky-row">
-          <img src="/SN.png" alt="Sticky Note" className="express-sticky-note" />
+        
+        {/* SLIM BANNER */}
+        <div className="june-banner">
+          <img src="/Skolify-Logo.jpeg" alt="Skolify" className="june-banner-logo" />
+          <span className="june-banner-text">June Special</span>
         </div>
 
+        {/* HERO / OFFER */}
+        <div className="june-hero">
+          <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 600, color: '#7c3aed' }}>4 universities + free bursary</p>
+          <h1 className="june-hero-title">We Apply For You</h1>
+          <p className="june-hero-subtitle">
+            Any university. All administration handled. Free NSFAS application included.
+          </p>
+          
+          <div className="june-price-block">
+            <span className="june-price">R299</span>
+            <span className="june-price-old">R499</span>
+            <span className="june-price-save">Save R200</span>
+          </div>
+
+          <div className="june-perks">
+            <span><FaCheck /> Apply to any university</span>
+            <span><FaCheck /> Free NSFAS application</span>
+            <span><FaCheck /> We do everything for you</span>
+          </div>
+
+          <p className="june-deadline">Limited to only 100 students</p>
+        </div>
+
+        {/* FORM */}
         <div className="express-heading">
           <h1>Fill Form</h1>
-          <p className="express-subtitle">Stuck on your application? Hand it over.</p>
+          <p className="express-subtitle">We'll handle the rest. Takes less than 3 minutes.</p>
         </div>
 
         {error && <div className="money-error">{error}</div>}
@@ -442,57 +457,29 @@ const ExpressApply = () => {
             </div>
           </div>
 
-          {/* Section 6: University Count Stepper + 3rd Term Sale */}
-          <div className="money-section-card">
+          {/* Section 6: Offer Summary */}
+          <div className="money-section-card june-offer-card">
             <div className="section-title">
-              <span className="section-number">6</span>
-              <h3>How many universities?</h3>
+              <span className="section-number"><FaTag /></span>
+              <h3>June Special Offer</h3>
             </div>
             
-            {/* Plus/Minus Stepper */}
-            <div className="express-stepper">
-              <button 
-                type="button" 
-                className="express-stepper-btn"
-                onClick={() => setUniversityCount(Math.max(1, universityCount - 1))}
-                disabled={isTermSale}
-              >
-                −
-              </button>
-              <div className="express-stepper-value">
-                <span className="express-stepper-number">{isTermSale ? TERM_SALE_COUNT : universityCount}</span>
-                <span className="express-stepper-label">Universities</span>
+            <div className="june-offer-summary">
+              <div className="june-offer-row">
+                <span>4 universities + free bursary</span>
+                <span className="june-offer-check"><FaCheck /></span>
               </div>
-              <button 
-                type="button" 
-                className="express-stepper-btn"
-                onClick={() => setUniversityCount(Math.min(10, universityCount + 1))}
-                disabled={isTermSale}
-              >
-                +
-              </button>
-            </div>
-
-            <div className="express-price-display">
-              R{totalPrice}
-            </div>
-
-            <p className="express-fee-notice">N.B Skolify does not cover application fees</p>
-
-            {/* 3rd Term Sale Toggle */}
-            <div 
-              className={`express-term-toggle ${isTermSale ? 'active' : ''}`}
-              onClick={handleTermSaleToggle}
-            >
-              <div className="express-term-toggle-content">
-                <FaTag className="express-term-toggle-icon" />
-                <div className="express-term-toggle-text">
-                  <span className="express-term-toggle-label">3rd Term Sale</span>
-                  <span className="express-term-toggle-desc">4 universities + free NSFAS — R{TERM_SALE_PRICE}</span>
-                </div>
+              <div className="june-offer-row">
+                <span>Free NSFAS application</span>
+                <span className="june-offer-check"><FaCheck /></span>
               </div>
-              <div className={`express-term-toggle-indicator ${isTermSale ? 'on' : ''}`}>
-                <FaCheck />
+              <div className="june-offer-row">
+                <span>We handle everything</span>
+                <span className="june-offer-check"><FaCheck /></span>
+              </div>
+              <div className="june-offer-total">
+                <span>Total</span>
+                <span className="june-offer-price">R299 <small><s>R499</s></small></span>
               </div>
             </div>
           </div>
@@ -558,7 +545,7 @@ const ExpressApply = () => {
 
           <button 
             type="submit" 
-            className="pay-now-btn" 
+            className="pay-now-btn june-submit-btn" 
             style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} 
             disabled={isSubmitting || isUploading}
           >
@@ -567,7 +554,7 @@ const ExpressApply = () => {
             ) : isUploading ? (
               <><FaSpinner className="spinner-icon" /> Uploading documents...</>
             ) : (
-              `Submit Application — R${totalPrice}`
+              'Submit & Continue to Payment — R299'
             )}
           </button>
         </form>
@@ -576,4 +563,4 @@ const ExpressApply = () => {
   );
 };
 
-export default ExpressApply;
+export default JuneSpecial;

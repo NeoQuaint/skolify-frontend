@@ -10,6 +10,21 @@ import {
 } from 'react-icons/fa';
 import API_URL from './config';
 
+// ALL YOCO PAYMENT LINKS
+const YOCO_LINKS = {
+  1: 'https://pay.yoco.com/k2026084461-south-africa?amount=49.00&reference=1Universities',
+  2: 'https://pay.yoco.com/k2026084461-south-africa?amount=98.00&reference=2Universities',
+  3: 'https://pay.yoco.com/k2026084461-south-africa?amount=147.00&reference=3Universities',
+  4: 'https://pay.yoco.com/k2026084461-south-africa?amount=196.00&reference=4Universities',
+  5: 'https://pay.yoco.com/k2026084461-south-africa?amount=245.00&reference=5Universities',
+  6: 'https://pay.yoco.com/k2026084461-south-africa?amount=294.00&reference=6Universities',
+  7: 'https://pay.yoco.com/k2026084461-south-africa?amount=343.00&reference=7Universities',
+  8: 'https://pay.yoco.com/k2026084461-south-africa?amount=392.00&reference=8Universities',
+  9: 'https://pay.yoco.com/k2026084461-south-africa?amount=441.00&reference=9Universities',
+  10: 'https://pay.yoco.com/k2026084461-south-africa?amount=490.00&reference=10Universities',
+  june_special: 'https://pay.yoco.com/k2026084461-south-africa?amount=199.00&reference=JuneSpecial'
+};
+
 const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplete }) => {
   const navigate = useNavigate();
   
@@ -65,12 +80,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
-  const packageLinks = {
-    basic: 'https://pay.yoco.com/k2026084461-south-africa?amount=169.00&reference=BasicPackage',
-    standard: 'https://pay.yoco.com/k2026084461-south-africa?amount=329.00&reference=StandardPackage',
-    premium: 'https://pay.yoco.com/k2026084461-south-africa?amount=499.00&reference=PremiumPackage'
-  };
-
   const bankDetails = {
     accountNumber: '63199178419',
     accountName: 'K2026084461 (South Africa) (pty) Ltd',
@@ -78,6 +87,33 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     accountType: 'Business Cheque Account',
     branchCode: '250655',
     reference: 'ID Number'
+  };
+
+  // Get correct Yoco payment link based on university count
+  const getYocoPaymentLink = () => {
+    if (selectedPackage === 'june_special') {
+      return YOCO_LINKS.june_special;
+    }
+    
+    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
+    if (pendingSummary) {
+      try {
+        const summary = JSON.parse(pendingSummary);
+        const count = summary.totalUniversities;
+        if (count && YOCO_LINKS[count]) {
+          return YOCO_LINKS[count];
+        }
+      } catch (e) {
+        console.error('Error reading session:', e);
+      }
+    }
+    
+    const calculatedCount = Math.round(totalAmount / 49);
+    if (YOCO_LINKS[calculatedCount]) {
+      return YOCO_LINKS[calculatedCount];
+    }
+    
+    return YOCO_LINKS[1];
   };
 
   useEffect(() => {
@@ -322,7 +358,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     await saveSmartClassLead();
     
     // Submit order first
-    const orderResponse = await fetch(`${API_URL}/api/submit-order`, {
+    const orderResponse = await fetch(`${API_URL}/api/payment/submit-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -552,7 +588,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       
       setShowSaveForLaterPopup(false);
       onClose();
-      navigate('/profile');
+      
       
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -609,22 +645,14 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     alert(`✅ Application Submitted Successfully!\n\nPlease complete your payment via bank transfer:\n\nBank: ${bankDetails.bankName}\nAccount Name: ${bankDetails.accountName}\nAccount Number: ${bankDetails.accountNumber}\nBranch Code: ${bankDetails.branchCode}\n\nReference: ${formData.idNumber}\n\nAmount: R${totalAmount}\n\nYour application will be processed once payment is confirmed. You will receive an email confirmation shortly.`);
     
     if (onPaymentComplete) {
-      onPaymentComplete(pendingTransactionData.trackingNumber);
+      onPaymentComplete({ success: true, transactionId: pendingTransactionData.trackingNumber });
     }
     
     onClose();
-    navigate('/dashboard');
   };
 
   const handleYocoPayment = () => {
     if (!pendingTransactionData) return;
-    
-    const paymentLink = packageLinks[selectedPackage];
-    if (!paymentLink) {
-      setError('Invalid package selected');
-      setShowPaymentModal(false);
-      return;
-    }
     
     sessionStorage.setItem('pendingPayment', JSON.stringify({
       trackingNumber: pendingTransactionData.trackingNumber,
@@ -633,6 +661,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       timestamp: Date.now()
     }));
     
+    const paymentLink = getYocoPaymentLink();
+    console.log('🔗 Redirecting to Yoco:', paymentLink);
     window.location.href = paymentLink;
   };
 
@@ -1269,7 +1299,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   <FaSpinner className="spinner-icon" /> Processing...
                 </>
               ) : (
-                `Proceed to Payment - R${totalAmount}`
+                `Proceed to Payment — R${totalAmount}`
               )}
             </button>
 
@@ -1291,6 +1321,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             <div className="payment-modal-header">
               <h2>Complete Payment</h2>
               <p className="payment-amount">R{totalAmount}</p>
+              {selectedPackage === 'june_special' && (
+                <p className="june-special-badge">June Special</p>
+              )}
             </div>
 
             <div className="payment-options-simple">
@@ -1344,7 +1377,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                     localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData?.trackingNumber);
                     
                     if (onPaymentComplete) {
-                      onPaymentComplete(pendingTransactionData?.trackingNumber);
+                      onPaymentComplete({ success: true, transactionId: pendingTransactionData?.trackingNumber });
                     }
                     
                     alert(`✅ Payment Initiated!\n\nTracking Number: ${pendingTransactionData?.trackingNumber}\n\nPlease send R${totalAmount} to the bank account above using your ID as reference.\n\nWe will confirm your payment within 24 hours.`);
@@ -1362,13 +1395,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                 className="payment-option-simple yoco"
                 onClick={() => {
                   setShowPaymentModal(false);
-                  const paymentLink = packageLinks[selectedPackage];
-                  
-                  if (paymentLink) {
-                    window.location.href = paymentLink;
-                  } else {
-                    alert('Payment link not available. Please try again.');
-                  }
+                  handleYocoPayment();
                 }}
               >
                 <div className="payment-option-header">

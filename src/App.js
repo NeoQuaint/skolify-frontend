@@ -9,6 +9,9 @@ import ProfilePage from './ProfilePage';
 import ExpressApply from './ExpressApply';
 import Accommodation from './Accommodation';
 import Bursary from './Bursary';
+import JuneSpecial from './JuneSpecial';
+import FreemiumFriday from './FreemiumFriday';
+import QuickApply from './QuickApply';
 import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
@@ -352,7 +355,6 @@ function WelcomeScreen() {
     setCheckingAuth(false);
   }, [navigate]);
 
-  // Track landing page view
   useEffect(() => {
     trackEvent('page_view', { page: 'landing' });
   }, []);
@@ -559,7 +561,7 @@ function WelcomeScreen() {
               </p>
             </div>
 
-            {/* AUTH MODAL - CENTERED, BLURRED BACKGROUND */}
+            {/* AUTH MODAL */}
             {showAuth && (
               <div className="auth-overlay" onClick={() => setShowAuth(false)}>
                 <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
@@ -1034,6 +1036,9 @@ function App() {
         <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/apply" element={<ExpressApply />} />
+        <Route path="/june" element={<JuneSpecial />} />
+        <Route path="/freemium-friday" element={<FreemiumFriday />} />
+        <Route path="/quick-apply" element={<QuickApply />} />
         <Route path="/accommodation" element={<Accommodation />} />
         <Route path="/bursary" element={<Bursary />} />
         <Route path="/terms" element={<TermsAndConditions />} />
