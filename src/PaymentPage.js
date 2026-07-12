@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
-import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaCopy, FaHistory, FaLock, FaCommentDots, FaTag, FaCreditCard } from 'react-icons/fa';
+import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaCopy, FaHistory, FaLock, FaCommentDots, FaTag, FaCreditCard, FaUserCircle, FaSignOutAlt, FaUser } from 'react-icons/fa';
 import API_URL from './config';
 
 const trackEvent = (eventType, eventData = {}) => {
@@ -63,6 +63,9 @@ const PaymentPage = () => {
   const [r19Error, setR19Error] = useState('');
   const [isCheckingR19, setIsCheckingR19] = useState(true);
   const [pollingInterval, setPollingInterval] = useState(null);
+
+  // Profile dropdown state
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const TERM_SALE_PRICE = 199;
   const TERM_SALE_UNI_COUNT = 4;
@@ -235,6 +238,17 @@ const PaymentPage = () => {
   }, []);
 
   useEffect(() => { trackEvent('page_view', { page: 'payment' }); }, []);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showProfileDropdown && !e.target.closest('.profile-dropdown-wrapper')) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileDropdown]);
 
   const isUniversityInPreviousOrders = useCallback((code, name) => {
     if (!isCreatingNewOrder) return false;
@@ -666,7 +680,17 @@ const PaymentPage = () => {
     }
   };
 
-  const progressPercent = 75;
+  const handleLogout = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    navigate('/');
+  };
+
+  const handleProfileClick = () => {
+    setShowProfileDropdown(false);
+    navigate('/profile');
+  };
+
   const availableForSelected = selectedUniversity ? getAvailableCoursesForUniversity(selectedUniversity) : [];
   const currentForSelected = selectedUniversity ? (selectedCourses[selectedUniversity.code] || []) : [];
   const maxForSelected = selectedUniversity ? getInstitutionCourseLimit(selectedUniversity.name) : 0;
@@ -687,6 +711,29 @@ const PaymentPage = () => {
 
   return (
     <div className="simple-payment-page">
+      {/* Profile Icon with Dropdown */}
+      {localStorage.getItem('authToken') && (
+        <div className="profile-dropdown-wrapper">
+          <button 
+            className="profile-icon-btn" 
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            title="Account"
+          >
+            <FaUserCircle />
+          </button>
+          {showProfileDropdown && (
+            <div className="profile-dropdown-menu">
+              <button className="profile-dropdown-item" onClick={handleProfileClick}>
+                <FaUser /> Profile
+              </button>
+              <button className="profile-dropdown-item logout-item" onClick={handleLogout}>
+                <FaSignOutAlt /> Logout
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {showR19Paywall && (
         <div className="r19-fullscreen-paywall">
           <div className="r19-paywall-card">
@@ -713,12 +760,6 @@ const PaymentPage = () => {
           </div>
         </div>
       )}
-
-      <div className="progress-bar-wrapper">
-        <div className="progress-bar-track">
-          <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }}></div>
-        </div>
-      </div>
 
       <div className={`simple-payment-container ${!resultsUnlocked ? 'blurred-content' : ''}`}>
         <div className="simple-hero">
