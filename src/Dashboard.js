@@ -314,12 +314,29 @@ const Dashboard = () => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
     try {
+      // Trim large arrays to only essential fields to stay under 1mb limit
+      const trimmedData = {
+        subjects: data.subjects || [],
+        selectedCourses: data.selectedCourses || [],
+        eligibleCourses: (data.eligibleCourses || []).slice(0, 50).map(c => ({
+          id: c.id, name: c.name, faculty_name: c.faculty_name, minAPS: c.minAPS
+        })),
+        eligibleFaculties: (data.eligibleFaculties || []).map(f => ({
+          id: f.id, name: f.name
+        })),
+        userAPS: data.userAPS || 0,
+        universityCount: data.universityCount || 0,
+        step: data.step || 1
+      };
+      
       await fetch(`${API_URL}/api/payment/save-progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(data)
+        body: JSON.stringify(trimmedData)
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to save progress:', e);
+    }
   }, []);
 
   // Load saved progress on mount
@@ -332,7 +349,7 @@ const Dashboard = () => {
       }
       
       try {
-        const response = await fetch(`${API_URL}/api/payment/load-progress`, {
+        const response = await fetch(`${API_URL}/api/payment/load-progress?_=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -377,6 +394,20 @@ const Dashboard = () => {
           if (p.currentStep >= 2 && p.subjects?.some(s => s.mark && !isNaN(s.mark))) {
             setStep(2);
           }
+        }
+        
+        // FALLBACK: if no progress in DB but R19 paid in localStorage, redirect
+        if (!data.hasProgress && localStorage.getItem('r19_paid') === 'true') {
+          const savedSubjects = JSON.parse(sessionStorage.getItem('dashboard_subjects') || '[]');
+          const savedSelectedCourses = JSON.parse(localStorage.getItem('selectedCourses') || '[]');
+          const studentMarks = savedSubjects
+            .filter(s => s.subject !== 'Life Orientation')
+            .filter(s => s.mark && !isNaN(s.mark))
+            .map(s => ({ subject_name: s.subject, mark: parseInt(s.mark) }));
+          
+          localStorage.setItem('student_marks', JSON.stringify(studentMarks));
+          navigate('/payment', { state: { selectedCourses: savedSelectedCourses, studentMarks }, replace: true });
+          return;
         }
       } catch (error) {
         console.error('Error loading progress:', error);
@@ -502,7 +533,6 @@ const Dashboard = () => {
     if (result && result.eligibleFacultiesData && result.eligibleFacultiesData.length > 0) {
       setStep(2); setFacultyPage(0); setSelectedCourses([]);
       
-      // Save progress to backend
       saveProgressToBackend({
         subjects, selectedCourses: [], eligibleCourses: result.coursesWithScores, 
         eligibleFaculties: result.eligibleFacultiesData, userAPS, 
@@ -534,7 +564,6 @@ const Dashboard = () => {
   const handleContinueFromCourses = () => {
     if (selectedCourses.length < MIN_REQUIRED_COURSES) { setShowMinimumPopup(true); return; }
     
-    // Save progress before going to review
     saveProgressToBackend({
       subjects, selectedCourses, eligibleCourses, eligibleFaculties,
       userAPS, universityCount, step: 3
@@ -547,7 +576,7 @@ const Dashboard = () => {
     setShowCongratulations(true);
   };
 
-  const handleSeeResults = () => {
+  const handleSeeResults = async () => {
     setShowCongratulations(false);
     const studentMarks = subjects
       .filter(subject => subject.subject !== 'Life Orientation')
@@ -558,8 +587,7 @@ const Dashboard = () => {
     localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
     localStorage.setItem('student_marks', JSON.stringify(studentMarks));
     
-    // Save final progress
-    saveProgressToBackend({
+    await saveProgressToBackend({
       subjects, selectedCourses, eligibleCourses, eligibleFaculties,
       userAPS, universityCount, step: 3
     });
