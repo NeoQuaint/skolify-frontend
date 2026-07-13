@@ -4,26 +4,11 @@ import './Money.css';
 import { 
   FaUser, FaEnvelope, FaPhone, FaIdCard, FaGraduationCap, 
   FaTimes, FaCheck, FaUpload, FaHome, FaUserTie, FaPhoneAlt, FaWhatsapp, 
-  FaInfoCircle, FaSpinner, FaUniversity, FaCreditCard, FaCopy, FaBank,
+  FaInfoCircle, FaSpinner, FaCreditCard,
   FaSchool, FaMapMarkerAlt, FaCity, FaBuilding, FaCalendarAlt, FaLaptop,
-  FaMoneyBillWave, FaSave, FaArrowRight
+  FaMoneyBillWave, FaSave
 } from 'react-icons/fa';
 import API_URL from './config';
-
-// ALL YOCO PAYMENT LINKS
-const YOCO_LINKS = {
-  1: 'https://pay.yoco.com/k2026084461-south-africa?amount=49.00&reference=1Universities',
-  2: 'https://pay.yoco.com/k2026084461-south-africa?amount=98.00&reference=2Universities',
-  3: 'https://pay.yoco.com/k2026084461-south-africa?amount=147.00&reference=3Universities',
-  4: 'https://pay.yoco.com/k2026084461-south-africa?amount=196.00&reference=4Universities',
-  5: 'https://pay.yoco.com/k2026084461-south-africa?amount=245.00&reference=5Universities',
-  6: 'https://pay.yoco.com/k2026084461-south-africa?amount=294.00&reference=6Universities',
-  7: 'https://pay.yoco.com/k2026084461-south-africa?amount=343.00&reference=7Universities',
-  8: 'https://pay.yoco.com/k2026084461-south-africa?amount=392.00&reference=8Universities',
-  9: 'https://pay.yoco.com/k2026084461-south-africa?amount=441.00&reference=9Universities',
-  10: 'https://pay.yoco.com/k2026084461-south-africa?amount=490.00&reference=10Universities',
-  june_special: 'https://pay.yoco.com/k2026084461-south-africa?amount=199.00&reference=JuneSpecial'
-};
 
 const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplete }) => {
   const navigate = useNavigate();
@@ -35,11 +20,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
   const [isUploading, setIsUploading] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [copiedBank, setCopiedBank] = useState(false);
-  const [pendingTransactionData, setPendingTransactionData] = useState(null);
   const [showSaveForLaterPopup, setShowSaveForLaterPopup] = useState(false);
   const [isSavingForLater, setIsSavingForLater] = useState(false);
+  
+  // Yoco checkout states
+  const [yocoPollingInterval, setYocoPollingInterval] = useState(null);
+  const [isWaitingForPayment, setIsWaitingForPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
   
   // SmartClass leads
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -80,41 +67,12 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     results: { name: null, uploaded: false, file: null, path: null }
   });
 
-  const bankDetails = {
-    accountNumber: '63199178419',
-    accountName: 'K2026084461 (South Africa) (pty) Ltd',
-    bankName: 'First National Bank (FNB)',
-    accountType: 'Business Cheque Account',
-    branchCode: '250655',
-    reference: 'ID Number'
-  };
-
-  // Get correct Yoco payment link based on university count
-  const getYocoPaymentLink = () => {
-    if (selectedPackage === 'june_special') {
-      return YOCO_LINKS.june_special;
-    }
-    
-    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
-    if (pendingSummary) {
-      try {
-        const summary = JSON.parse(pendingSummary);
-        const count = summary.totalUniversities;
-        if (count && YOCO_LINKS[count]) {
-          return YOCO_LINKS[count];
-        }
-      } catch (e) {
-        console.error('Error reading session:', e);
-      }
-    }
-    
-    const calculatedCount = Math.round(totalAmount / 49);
-    if (YOCO_LINKS[calculatedCount]) {
-      return YOCO_LINKS[calculatedCount];
-    }
-    
-    return YOCO_LINKS[1];
-  };
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (yocoPollingInterval) clearInterval(yocoPollingInterval);
+    };
+  }, [yocoPollingInterval]);
 
   useEffect(() => {
     const checkPaymentHistory = async () => {
@@ -276,6 +234,59 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     return true;
   };
 
+  // Save profile data to backend
+  const saveProfileData = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/user/update-profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          middleName: formData.middleName,
+          lastName: formData.lastName,
+          idNumber: formData.idNumber,
+          dateOfBirth: formData.dateOfBirth,
+          gender: formData.gender,
+          nationality: formData.nationality,
+          homeLanguage: formData.homeLanguage,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          whatsappNumber: formData.whatsappNumber,
+          address: formData.address,
+          suburb: formData.suburb,
+          city: formData.city,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          previousSchool: formData.previousSchool,
+          previousSchoolProvince: formData.previousSchoolProvince,
+          previousSchoolYear: formData.previousSchoolYear,
+          kinName: formData.kinName,
+          kinRelationship: formData.kinRelationship,
+          kinIdNumber: formData.kinIdNumber,
+          kinGender: formData.kinGender,
+          kinPhone: formData.kinPhone,
+          kinEmail: formData.kinEmail,
+          documents: {
+            id: documents.id.path || null,
+            results: documents.results.path || null
+          }
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Profile data saved');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    }
+  };
+
   // Save SmartClass lead to database
   const saveSmartClassLead = async () => {
     if (!needsHelp && !isUpgrading && !hasLaptop && !requiresNsfas) return;
@@ -307,7 +318,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     }
   };
 
-  const saveApplicationData = async (transactionId, paymentMethod = 'bank_transfer') => {
+  const saveApplicationData = async (transactionId) => {
     const token = localStorage.getItem('authToken');
     const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
     let applicationData = {};
@@ -354,10 +365,13 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       };
     }
     
-    // Save SmartClass lead first
+    // Save SmartClass lead
     await saveSmartClassLead();
     
-    // Submit order first
+    // Save profile data
+    await saveProfileData();
+    
+    // Submit order
     const orderResponse = await fetch(`${API_URL}/api/payment/submit-order`, {
       method: 'POST',
       headers: {
@@ -387,7 +401,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         universities: applicationData.universities,
         courses: applicationData.courseDetails,
         transactionId: transactionId,
-        paymentMethod: paymentMethod,
+        paymentMethod: 'yoco',
         isUpgrading: isUpgrading,
         needsHelp: needsHelp,
         hasLaptop: hasLaptop
@@ -406,12 +420,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       throw new Error('No tracking number received from server');
     }
     
-    console.log('✅ Got tracking number from backend:', trackingNumber);
+    console.log('✅ Got tracking number:', trackingNumber);
     
     // Save payment selection
     if (applicationData.package) {
-      console.log('📥 Saving payment selection with tracking:', trackingNumber);
-      
       const paymentSelectionData = {
         selectedPackage: applicationData.package,
         universities: applicationData.universities,
@@ -421,10 +433,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
         courseDetails: applicationData.courseDetails
       };
       
-      console.log('📤 Payment selection data:', paymentSelectionData);
-      
       try {
-        const paymentResponse = await fetch(`${API_URL}/api/payment/save-selection`, {
+        await fetch(`${API_URL}/api/payment/save-selection`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -432,28 +442,12 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
           },
           body: JSON.stringify(paymentSelectionData)
         });
-        
-        if (!paymentResponse.ok) {
-          const errorText = await paymentResponse.text();
-          console.error('❌ Payment selection save failed:', errorText);
-        } else {
-          const paymentResult = await paymentResponse.json();
-          console.log('✅ Payment selection saved:', paymentResult);
-        }
       } catch (paymentError) {
         console.error('❌ Payment selection error:', paymentError);
       }
     }
     
-    console.log('📤 SENDING APPLICATION DATA:', {
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      email: formData.email,
-      phone_number: formData.phoneNumber,
-      id_number: formData.idNumber,
-      tracking_number: trackingNumber
-    });
-
+    // Create application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
       method: 'POST',
       headers: {
@@ -500,8 +494,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       throw new Error(`Application save failed: ${errorData.error || errorData.message}`);
     }
     
-    const appResult = await appResponse.json();
-    console.log('✅ Application saved with tracking:', appResult.trackingNumber || trackingNumber);
+    console.log('✅ Application saved');
     
     localStorage.setItem('paymentTrackingNumber', trackingNumber);
     sessionStorage.removeItem('pendingApplicationSummary');
@@ -512,59 +505,15 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   // Save profile without payment (for "Save for Later")
   const saveProfileForLater = async () => {
     setIsSavingForLater(true);
-    const token = localStorage.getItem('authToken');
     
     try {
-      // Save user profile data
-      const profileResponse = await fetch(`${API_URL}/api/user/update-profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          middleName: formData.middleName,
-          lastName: formData.lastName,
-          idNumber: formData.idNumber,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          nationality: formData.nationality,
-          homeLanguage: formData.homeLanguage,
-          email: formData.email,
-          phoneNumber: formData.phoneNumber,
-          whatsappNumber: formData.whatsappNumber,
-          address: formData.address,
-          suburb: formData.suburb,
-          city: formData.city,
-          province: formData.province,
-          postalCode: formData.postalCode,
-          previousSchool: formData.previousSchool,
-          previousSchoolProvince: formData.previousSchoolProvince,
-          previousSchoolYear: formData.previousSchoolYear,
-          kinName: formData.kinName,
-          kinRelationship: formData.kinRelationship,
-          kinIdNumber: formData.kinIdNumber,
-          kinGender: formData.kinGender,
-          kinPhone: formData.kinPhone,
-          kinEmail: formData.kinEmail,
-          documents: {
-            id: documents.id.path || null,
-            results: documents.results.path || null
-          }
-        })
-      });
-      
-      if (profileResponse.ok) {
-        console.log('✅ Profile saved for later');
-      }
-      
-      // Save SmartClass leads if any
+      await saveProfileData();
       await saveSmartClassLead();
       
       // Save payment selection as pending
       const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
       if (pendingSummary) {
+        const token = localStorage.getItem('authToken');
         const summary = JSON.parse(pendingSummary);
         const paymentSelectionData = {
           selectedPackage: summary.package,
@@ -589,7 +538,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       setShowSaveForLaterPopup(false);
       onClose();
       
-      
     } catch (error) {
       console.error('Error saving profile:', error);
       setError('Failed to save. Please try again.');
@@ -605,72 +553,113 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     setIsProcessing(true);
     setError('');
+    setPaymentError('');
+
+    const token = localStorage.getItem('authToken');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
     
+    let universitiesData = [];
+    let pkg = selectedPackage || 'per_university';
+    let isTermSale = false;
+    
+    if (pendingSummary) {
+      try {
+        const summary = JSON.parse(pendingSummary);
+        universitiesData = summary.universities || [];
+        pkg = summary.package || pkg;
+        isTermSale = summary.isTermSale || false;
+      } catch (e) {}
+    }
+
     try {
+      // Save application data first (gets tracking number)
       const tempTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-      const trackingNumber = await saveApplicationData(tempTransactionId, 'pending');
+      const trackingNumber = await saveApplicationData(tempTransactionId);
       
-      setPendingTransactionData({
-        trackingNumber,
-        tempTransactionId,
-        amount: totalAmount,
-        package: selectedPackage
+      // Create Yoco checkout
+      const createResponse = await fetch(`${API_URL}/api/payment/create-application-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: totalAmount,
+          email: formData.email || user.email || '',
+          name: `${formData.firstName || user.firstName || ''} ${formData.lastName || user.lastName || ''}`.trim() || 'Student',
+          universities: universitiesData,
+          selectedPackage: pkg,
+          isTermSale: isTermSale
+        })
       });
-      
-      setShowPaymentModal(true);
+
+      const createData = await createResponse.json();
+
+      if (!createData.success) {
+        throw new Error(createData.error || 'Failed to create payment');
+      }
+
+      localStorage.setItem('application_checkout_id', createData.checkoutId);
+      localStorage.setItem('application_payment_pending', 'true');
+
+      // Open Yoco checkout in new tab
+      window.open(createData.redirectUrl, '_blank');
+
+      // Show waiting state
       setIsProcessing(false);
-      
+      setIsWaitingForPayment(true);
+
+      // Poll for payment confirmation
+      const interval = setInterval(async () => {
+        try {
+          const verifyResponse = await fetch(`${API_URL}/api/payment/verify-application-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ checkoutId: createData.checkoutId })
+          });
+
+          const verifyData = await verifyResponse.json();
+
+          if (verifyData.success && verifyData.status === 'completed') {
+            clearInterval(interval);
+            setYocoPollingInterval(null);
+            localStorage.removeItem('application_payment_pending');
+            localStorage.removeItem('application_checkout_id');
+            localStorage.removeItem('selectedUniversityCourses');
+            localStorage.removeItem('isTermSaleActive');
+            setIsWaitingForPayment(false);
+            
+            if (onPaymentComplete) {
+              onPaymentComplete({ success: true, transactionId: trackingNumber });
+            }
+            
+            onClose();
+            navigate('/profile');
+          }
+        } catch (e) {
+          // Keep polling
+        }
+      }, 3000);
+
+      setYocoPollingInterval(interval);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(interval);
+        setYocoPollingInterval(null);
+        if (isWaitingForPayment) {
+          setIsWaitingForPayment(false);
+          setPaymentError('Payment not confirmed. Please contact support if you completed the payment.');
+        }
+      }, 300000);
+
     } catch (error) {
-      console.error('❌ Error creating application:', error);
-      setError(error.message || 'Failed to process. Please try again.');
+      setError(error.message || 'Payment failed. Please try again.');
       setIsProcessing(false);
-    }
-  };
-
-  const handleBankTransfer = () => {
-    if (!pendingTransactionData) return;
-    
-    localStorage.setItem('hasCompletedPayment', 'false');
-    localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData.trackingNumber);
-    localStorage.setItem('pendingBankTransfer', JSON.stringify({
-      trackingNumber: pendingTransactionData.trackingNumber,
-      amount: pendingTransactionData.amount,
-      package: pendingTransactionData.package,
-      idNumber: formData.idNumber,
-      date: new Date().toISOString()
-    }));
-    
-    setShowPaymentModal(false);
-    
-    alert(`✅ Application Submitted Successfully!\n\nPlease complete your payment via bank transfer:\n\nBank: ${bankDetails.bankName}\nAccount Name: ${bankDetails.accountName}\nAccount Number: ${bankDetails.accountNumber}\nBranch Code: ${bankDetails.branchCode}\n\nReference: ${formData.idNumber}\n\nAmount: R${totalAmount}\n\nYour application will be processed once payment is confirmed. You will receive an email confirmation shortly.`);
-    
-    if (onPaymentComplete) {
-      onPaymentComplete({ success: true, transactionId: pendingTransactionData.trackingNumber });
-    }
-    
-    onClose();
-  };
-
-  const handleYocoPayment = () => {
-    if (!pendingTransactionData) return;
-    
-    sessionStorage.setItem('pendingPayment', JSON.stringify({
-      trackingNumber: pendingTransactionData.trackingNumber,
-      selectedPackage,
-      totalAmount,
-      timestamp: Date.now()
-    }));
-    
-    const paymentLink = getYocoPaymentLink();
-    console.log('🔗 Redirecting to Yoco:', paymentLink);
-    window.location.href = paymentLink;
-  };
-
-  const copyToClipboard = (text, type) => {
-    navigator.clipboard.writeText(text);
-    if (type === 'bank') {
-      setCopiedBank(true);
-      setTimeout(() => setCopiedBank(false), 2000);
     }
   };
 
@@ -731,6 +720,18 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
           {error && (
             <div className="money-error">
               {error}
+            </div>
+          )}
+
+          {isWaitingForPayment && (
+            <div className="money-error" style={{ background: '#e8f0fe', border: '1px solid #007bff', color: '#007bff' }}>
+              <FaSpinner className="spinner-icon" /> Payment tab opened. Complete payment to continue...
+            </div>
+          )}
+
+          {paymentError && (
+            <div className="money-error">
+              {paymentError}
             </div>
           )}
 
@@ -1287,133 +1288,52 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
               <span>Payment may take up to 60 seconds to load. Please wait and don't refresh.</span>
             </div>
 
-            {/* Pay Button - Shows Payment Options Modal */}
+            {/* Pay Button */}
             <button 
               type="button"
               onClick={handleProceedToPayment}
-              className="pay-now-btn"
-              disabled={isProcessing}
+              disabled={isProcessing || isWaitingForPayment}
+              style={{
+                width: '100%',
+                padding: '18px',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '30px',
+                fontSize: '18px',
+                fontWeight: '700',
+                cursor: (isProcessing || isWaitingForPayment) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                transition: 'all 0.3s ease',
+                fontFamily: 'inherit',
+                opacity: (isProcessing || isWaitingForPayment) ? 0.7 : 1,
+                letterSpacing: '0.5px'
+              }}
             >
               {isProcessing ? (
                 <>
                   <FaSpinner className="spinner-icon" /> Processing...
                 </>
+              ) : isWaitingForPayment ? (
+                <>
+                  <FaSpinner className="spinner-icon" /> Waiting for payment...
+                </>
               ) : (
-                `Proceed to Payment — R${totalAmount}`
+                `Pay R${totalAmount}`
               )}
             </button>
 
             <p className="secure-payment">
-              🔒 All information is encrypted and secure
+              🔒 Secure payment via Yoco
             </p>
           </form>
         </div>
       </div>
 
-      {/* Payment Options Modal */}
-      {showPaymentModal && (
-        <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
-          <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
-            <button className="payment-modal-close" onClick={() => setShowPaymentModal(false)}>
-              <FaTimes />
-            </button>
-            
-            <div className="payment-modal-header">
-              <h2>Complete Payment</h2>
-              <p className="payment-amount">R{totalAmount}</p>
-              {selectedPackage === 'june_special' && (
-                <p className="june-special-badge">June Special</p>
-              )}
-            </div>
-
-            <div className="payment-options-simple">
-              {/* OPTION 1: Skolify Direct Payment */}
-              <div className="payment-option-simple primary">
-                <div className="payment-option-header">
-                  <span className="payment-option-title">Skolify Direct Payment</span>
-                  <span className="recommended-badge">Recommended</span>
-                </div>
-                
-                <div className="bank-details-mini">
-                  <div className="bank-row">
-                    <span className="bank-label">Bank:</span>
-                    <span className="bank-value">FNB</span>
-                  </div>
-                  <div className="bank-row">
-                    <span className="bank-label">Account Name:</span>
-                    <span className="bank-value">K2026084461 (South Africa) (pty) Ltd</span>
-                  </div>
-                  <div className="bank-row copyable-row" onClick={() => {
-                    navigator.clipboard.writeText('63199178419');
-                    alert('Account number copied!');
-                  }}>
-                    <span className="bank-label">Account Number:</span>
-                    <span className="bank-value">63199178419</span>
-                    <FaCopy className="copy-icon" />
-                  </div>
-                  <div className="bank-row copyable-row" onClick={() => {
-                    navigator.clipboard.writeText('250655');
-                    alert('Branch code copied!');
-                  }}>
-                    <span className="bank-label">Branch Code:</span>
-                    <span className="bank-value">250655</span>
-                    <FaCopy className="copy-icon" />
-                  </div>
-                  <div className="bank-row copyable-row" onClick={() => {
-                    navigator.clipboard.writeText(formData.idNumber || 'YOUR ID NUMBER');
-                    alert('Reference copied!');
-                  }}>
-                    <span className="bank-label">Reference:</span>
-                    <span className="bank-value reference">{formData.idNumber || 'YOUR ID NUMBER'}</span>
-                    <FaCopy className="copy-icon" />
-                  </div>
-                </div>
-
-                <button 
-                  className="payment-confirm-btn"
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    localStorage.setItem('hasCompletedPayment', 'true');
-                    localStorage.setItem('lastPaymentTrackingNumber', pendingTransactionData?.trackingNumber);
-                    
-                    if (onPaymentComplete) {
-                      onPaymentComplete({ success: true, transactionId: pendingTransactionData?.trackingNumber });
-                    }
-                    
-                    alert(`✅ Payment Initiated!\n\nTracking Number: ${pendingTransactionData?.trackingNumber}\n\nPlease send R${totalAmount} to the bank account above using your ID as reference.\n\nWe will confirm your payment within 24 hours.`);
-                    
-                    onClose();
-                    navigate('/profile');
-                  }}
-                >
-                  Confirm Bank Transfer
-                </button>
-              </div>
-
-              {/* OPTION 2: Yoco Card Payment */}
-              <button 
-                className="payment-option-simple yoco"
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  handleYocoPayment();
-                }}
-              >
-                <div className="payment-option-header">
-                  <span className="payment-option-title">Yoco Card Payment</span>
-                </div>
-                <span className="payment-option-desc">Pay instantly with credit/debit card</span>
-                <span className="payment-option-arrow">→</span>
-              </button>
-            </div>
-
-            <p className="payment-modal-footer-simple">
-              Your ID: <strong>{formData.idNumber || 'Not provided'}</strong> • Payment reference
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* SAVE FOR LATER POPUP */}
+      {/* SAVE PROFILE POPUP */}
       {showSaveForLaterPopup && (
         <div className="save-for-later-overlay" onClick={() => setShowSaveForLaterPopup(false)}>
           <div className="save-for-later-modal" onClick={(e) => e.stopPropagation()}>
@@ -1421,12 +1341,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
               <FaTimes />
             </button>
             
-            <div className="save-for-later-icon">
-              <FaSave />
-            </div>
-            
-            <h3>Not ready to pay?</h3>
-            <p>No worries! We'll save your profile and selections so you can come back anytime to complete your payment.</p>
+            <h3>Save profile for later?</h3>
             
             <div className="save-for-later-actions">
               <button 
@@ -1434,11 +1349,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                 onClick={saveProfileForLater}
                 disabled={isSavingForLater}
               >
-                {isSavingForLater ? (
-                  <><FaSpinner className="spinner-icon" /> Saving...</>
-                ) : (
-                  <><FaSave /> Save & Continue Later</>
-                )}
+                {isSavingForLater ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Yes'}
               </button>
               
               <button 
@@ -1448,13 +1359,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
                   onClose();
                 }}
               >
-                <FaTimes /> Exit Without Saving
+                No
               </button>
             </div>
-            
-            <p className="save-for-later-note">
-              Your data helps us prepare your applications faster when you're ready.
-            </p>
           </div>
         </div>
       )}

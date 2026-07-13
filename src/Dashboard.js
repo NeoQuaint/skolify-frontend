@@ -275,12 +275,6 @@ const Dashboard = () => {
     'Life Orientation': subjectCategories.lifeOrientation
   };
 
-  const hiddenInstitutions = ['Nelson Mandela University', 'Sol Plaatje University'];
-
-  const filterHiddenInstitutions = (courses) => {
-    return courses.filter(course => !hiddenInstitutions.some(institution => course.institution_name?.toLowerCase().includes(institution.toLowerCase())));
-  };
-
   const facultyPriority = [
     'College of Business and Economics', 'Faculty of Science', 'Faculty of Engineering and the Built Environment',
     'Faculty of Engineering', 'Faculty of Engineering, the Built Environment and Technology', 'Faculty of ICT (Technology)',
@@ -314,7 +308,6 @@ const Dashboard = () => {
     const token = localStorage.getItem('authToken');
     if (!token) return;
     try {
-      // Trim large arrays to only essential fields to stay under 1mb limit
       const trimmedData = {
         subjects: data.subjects || [],
         selectedCourses: data.selectedCourses || [],
@@ -449,7 +442,7 @@ const Dashboard = () => {
         const coursesResponse = await fetch(`${API_URL}/api/courses`);
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json();
-          setBackendData({ isConnected: true, courses: filterHiddenInstitutions(coursesData), isLoading: false, error: null });
+          setBackendData({ isConnected: true, courses: coursesData, isLoading: false, error: null });
         } else {
           setBackendData(prev => ({ ...prev, isConnected: true, isLoading: false, error: 'Could not load courses' }));
         }
@@ -484,7 +477,7 @@ const Dashboard = () => {
       if (!response.ok) throw new Error(`Backend error: ${response.status}`);
       const result = await response.json();
       if (result.status === 'success') {
-        const eligibleCoursesData = filterHiddenInstitutions(result.eligible_courses || []);
+        const eligibleCoursesData = result.eligible_courses || [];
         const coursesWithScores = eligibleCoursesData.map(course => ({ ...course, matchScore: course.matchScore || Math.floor(Math.random() * 40) + 60 }));
         setEligibleCourses(coursesWithScores);
         saveState('eligibleCourses', coursesWithScores);

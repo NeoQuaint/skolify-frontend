@@ -25,7 +25,6 @@ const PaymentPage = () => {
   const [selectedUniversity, setSelectedUniversity] = useState(null);
   const [selectedCourses, setSelectedCourses] = useState({});
   const [selectedCourseNames, setSelectedCourseNames] = useState([]);
-  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
   const [isTermSaleActive, setIsTermSaleActive] = useState(() => {
     const saved = localStorage.getItem('isTermSaleActive');
     return saved === 'true' || false;
@@ -39,7 +38,6 @@ const PaymentPage = () => {
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [accountUsername, setAccountUsername] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
-  const [isProcessingComplete, setIsProcessingComplete] = useState(false);
   const [studentMarks, setStudentMarks] = useState([]);
   const [previousSelections, setPreviousSelections] = useState([]);
   const [isCreatingNewOrder, setIsCreatingNewOrder] = useState(false);
@@ -62,14 +60,17 @@ const PaymentPage = () => {
   const [isPayingR19, setIsPayingR19] = useState(false);
   const [r19Error, setR19Error] = useState('');
   const [isCheckingR19, setIsCheckingR19] = useState(true);
-  const [pollingInterval, setPollingInterval] = useState(null);
+  const [r19PollingInterval, setR19PollingInterval] = useState(null);
+
+  // Money modal state (replaces old payment overlay)
+  const [showMoneyModal, setShowMoneyModal] = useState(false);
 
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-  const TERM_SALE_PRICE = 199;
+  const TERM_SALE_PRICE = 249;
   const TERM_SALE_UNI_COUNT = 4;
-  const PRICE_PER_UNI = 49;
+  const PRICE_PER_UNI = 59;
 
   const universityLogos = useMemo(() => ({
     'University of Johannesburg': { code: 'UJ', logo: '/UJ.jpeg' },
@@ -94,12 +95,9 @@ const PaymentPage = () => {
     'University of Venda': { code: 'UNIVEN', logo: '/UNIVEN.jpeg' },
     'University of Zululand': { code: 'UNIZULU', logo: '/UNIZULU.jpeg' },
     'Sefako Makgatho Health Sciences University': { code: 'SMU', logo: '/SMU.jpeg' },
+    'Nelson Mandela University': { code: 'NMU', logo: '/NMU.jpeg' },
+    'Sol Plaatje University': { code: 'SPU', logo: '/SPU.jpeg' },
   }), []);
-
-  const hiddenInstitutions = ['Nelson Mandela University', 'Sol Plaatje University'];
-  const filterHiddenInstitutions = (institutions) => {
-    return institutions.filter(inst => !hiddenInstitutions.some(hidden => inst.name?.toLowerCase().includes(hidden.toLowerCase())));
-  };
 
   const noFeeUniversitiesList = useMemo(() => [
     'University of Johannesburg', 'North-West University', 'University of Free State',
@@ -116,6 +114,7 @@ const PaymentPage = () => {
       'Cape Peninsula University of Technology': 4, 'Central University of Technology': 4,
       'Mangosuthu University of Technology': 4, 'University of Fort Hare': 3, 'University of Venda': 3,
       'University of Zululand': 4, 'Sefako Makgatho Health Sciences University': 3,
+      'Nelson Mandela University': 3, 'Sol Plaatje University': 3,
     };
     return limits[institutionName] || 3;
   }, []);
@@ -135,12 +134,10 @@ const PaymentPage = () => {
     return [];
   }, [location.state, studentMarks]);
 
-  // Check R19 status on load - LOCALSTORAGE FIRST
   useEffect(() => {
     const checkR19Status = async () => {
       setIsCheckingR19(true);
       
-      // CHECK LOCAL STORAGE FIRST - immediate bypass
       if (localStorage.getItem('r19_paid') === 'true') {
         setResultsUnlocked(true);
         setShowR19Paywall(false);
@@ -213,7 +210,7 @@ const PaymentPage = () => {
     checkR19Status();
 
     return () => {
-      if (pollingInterval) clearInterval(pollingInterval);
+      if (r19PollingInterval) clearInterval(r19PollingInterval);
     };
   }, []);
 
@@ -239,7 +236,6 @@ const PaymentPage = () => {
 
   useEffect(() => { trackEvent('page_view', { page: 'payment' }); }, []);
 
-  // Close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showProfileDropdown && !e.target.closest('.profile-dropdown-wrapper')) {
@@ -292,8 +288,7 @@ const PaymentPage = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.status === 'success') {
-            const filtered = filterHiddenInstitutions(data.institutions || []);
-            const uniList = filtered.map(uni => {
+            const uniList = (data.institutions || []).map(uni => {
               let logoInfo = universityLogos[uni.name];
               if (!logoInfo) {
                 for (const [key, value] of Object.entries(universityLogos)) {
@@ -350,11 +345,11 @@ const PaymentPage = () => {
         localStorage.setItem('selectedUniversityCourses', JSON.stringify(updated));
         showNotificationMessage('3rd Term Sale activated! Limited to 4 universities.', 'info');
       } else {
-        showNotificationMessage('3rd Term Sale activated! Select exactly 4 universities for R199.', 'success');
+        showNotificationMessage('3rd Term Sale activated! Select exactly 4 universities for R249.', 'success');
       }
     } else {
       trackEvent('term_sale_deactivated');
-      showNotificationMessage('Switched to regular pricing: R49 per university.', 'info');
+      showNotificationMessage('Switched to regular pricing: R59 per university.', 'info');
     }
   };
 
@@ -418,8 +413,7 @@ const PaymentPage = () => {
         const res = await fetch(`${API_URL}/api/institutions-with-courses`);
         if (res.ok) {
           const insts = await res.json();
-          const filtered = filterHiddenInstitutions(insts);
-          allUnis = filtered.map(inst => {
+          allUnis = insts.map(inst => {
             let logoInfo = universityLogos[inst.name];
             if (!logoInfo) {
               for (const [key, value] of Object.entries(universityLogos)) {
@@ -565,39 +559,28 @@ const PaymentPage = () => {
         body: JSON.stringify({ selectedPackage: isTermSaleActive ? 'term_sale' : 'per_university', isTermSale: isTermSaleActive, universities: universitiesData, totalCourses, totalUniversities, totalCost: cost, courseDetails: {} })
       });
       const data = await response.json();
-      if (data.success) { localStorage.setItem('trackingNumber', data.trackingNumber); return data.trackingNumber; }
+      if (data.success) { return data.trackingNumber; }
       return 'pending-' + Date.now();
     } catch (error) { return 'pending-' + Date.now(); }
     finally { setIsSavingSelection(false); }
   };
 
+  // Apply button now opens Money.js modal instead of handling payment directly
   const handleApply = async () => {
     const selectedCount = Object.keys(selectedCourses).length;
     if (selectedCount === 0) { showNotificationMessage('Select at least one university.', 'warning'); return; }
     if (universitiesWithCourses === 0) { showNotificationMessage('Select at least one course.', 'warning'); return; }
     if (isTermSaleActive && selectedCount !== TERM_SALE_UNI_COUNT) { showNotificationMessage(`3rd Term Sale requires exactly ${TERM_SALE_UNI_COUNT} universities.`, 'warning'); return; }
+
     trackEvent('payment_initiated', { pricingType: isTermSaleActive ? 'term_sale' : 'per_university', price: totalCost, universityCount: selectedUniCount, courseCount: totalApplications });
+    
+    // Save selection first
     await savePaymentSelectionToDatabase();
-    setShowPaymentPopup(true);
+    
+    // Open Money.js form modal
+    setShowMoneyModal(true);
   };
 
-  const handlePaymentComplete = async (result) => {
-    if (isProcessingComplete) return;
-    setIsProcessingComplete(true);
-    try {
-      setShowPaymentPopup(false);
-      if (result.showCredentials) { setAccountUsername(result.username); setAccountPassword(result.password); setShowCredentialsModal(true); }
-      if (result.success) {
-        localStorage.setItem('userProfile', JSON.stringify({ pricingType: isTermSaleActive ? 'term_sale' : 'per_university', isTermSale: isTermSaleActive, amount: totalCost, universities: Object.entries(selectedCourses).map(([code, courses]) => { const uni = universities.find(u => u.code === code); return { code, name: uni?.name, courses }; }), courses: selectedCourses, transactionId: result.transactionId }));
-        localStorage.removeItem('selectedUniversityCourses');
-        localStorage.removeItem('isTermSaleActive');
-        showNotificationMessage('Application submitted! We will process it shortly.', 'success');
-      }
-    } catch (e) { showNotificationMessage('Something went wrong.', 'error'); }
-    finally { setTimeout(() => setIsProcessingComplete(false), 2000); }
-  };
-
-  // R19 payment - creates checkout, opens Yoco link, polls backend
   const handleR19Payment = async () => {
     setIsPayingR19(true);
     setR19Error('');
@@ -647,7 +630,7 @@ const PaymentPage = () => {
 
           if (verifyData.success && verifyData.status === 'completed') {
             clearInterval(interval);
-            setPollingInterval(null);
+            setR19PollingInterval(null);
             localStorage.setItem('r19_paid', 'true');
             localStorage.removeItem('r19_payment_pending');
             localStorage.removeItem('r19_checkout_id');
@@ -658,16 +641,14 @@ const PaymentPage = () => {
             trackEvent('r19_payment_complete', { universityCount: totalFound });
             showNotificationMessage('Results unlocked!', 'success');
           }
-        } catch (e) {
-          // Keep polling
-        }
+        } catch (e) {}
       }, 3000);
 
-      setPollingInterval(interval);
+      setR19PollingInterval(interval);
 
       setTimeout(() => {
         clearInterval(interval);
-        setPollingInterval(null);
+        setR19PollingInterval(null);
         if (!resultsUnlocked) {
           setIsPayingR19(false);
           setR19Error('Payment not confirmed. Please try again.');
@@ -711,7 +692,6 @@ const PaymentPage = () => {
 
   return (
     <div className="simple-payment-page">
-      {/* Profile Icon with Dropdown */}
       {localStorage.getItem('authToken') && (
         <div className="profile-dropdown-wrapper">
           <button 
@@ -1111,7 +1091,19 @@ const PaymentPage = () => {
         </div>
       )}
 
-      <Money isOpen={showPaymentPopup} onClose={() => setShowPaymentPopup(false)} totalAmount={totalCost} selectedPackage={isTermSaleActive ? 'term_sale' : 'per_university'} onPaymentComplete={handlePaymentComplete} />
+      {/* Money.js Modal - opens when user clicks Apply */}
+      <Money 
+        isOpen={showMoneyModal} 
+        onClose={() => setShowMoneyModal(false)} 
+        totalAmount={totalCost} 
+        selectedPackage={isTermSaleActive ? 'term_sale' : 'per_university'} 
+        onPaymentComplete={(result) => {
+          setShowMoneyModal(false);
+          if (result.success) {
+            showNotificationMessage('Payment successful! Redirecting to profile...', 'success');
+          }
+        }} 
+      />
 
       <button className="chatbot-floating-btn" onClick={() => window.open('https://wa.me/27822589917', '_blank')} title="Chat with us on WhatsApp">
         <FaCommentDots className="chatbot-msg-icon" />
