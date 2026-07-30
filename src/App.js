@@ -1,5 +1,5 @@
 import API_URL from './config';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import './App.css';
 import Background from './Background';
@@ -16,15 +16,74 @@ import PaymentSuccess from './Pages/PaymentSuccess';
 import PaymentCancel from './Pages/PaymentCancel';
 import PaymentError from './Pages/PaymentError';
 
+// ==================== API HELPER WITH TOKEN REFRESH ====================
+const apiFetch = async (endpoint, options = {}) => {
+  let token = localStorage.getItem('authToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  
+  const makeRequest = async (retryToken, isRetry = false) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(retryToken && { 'Authorization': `Bearer ${retryToken}` }),
+      ...options.headers,
+    };
+    
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+    
+    if (response.status === 401 && refreshToken && !isRetry) {
+      console.log('🔄 Token expired, attempting refresh...');
+      
+      try {
+        const refreshResponse = await fetch(`${API_URL}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        const refreshData = await refreshResponse.json();
+        
+        if (refreshData.success && refreshData.token) {
+          localStorage.setItem('authToken', refreshData.token);
+          token = refreshData.token;
+          console.log('✅ Token refreshed successfully');
+          
+          return await makeRequest(token, true);
+        } else {
+          console.log('❌ Token refresh failed, redirecting to login');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/';
+          throw new Error('Session expired. Please sign in again.');
+        }
+      } catch (refreshError) {
+        console.error('❌ Token refresh error:', refreshError);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/';
+        throw new Error('Session expired. Please sign in again.');
+      }
+    }
+    
+    return response;
+  };
+  
+  return makeRequest(token);
+};
+
 // ==================== EVENT TRACKING ====================
 const trackEvent = async (eventType, eventData = {}) => {
-  const token = localStorage.getItem('authToken');
   try {
+    const token = localStorage.getItem('authToken');
     await fetch(`${API_URL}/api/track-event`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify({ eventType, eventData })
     });
@@ -338,6 +397,9 @@ function WelcomeScreen() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleInitialized = useRef(false);
+  const googleScriptLoaded = useRef(false);
+
+  const GOOGLE_CLIENT_ID = '653263265768-dnbqe08an6rei7pfacpsnc96mqfinr8t.apps.googleusercontent.com';
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -351,22 +413,73 @@ function WelcomeScreen() {
     trackEvent('page_view', { page: 'landing' });
   }, []);
 
-  // Load Google Identity Services script
+  // Initialize Google Identity Services ONCE when component mounts
   useEffect(() => {
-    if (window.google) return;
-    
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-  }, []);
+    const initializeGoogle = () => {
+      if (window.google && window.google.accounts && !googleInitialized.current) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignIn,
+            auto_select: false,
+            cancel_on_tap_outside: false,
+          });
+          googleInitialized.current = true;
+          console.log('Google Identity Services initialized successfully');
+        } catch (error) {
+          console.error('Failed to initialize Google Sign-In:', error);
+        }
+      }
+    };
 
-  const handleGoogleSignIn = async (response) => {
+    // If script already loaded
+    if (window.google && window.google.accounts) {
+      initializeGoogle();
+      return;
+    }
+
+    // Load script if not already loading
+    if (!googleScriptLoaded.current && !document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+      googleScriptLoaded.current = true;
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        initializeGoogle();
+      };
+      script.onerror = () => {
+        console.error('Failed to load Google Sign-In script');
+        googleScriptLoaded.current = false;
+      };
+      document.body.appendChild(script);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+          window.google.accounts.id.cancel();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, []); // Empty dependency array - only run on mount
+
+  const handleGoogleSignIn = useCallback(async (response) => {
     setGoogleLoading(true);
     setAuthError('');
 
     try {
+      // Validate credential exists
+      if (!response || !response.credential) {
+        console.error('No credential received from Google');
+        setAuthError('Google sign-in failed. No credential received. Please try again.');
+        setGoogleLoading(false);
+        return;
+      }
+
       const res = await fetch(`${API_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -383,14 +496,58 @@ function WelcomeScreen() {
         trackEvent('google_signin', { email: data.user.email });
         navigate('/dashboard');
       } else {
-        setAuthError(data.error || 'Google sign in failed');
+        // More specific error messages
+        if (data.error?.toLowerCase().includes('not found')) {
+          setAuthError('No account found with this Google email. Please sign up first.');
+        } else if (data.error?.toLowerCase().includes('token')) {
+          setAuthError('Google verification failed. Please try again.');
+        } else {
+          setAuthError(data.error || 'Google sign in failed. Please try again.');
+        }
+        setGoogleLoading(false);
       }
     } catch (error) {
-      setAuthError('Network error. Please try again.');
-    } finally {
+      console.error('Google sign-in network error:', error);
+      setAuthError('Network error. Please check your connection and try again.');
       setGoogleLoading(false);
     }
-  };
+  }, [navigate]);
+
+  const handleGoogleButtonClick = useCallback(() => {
+    setAuthError('');
+    setGoogleLoading(false);
+
+    if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+      setAuthError('Google Sign-In is loading. Please wait or use email sign-in.');
+      return;
+    }
+
+    if (!googleInitialized.current) {
+      // Re-initialize if needed
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: false,
+        });
+        googleInitialized.current = true;
+      } catch (e) {
+        console.error('Re-initialization failed:', e);
+        setAuthError('Google Sign-In unavailable. Please use email sign-in.');
+        return;
+      }
+    }
+
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed()) {
+        console.log('Google prompt not displayed:', notification.getNotDisplayedReason());
+        setAuthError('Google sign-in popup was blocked. Please allow popups or use email sign-in.');
+      } else if (notification.isSkippedMoment()) {
+        console.log('Google prompt skipped:', notification.getSkippedReason());
+      }
+    });
+  }, [handleGoogleSignIn]);
 
   const handleGetStarted = () => {
     if (termsAccepted) {
@@ -640,16 +797,7 @@ function WelcomeScreen() {
                       <button
                         type="button"
                         className="google-auth-btn"
-                        onClick={() => {
-                          if (window.google) {
-                            window.google.accounts.id.initialize({
-                              client_id: '653263265768-dnbqe08an6rei7pfacpsnc96mqfinr8t.apps.googleusercontent.com',
-                              callback: handleGoogleSignIn,
-                              auto_select: false,
-                            });
-                            window.google.accounts.id.prompt();
-                          }
-                        }}
+                        onClick={handleGoogleButtonClick}
                         disabled={googleLoading}
                         style={{ marginBottom: '20px' }}
                       >
@@ -868,7 +1016,7 @@ function TermsAndConditions() {
           
           <div className="terms-content">
             <h1 className="terms-title">Terms & Conditions</h1>
-            <p className="terms-last-updated">Last Updated: February 2026</p>
+            <p className="terms-last-updated">Last Updated: July 2026</p>
 
             <div className="terms-section">
               <h2>1. Introduction</h2>
@@ -920,7 +1068,7 @@ function TermsAndConditions() {
               <ul>
                 <li>Provide accurate, complete, and truthful information in all applications and communications</li>
                 <li>Submit applications before the stated deadlines</li>
-                <li>Pay any applicable application fees directly to institutions or through our platform as specified</li>
+                <li>Pay any applicable fees as described in Section 6</li>
                 <li>Review and understand each institution's specific requirements and policies</li>
                 <li>Maintain the confidentiality of your account credentials</li>
                 <li>Accept that you are solely responsible for the outcome of your applications</li>
@@ -928,20 +1076,42 @@ function TermsAndConditions() {
             </div>
 
             <div className="terms-section">
-              <h2>6. Application Fees, Payments, and Refunds</h2>
-              <p>Some institutions may charge application fees. Regarding such fees:</p>
+              <h2>6. Payments, Fees, and Refunds</h2>
+              
+              <h3>6.1 R19 Results Unlock Service</h3>
+              <p>Skolify offers a once-off R19 Results Unlock service that allows users to view all universities and courses they qualify for based on their academic results entered on the Platform.</p>
               <ul>
-                <li>Application fees are set by and paid to the educational institutions</li>
-                <li>Skolify charges a separate service fee for platform usage, which will be clearly disclosed</li>
-                <li><strong>Refund Policy:</strong> All fees paid to Skolify are non-refundable once an application has been submitted, unless:</li>
-                <ul>
-                  <li>The application was not successfully transmitted to the institution due to a technical error on Skolify's part</li>
-                  <li>Duplicate payment was processed in error</li>
-                  <li>Required by South African consumer protection law (CPA)</li>
-                </ul>
-                <li>Refund requests must be submitted in writing to skolifyteam@gmail.com within 14 days of payment</li>
-                <li>Processing refunds may take 7-14 business days</li>
-                <li>Institution application fees are subject to the refund policies of the respective institutions</li>
+                <li>The R19 fee is a once-off payment for lifetime access to your personalized qualifying results on the Platform.</li>
+                <li>Payment is processed securely via Yoco, a PCI-compliant payment gateway.</li>
+                <li>Once payment is confirmed, your results are unlocked immediately and remain accessible whenever you log into your account.</li>
+                <li><strong>Refund Policy for R19:</strong> The R19 Results Unlock fee is generally non-refundable. By paying R19, you acknowledge that the service provides immediate access to digital content (your qualifying universities and courses). Dissatisfaction with the results does not qualify for a refund. A refund may only be considered if a technical error on Skolify's part prevents you from accessing the results after payment. Refund requests must be submitted to skolifyteam@gmail.com within 48 hours of payment.</li>
+              </ul>
+
+              <h3>6.2 Application Service Fees (Per University / Term Sale)</h3>
+              <p>Skolify charges a service fee for guiding and processing your university applications. The fee structure is as follows:</p>
+              <ul>
+                <li><strong>Per University:</strong> R59 per university application</li>
+                <li><strong>3rd Term Sale:</strong> R249 for up to 4 universities</li>
+              </ul>
+              <p>These fees cover Skolify's application guidance and processing services only. They do NOT include the application fees charged by the universities themselves.</p>
+              
+              <h3>6.3 Refund Policy for Application Service Fees</h3>
+              <ul>
+                <li>If you request a refund <strong>before</strong> Skolify has begun processing your applications, you are entitled to a full refund of the service fee.</li>
+                <li>If Skolify has <strong>already begun processing</strong> your applications (applications submitted to universities on your behalf), we will deduct the per-university fee (R59 per university already applied to) from your refund. You will be refunded the remaining balance for universities not yet processed.</li>
+                <li><strong>Example:</strong> If you paid R249 for the Term Sale (4 universities) and we have already applied to 2 universities, your refund would be R249 - (2 × R59) = R131.</li>
+                <li>Once an application has been fully processed and submitted to a university, that portion of the service fee is non-refundable as the service has been rendered.</li>
+                <li>Refund requests must be submitted in writing to skolifyteam@gmail.com within 14 days of payment.</li>
+                <li>Processing of refunds may take 7-14 business days.</li>
+              </ul>
+
+              <h3>6.4 Institution Application Fees</h3>
+              <p>Some universities charge their own application fees. These fees are:</p>
+              <ul>
+                <li>Set by and payable to the respective educational institutions</li>
+                <li>Not included in Skolify's service fees</li>
+                <li>Subject to the refund policies of the respective institutions</li>
+                <li>Clearly indicated on the Platform where applicable</li>
               </ul>
             </div>
 
@@ -1014,7 +1184,7 @@ function TermsAndConditions() {
               <h2>15. Contact Information</h2>
               <p>If you have any questions about these Terms, please contact us at:</p>
               <p className="contact-info">
-                Support: skolifyteam@gmail.com<br />
+                Email: skolifyteam@gmail.com<br />
                 Address: Pretoria, South Africa
               </p>
             </div>
@@ -1053,7 +1223,7 @@ function PrivacyPolicy() {
           
           <div className="terms-content">
             <h1 className="terms-title">Privacy Policy</h1>
-            <p className="terms-last-updated">Last Updated: February 2026</p>
+            <p className="terms-last-updated">Last Updated: July 2026</p>
             <p className="popia-notice">Compliant with the Protection of Personal Information Act (POPIA) of South Africa</p>
 
             <div className="terms-section">
@@ -1069,7 +1239,7 @@ function PrivacyPolicy() {
                 <li><strong>Contact Information:</strong> Email address, phone number, WhatsApp number, physical address</li>
                 <li><strong>Academic Information:</strong> Subjects, marks, APS scores, educational history</li>
                 <li><strong>Application Information:</strong> Courses selected, universities chosen, application status</li>
-                <li><strong>Payment Information:</strong> Transaction details (payment information is processed by secure third-party payment gateways)</li>
+                <li><strong>Payment Information:</strong> Transaction details (payment information is processed by secure third-party payment gateways including Yoco)</li>
                 <li><strong>Technical Data:</strong> IP address, browser type, device information, usage data</li>
               </ul>
             </div>
@@ -1103,7 +1273,7 @@ function PrivacyPolicy() {
               <p>We may share your information with:</p>
               <ul>
                 <li><strong>Educational Institutions:</strong> To submit your applications and facilitate the admissions process</li>
-                <li><strong>Service Providers:</strong> Third parties who assist us with payment processing, hosting, analytics, and customer support</li>
+                <li><strong>Service Providers:</strong> Third parties who assist us with payment processing (Yoco), hosting, analytics, and customer support</li>
                 <li><strong>Legal Authorities:</strong> When required by law or to protect our rights</li>
               </ul>
               <p>We do not sell your personal information to third parties.</p>
@@ -1135,7 +1305,7 @@ function PrivacyPolicy() {
                 <li><strong>Right to Object:</strong> You may object to the processing of your personal information</li>
                 <li><strong>Right to Withdraw Consent:</strong> You may withdraw consent for processing where consent was the basis</li>
               </ul>
-              <p>To exercise these rights, please contact us at privacy@skolify.com.</p>
+              <p>To exercise these rights, please contact us at skolifyteam@gmail.com.</p>
             </div>
 
             <div className="terms-section">
@@ -1162,7 +1332,7 @@ function PrivacyPolicy() {
               <h2>13. Contact Us</h2>
               <p>If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us:</p>
               <p className="contact-info">
-                Support: skolifyteam@gmail.com<br />
+                Email: skolifyteam@gmail.com<br />
                 Address: Pretoria, South Africa
               </p>
             </div>

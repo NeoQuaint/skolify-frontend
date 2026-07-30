@@ -20,8 +20,8 @@ const ExpressApply = () => {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [needsHelp, setNeedsHelp] = useState(false);
   
-  const PRICE_PER_UNI = 49;
-  const TERM_SALE_PRICE = 199;
+  const PRICE_PER_UNI = 59;
+  const TERM_SALE_PRICE = 249;
   const TERM_SALE_COUNT = 4;
   
   const totalPrice = isTermSale ? TERM_SALE_PRICE : universityCount * PRICE_PER_UNI;
@@ -556,20 +556,42 @@ const ExpressApply = () => {
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className="pay-now-btn" 
-            style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '8px' }} 
-            disabled={isSubmitting || isUploading}
-          >
-            {isSubmitting ? (
-              <><FaSpinner className="spinner-icon" /> Submitting...</>
-            ) : isUploading ? (
-              <><FaSpinner className="spinner-icon" /> Uploading documents...</>
-            ) : (
-              `Submit Application — R${totalPrice}`
-            )}
-          </button>
+          {/* Submit Button - DISABLED with message */}
+          <div style={{ width: '100%' }}>
+            <button 
+              type="submit" 
+              className="pay-now-btn" 
+              style={{ 
+                width: '100%', 
+                padding: '16px', 
+                fontSize: '16px', 
+                marginTop: '8px',
+                opacity: 1,
+                cursor: 'not-allowed'
+              }} 
+              disabled={true}
+            >
+              {isSubmitting ? (
+                <><FaSpinner className="spinner-icon" /> Submitting...</>
+              ) : isUploading ? (
+                <><FaSpinner className="spinner-icon" /> Uploading documents...</>
+              ) : (
+                `Submit Application — R${totalPrice}`
+              )}
+            </button>
+            
+            {/* Disabled message below button */}
+            <p style={{
+              textAlign: 'center',
+              color: '#666',
+              fontSize: '13px',
+              marginTop: '8px',
+              marginBottom: '16px',
+              fontStyle: 'italic'
+            }}>
+              Button disabled, please try again later
+            </p>
+          </div>
         </form>
       </div>
     </div>

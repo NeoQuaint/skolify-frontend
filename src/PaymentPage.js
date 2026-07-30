@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './PaymentPage.css';
 import Money from './Money';
-import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaCopy, FaHistory, FaLock, FaCommentDots, FaTag, FaCreditCard, FaUserCircle, FaSignOutAlt, FaUser } from 'react-icons/fa';
+import { FaUniversity, FaSpinner, FaCheck, FaTimes, FaInfoCircle, FaBook, FaCheckCircle, FaSearch, FaExchangeAlt, FaArrowLeft, FaMagic, FaCopy, FaHistory, FaLock, FaUnlock, FaCommentDots, FaTag, FaCreditCard, FaUserCircle, FaSignOutAlt, FaUser } from 'react-icons/fa';
 import API_URL from './config';
 
 const trackEvent = (eventType, eventData = {}) => {
@@ -14,6 +14,26 @@ const trackEvent = (eventType, eventData = {}) => {
       'Authorization': token ? `Bearer ${token}` : ''
     },
     body: JSON.stringify({ eventType, eventData })
+  }).catch(() => {});
+};
+
+const saveAttemptSilent = (amount, pkg, checkoutId = null) => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = localStorage.getItem('authToken');
+  if (!user.email) return;
+  
+  fetch(`${API_URL}/api/payment/save-attempt`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      email: user.email,
+      amount,
+      package: pkg,
+      checkoutId
+    })
   }).catch(() => {});
 };
 
@@ -53,20 +73,23 @@ const PaymentPage = () => {
   const [availableAlternatives, setAvailableAlternatives] = useState([]);
   const [alternativeUniversity, setAlternativeUniversity] = useState(null);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // R19 Paywall state
   const [showR19Paywall, setShowR19Paywall] = useState(true);
   const [resultsUnlocked, setResultsUnlocked] = useState(false);
   const [isPayingR19, setIsPayingR19] = useState(false);
   const [r19Error, setR19Error] = useState('');
   const [isCheckingR19, setIsCheckingR19] = useState(true);
   const [r19PollingInterval, setR19PollingInterval] = useState(null);
+  const [r19Timeout, setR19Timeout] = useState(null);
 
-  // Money modal state (replaces old payment overlay)
   const [showMoneyModal, setShowMoneyModal] = useState(false);
-
-  // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  const [unlockedUniversities, setUnlockedUniversities] = useState(() => {
+    const saved = localStorage.getItem('unlockedUniversities');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const TERM_SALE_PRICE = 249;
   const TERM_SALE_UNI_COUNT = 4;
@@ -99,9 +122,10 @@ const PaymentPage = () => {
     'Sol Plaatje University': { code: 'SPU', logo: '/SPU.jpeg' },
   }), []);
 
+  // ✅ FIXED: WSU removed from no-fee list
   const noFeeUniversitiesList = useMemo(() => [
     'University of Johannesburg', 'North-West University', 'University of Free State',
-    'University of Western Cape', 'Walter Sisulu University'
+    'University of Western Cape'
   ], []);
 
   const getInstitutionCourseLimit = useCallback((institutionName) => {
@@ -133,6 +157,13 @@ const PaymentPage = () => {
     if (storedMarks) { try { const m = JSON.parse(storedMarks); if (m.length > 0) { setStudentMarks(m); return m; } } catch (e) {} }
     return [];
   }, [location.state, studentMarks]);
+
+  useEffect(() => {
+    return () => {
+      if (r19PollingInterval) clearInterval(r19PollingInterval);
+      if (r19Timeout) clearTimeout(r19Timeout);
+    };
+  }, [r19PollingInterval, r19Timeout]);
 
   useEffect(() => {
     const checkR19Status = async () => {
@@ -208,10 +239,6 @@ const PaymentPage = () => {
     };
 
     checkR19Status();
-
-    return () => {
-      if (r19PollingInterval) clearInterval(r19PollingInterval);
-    };
   }, []);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
@@ -258,6 +285,28 @@ const PaymentPage = () => {
       return uni?.courses?.includes(courseName);
     });
   }, [previousSelections, isCreatingNewOrder]);
+
+  const isUniversityLocked = useCallback((code, name) => {
+    if (!isCreatingNewOrder) return false;
+    if (unlockedUniversities.includes(code)) return false;
+    return isUniversityInPreviousOrders(code, name);
+  }, [isCreatingNewOrder, unlockedUniversities, isUniversityInPreviousOrders]);
+
+  const handleUnlockUniversity = (code, e) => {
+    e.stopPropagation();
+    setUnlockedUniversities(prev => {
+      let updated;
+      if (prev.includes(code)) {
+        updated = prev.filter(c => c !== code);
+        showNotificationMessage(`${code} locked again.`, 'info');
+      } else {
+        updated = [...prev, code];
+        showNotificationMessage(`${code} unlocked! You can now modify it.`, 'success');
+      }
+      localStorage.setItem('unlockedUniversities', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   useEffect(() => {
     if (location.state?.selectedCourses) {
@@ -355,8 +404,9 @@ const PaymentPage = () => {
 
   const handleUniversityClick = (university) => {
     if (!resultsUnlocked) return;
-    if (isUniversityInPreviousOrders(university.code, university.name)) {
-      showNotificationMessage(`Already applied to ${university.code}.`, 'warning');
+    const locked = isUniversityLocked(university.code, university.name);
+    if (locked) {
+      showNotificationMessage(`Click the 🔓 icon to unlock ${university.code}.`, 'warning');
       return;
     }
     const isAlreadySelected = selectedCourses[university.code]?.length > 0;
@@ -373,8 +423,8 @@ const PaymentPage = () => {
     const code = selectedUniversity.code;
     const current = selectedCourses[code] || [];
     const limit = getInstitutionCourseLimit(selectedUniversity.name);
-    if (isCourseInPreviousOrders(code, course.name)) {
-      showNotificationMessage(`Already applied to "${course.name}".`, 'warning');
+    if (isCourseInPreviousOrders(code, course.name) && !unlockedUniversities.includes(code)) {
+      showNotificationMessage(`Unlock ${code} first to modify courses.`, 'warning');
       return;
     }
     if (current.includes(course.name)) {
@@ -541,54 +591,113 @@ const PaymentPage = () => {
 
   const savePaymentSelectionToDatabase = async () => {
     const token = localStorage.getItem('authToken');
-    if (!token) return null;
+    if (!token) {
+      showNotificationMessage('Please sign in again.', 'error');
+      return null;
+    }
     setIsSavingSelection(true);
     try {
       const universitiesData = Object.entries(selectedCourses).map(([code, courses]) => {
         const uni = universities.find(u => u.code === code);
         return { code, name: uni?.name || code, courses };
       });
+      
+      if (universitiesData.length === 0) {
+        throw new Error('No universities selected');
+      }
+      
       const totalCourses = Object.values(selectedCourses).reduce((sum, courses) => sum + courses.length, 0);
       const totalUniversities = Object.keys(selectedCourses).length;
       const cost = totalCost;
-      const applicationSummary = { package: isTermSaleActive ? 'term_sale' : 'per_university', isTermSale: isTermSaleActive, universities: universitiesData, totalCourses, totalUniversities, totalCost: cost, courseDetails: {} };
-      sessionStorage.setItem('pendingApplicationSummary', JSON.stringify(applicationSummary));
+      
       const response = await fetch(`${API_URL}/api/payment/save-selection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ selectedPackage: isTermSaleActive ? 'term_sale' : 'per_university', isTermSale: isTermSaleActive, universities: universitiesData, totalCourses, totalUniversities, totalCost: cost, courseDetails: {} })
+        body: JSON.stringify({ 
+          selectedPackage: isTermSaleActive ? 'term_sale' : 'per_university', 
+          isTermSale: isTermSaleActive, 
+          universities: universitiesData, 
+          totalCourses, 
+          totalUniversities, 
+          totalCost: cost, 
+          courseDetails: {} 
+        })
       });
       const data = await response.json();
-      if (data.success) { return data.trackingNumber; }
-      return 'pending-' + Date.now();
-    } catch (error) { return 'pending-' + Date.now(); }
-    finally { setIsSavingSelection(false); }
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save selection');
+      }
+      
+      if (data.success) { 
+        return data.trackingNumber; 
+      }
+      
+      throw new Error(data.error || 'Application save failed');
+    } catch (error) {
+      console.error('Save selection error:', error);
+      showNotificationMessage(error.message || 'Application save failed. Please try again.', 'error');
+      return null;
+    } finally {
+      setIsSavingSelection(false);
+    }
   };
 
-  // Apply button now opens Money.js modal instead of handling payment directly
   const handleApply = async () => {
+    if (isProcessingPayment) return;
+    
+    if (isLoading) {
+      showNotificationMessage('Loading university data... Please wait.', 'info');
+      return;
+    }
+    
+    if (universities.length === 0) {
+      showNotificationMessage('Still loading your results. Please wait a moment.', 'warning');
+      return;
+    }
+    
     const selectedCount = Object.keys(selectedCourses).length;
     if (selectedCount === 0) { showNotificationMessage('Select at least one university.', 'warning'); return; }
     if (universitiesWithCourses === 0) { showNotificationMessage('Select at least one course.', 'warning'); return; }
     if (isTermSaleActive && selectedCount !== TERM_SALE_UNI_COUNT) { showNotificationMessage(`3rd Term Sale requires exactly ${TERM_SALE_UNI_COUNT} universities.`, 'warning'); return; }
 
+    setIsProcessingPayment(true);
+    
+    saveAttemptSilent(totalCost, isTermSaleActive ? 'term_sale' : 'per_university');
     trackEvent('payment_initiated', { pricingType: isTermSaleActive ? 'term_sale' : 'per_university', price: totalCost, universityCount: selectedUniCount, courseCount: totalApplications });
     
-    // Save selection first
-    await savePaymentSelectionToDatabase();
+    const trackingNumber = await savePaymentSelectionToDatabase();
     
-    // Open Money.js form modal
-    setShowMoneyModal(true);
+    if (trackingNumber) {
+      setShowMoneyModal(true);
+    } else {
+      showNotificationMessage('Failed to save your selection. Please try again.', 'error');
+    }
+    
+    setIsProcessingPayment(false);
   };
 
   const handleR19Payment = async () => {
+    if (isPayingR19) return;
+    
     setIsPayingR19(true);
-    setR19Error('');
+    setR19Error('Connecting to Yoco...');
+
+    const paymentWindow = window.open('', '_blank');
+    
+    saveAttemptSilent(19, 'r19_unlock');
 
     const token = localStorage.getItem('authToken');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+    const loadingTimeout = setTimeout(() => {
+      setR19Error('Still connecting to payment provider... Please wait.');
+    }, 8000);
+
     try {
+      const controller = new AbortController();
+      const fetchTimeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const createResponse = await fetch(`${API_URL}/api/payment/create-r19-checkout`, {
         method: 'POST',
         headers: {
@@ -599,19 +708,34 @@ const PaymentPage = () => {
           amount: 19,
           email: user.email || '',
           name: `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim() || 'Student'
-        })
+        }),
+        signal: controller.signal
       });
 
-      const createData = await createResponse.json();
+      clearTimeout(fetchTimeoutId);
+      clearTimeout(loadingTimeout);
+
+      let createData;
+      try {
+        createData = await createResponse.json();
+      } catch (parseError) {
+        if (paymentWindow) paymentWindow.close();
+        throw new Error('Invalid response from server. Please try again.');
+      }
 
       if (!createData.success) {
-        throw new Error(createData.error || 'Failed to create payment');
+        if (paymentWindow) paymentWindow.close();
+        throw new Error(createData.error || 'Failed to create payment. Please try again.');
       }
 
       localStorage.setItem('r19_checkout_id', createData.checkoutId);
       localStorage.setItem('r19_payment_pending', 'true');
 
-      window.open(createData.redirectUrl, '_blank');
+      if (paymentWindow) {
+        paymentWindow.location.href = createData.redirectUrl;
+      } else {
+        window.location.href = createData.redirectUrl;
+      }
 
       setR19Error('Complete payment in the opened tab. Waiting for confirmation...');
 
@@ -639,29 +763,40 @@ const PaymentPage = () => {
             setIsPayingR19(false);
             setR19Error('');
             trackEvent('r19_payment_complete', { universityCount: totalFound });
-            showNotificationMessage('Results unlocked!', 'success');
+            showNotificationMessage('Payment successful! Results unlocked.', 'success');
           }
         } catch (e) {}
       }, 3000);
 
       setR19PollingInterval(interval);
 
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         clearInterval(interval);
         setR19PollingInterval(null);
         if (!resultsUnlocked) {
           setIsPayingR19(false);
-          setR19Error('Payment not confirmed. Please try again.');
+          setR19Error('Payment not confirmed after 5 minutes. Please try again or contact support.');
         }
       }, 300000);
 
+      setR19Timeout(timeout);
+
     } catch (error) {
-      setR19Error(error.message || 'Payment failed. Please try again.');
+      clearTimeout(loadingTimeout);
+      if (paymentWindow) paymentWindow.close();
+      
+      if (error.name === 'AbortError') {
+        setR19Error('Request timed out. Please check your connection and try again.');
+      } else {
+        setR19Error(error.message || 'Payment failed. Please try again.');
+      }
       setIsPayingR19(false);
     }
   };
 
   const handleLogout = () => {
+    if (r19PollingInterval) clearInterval(r19PollingInterval);
+    if (r19Timeout) clearTimeout(r19Timeout);
     localStorage.clear();
     sessionStorage.clear();
     navigate('/');
@@ -731,7 +866,7 @@ const PaymentPage = () => {
               disabled={isPayingR19}
             >
               {isPayingR19 ? (
-                <><FaSpinner className="spinner-icon" /> Processing...</>
+                <><FaSpinner className="spinner-icon" /> Connecting to Yoco...</>
               ) : (
                 <><FaCreditCard /> Pay R19 — Unlock Results</>
               )}
@@ -786,17 +921,25 @@ const PaymentPage = () => {
                     const isSelected = selectedCourses[uni.code]?.length > 0;
                     const courseCount = selectedCourses[uni.code]?.length || 0;
                     const isFull = isTermSaleActive && selectedUniCount >= TERM_SALE_UNI_COUNT && !isSelected;
-                    const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
-                    const disabled = isFull || isPrev || !resultsUnlocked;
+                    const locked = isUniversityLocked(uni.code, uni.name);
+                    const disabled = (isFull || locked) && !isSelected;
                     return (
                       <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
                         <div className="simple-uni-logo">
                           {uni.logo ? <img src={uni.logo} alt={uni.code} className="uni-logo-img" onError={(e) => { e.target.style.display = 'none'; }} /> : <span>{uni.code?.slice(0, 2)}</span>}
                         </div>
                         <div className="simple-uni-name">{uni.code}</div>
-                        {isPrev && <div className="simple-uni-badge prev-badge"><FaLock size={10} /> Applied</div>}
-                        {isSelected && !isPrev && <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>}
-                        {isSelected && resultsUnlocked && <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>}
+                        {locked && (
+                          <div className="simple-uni-badge prev-badge" onClick={(e) => handleUnlockUniversity(uni.code, e)} title="Click to unlock">
+                            <FaUnlock size={10} /> Unlock
+                          </div>
+                        )}
+                        {isSelected && !locked && (
+                          <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>
+                        )}
+                        {isSelected && resultsUnlocked && !locked && (
+                          <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>
+                        )}
                       </div>
                     );
                   })}
@@ -814,17 +957,25 @@ const PaymentPage = () => {
                     const isSelected = selectedCourses[uni.code]?.length > 0;
                     const courseCount = selectedCourses[uni.code]?.length || 0;
                     const isFull = isTermSaleActive && selectedUniCount >= TERM_SALE_UNI_COUNT && !isSelected;
-                    const isPrev = isUniversityInPreviousOrders(uni.code, uni.name);
-                    const disabled = isFull || isPrev || !resultsUnlocked;
+                    const locked = isUniversityLocked(uni.code, uni.name);
+                    const disabled = (isFull || locked) && !isSelected;
                     return (
                       <div key={uni.id} className={`simple-uni-card ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && handleUniversityClick(uni)}>
                         <div className="simple-uni-logo">
                           {uni.logo ? <img src={uni.logo} alt={uni.code} className="uni-logo-img" onError={(e) => { e.target.style.display = 'none'; }} /> : <span>{uni.code?.slice(0, 2)}</span>}
                         </div>
                         <div className="simple-uni-name">{uni.code}</div>
-                        {isPrev && <div className="simple-uni-badge prev-badge"><FaLock size={10} /> Applied</div>}
-                        {isSelected && !isPrev && <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>}
-                        {isSelected && resultsUnlocked && <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>}
+                        {locked && (
+                          <div className="simple-uni-badge prev-badge" onClick={(e) => handleUnlockUniversity(uni.code, e)} title="Click to unlock">
+                            <FaUnlock size={10} /> Unlock
+                          </div>
+                        )}
+                        {isSelected && !locked && (
+                          <div className="simple-uni-badge">{courseCount}/{getInstitutionCourseLimit(uni.name)}</div>
+                        )}
+                        {isSelected && resultsUnlocked && !locked && (
+                          <div className="simple-uni-check" onClick={(e) => handleUniversityDeselect(uni, e)}><FaTimes /></div>
+                        )}
                       </div>
                     );
                   })}
@@ -839,9 +990,17 @@ const PaymentPage = () => {
             <h4 className="selected-courses-title">Your Chosen Courses</h4>
             {Object.entries(selectedCourses).map(([code, courses]) => {
               const uni = universities.find(u => u.code === code);
+              const locked = isUniversityLocked(code, uni?.name);
               return (
                 <div key={code} className="selected-uni-row">
-                  <span className="selected-uni-code">{uni?.code || code}</span>
+                  <span className="selected-uni-code">
+                    {uni?.code || code}
+                    {locked && (
+                      <span className="unlock-inline-btn" onClick={() => handleUnlockUniversity(code, { stopPropagation: () => {} })} title="Click to unlock">
+                        <FaUnlock size={10} />
+                      </span>
+                    )}
+                  </span>
                   <span className="selected-uni-courses">
                     {courses.map((course, idx) => (
                       <span key={idx} className="selected-course-tag"><FaBook className="selected-course-icon" />{course}</span>
@@ -877,8 +1036,8 @@ const PaymentPage = () => {
           </div>
 
           <div className="apply-section-inline">
-            <button className="primary-btn-full" onClick={handleApply} disabled={isSavingSelection || !resultsUnlocked}>
-              {isSavingSelection ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Apply'}
+            <button className="primary-btn-full" onClick={handleApply} disabled={isSavingSelection || isProcessingPayment || !resultsUnlocked}>
+              {isSavingSelection || isProcessingPayment ? <><FaSpinner className="spinner-icon" /> Saving...</> : 'Apply'}
             </button>
           </div>
         </div>
@@ -922,11 +1081,11 @@ const PaymentPage = () => {
                     })}
                     {availableForSelected.filter(c => !currentForSelected.includes(c.name)).map((course, idx) => {
                       const isMaxed = currentForSelected.length >= maxForSelected;
-                      const isPrev = isCourseInPreviousOrders(selectedUniversity.code, course.name);
+                      const isPrev = isCourseInPreviousOrders(selectedUniversity.code, course.name) && !unlockedUniversities.includes(selectedUniversity.code);
                       return (
                         <div key={`avail-${idx}`} className={`course-item ${(isMaxed || isPrev) ? 'disabled' : ''}`} onClick={() => { if (!isMaxed && !isPrev) handleCourseSelection(course); }}>
-                          <div className="course-item-content"><FaBook className="course-item-icon" /><span className="course-item-name">{course.name}</span><div className="course-item-check">{isPrev ? <FaLock /> : '+'}</div></div>
-                          {isPrev && <div className="prev-course-note">Already applied</div>}
+                          <div className="course-item-content"><FaBook className="course-item-icon" /><span className="course-item-name">{course.name}</span><div className="course-item-check">{isPrev ? <FaUnlock /> : '+'}</div></div>
+                          {isPrev && <div className="prev-course-note">Click unlock on university</div>}
                         </div>
                       );
                     })}
@@ -1091,7 +1250,6 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Money.js Modal - opens when user clicks Apply */}
       <Money 
         isOpen={showMoneyModal} 
         onClose={() => setShowMoneyModal(false)} 

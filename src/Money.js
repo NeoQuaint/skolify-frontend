@@ -18,7 +18,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({ id: '', results: '' });
+  const [documentErrors, setDocumentErrors] = useState({ id: '', results: '' });
+  const [fieldErrors, setFieldErrors] = useState({ 
+    email: '', phoneNumber: '', whatsappNumber: '' 
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [showSaveForLaterPopup, setShowSaveForLaterPopup] = useState(false);
   const [isSavingForLater, setIsSavingForLater] = useState(false);
@@ -33,6 +36,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   const [needsHelp, setNeedsHelp] = useState(false);
   const [hasLaptop, setHasLaptop] = useState(false);
   const [requiresNsfas, setRequiresNsfas] = useState(false);
+  
+  // Payment disabled state
+  const [isPaymentDisabled, setIsPaymentDisabled] = useState(true);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -162,6 +168,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Clear field error when user types
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
     setError('');
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -172,7 +180,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     setIsUploading(true);
     setError('');
-    setFieldErrors(prev => ({ ...prev, [type]: '' }));
+    setDocumentErrors(prev => ({ ...prev, [type]: '' }));
     
     const formDataFile = new FormData();
     formDataFile.append(type, file);
@@ -187,7 +195,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       
       if (!response.ok) {
         const errorMsg = result.error || 'Upload failed';
-        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+        setDocumentErrors(prev => ({ ...prev, [type]: errorMsg }));
         throw new Error(errorMsg);
       }
       
@@ -204,10 +212,10 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             path: s3Path
           }
         });
-        setFieldErrors(prev => ({ ...prev, [type]: '' }));
+        setDocumentErrors(prev => ({ ...prev, [type]: '' }));
       } else {
         const errorMsg = result.error || 'Upload failed';
-        setFieldErrors(prev => ({ ...prev, [type]: errorMsg }));
+        setDocumentErrors(prev => ({ ...prev, [type]: errorMsg }));
         throw new Error(errorMsg);
       }
     } catch (error) {
@@ -219,19 +227,24 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
   };
 
   const validateForm = () => {
+    const errors = {};
+    let valid = true;
+
     if (!formData.email || !formData.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return false;
+      errors.email = 'Please enter a valid email address';
+      valid = false;
     }
     if (!formData.phoneNumber || formData.phoneNumber.trim().length < 10) {
-      setError('Please enter a valid phone number');
-      return false;
+      errors.phoneNumber = 'Please enter a valid phone number (at least 10 digits)';
+      valid = false;
     }
     if (!formData.whatsappNumber || formData.whatsappNumber.trim().length < 10) {
-      setError('Please enter a valid WhatsApp number');
-      return false;
+      errors.whatsappNumber = 'Please enter a valid WhatsApp number (at least 10 digits)';
+      valid = false;
     }
-    return true;
+
+    setFieldErrors(prev => ({ ...prev, ...errors }));
+    return valid;
   };
 
   // Save profile data to backend
@@ -240,7 +253,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     if (!token) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/user/update-profile`, {
+      const response = await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -281,6 +294,8 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       
       if (response.ok) {
         console.log('✅ Profile data saved');
+      } else {
+        console.error('Profile save failed:', response.status);
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -365,13 +380,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       };
     }
     
-    // Save SmartClass lead
     await saveSmartClassLead();
-    
-    // Save profile data
     await saveProfileData();
     
-    // Submit order
     const orderResponse = await fetch(`${API_URL}/api/payment/submit-order`, {
       method: 'POST',
       headers: {
@@ -422,17 +433,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     
     console.log('✅ Got tracking number:', trackingNumber);
     
-    // Save payment selection
     if (applicationData.package) {
-      const paymentSelectionData = {
-        selectedPackage: applicationData.package,
-        universities: applicationData.universities,
-        totalCourses: applicationData.totalCourses,
-        totalUniversities: applicationData.totalUniversities,
-        totalCost: applicationData.totalCost,
-        courseDetails: applicationData.courseDetails
-      };
-      
       try {
         await fetch(`${API_URL}/api/payment/save-selection`, {
           method: 'POST',
@@ -440,14 +441,20 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(paymentSelectionData)
+          body: JSON.stringify({
+            selectedPackage: applicationData.package,
+            universities: applicationData.universities,
+            totalCourses: applicationData.totalCourses,
+            totalUniversities: applicationData.totalUniversities,
+            totalCost: applicationData.totalCost,
+            courseDetails: applicationData.courseDetails
+          })
         });
       } catch (paymentError) {
         console.error('❌ Payment selection error:', paymentError);
       }
     }
     
-    // Create application
     const appResponse = await fetch(`${API_URL}/api/applications/create`, {
       method: 'POST',
       headers: {
@@ -510,7 +517,6 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
       await saveProfileData();
       await saveSmartClassLead();
       
-      // Save payment selection as pending
       const pendingSummary = sessionStorage.getItem('pendingApplicationSummary');
       if (pendingSummary) {
         const token = localStorage.getItem('authToken');
@@ -573,9 +579,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     }
 
     try {
-      // Save application data first (gets tracking number)
-      const tempTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-      const trackingNumber = await saveApplicationData(tempTransactionId);
+      // Save profile and SmartClass lead (non-blocking)
+      saveProfileData().catch(e => console.error('Profile save error:', e));
+      saveSmartClassLead().catch(e => console.error('SmartClass lead error:', e));
       
       // Create Yoco checkout
       const createResponse = await fetch(`${API_URL}/api/payment/create-application-checkout`, {
@@ -629,12 +635,25 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             setYocoPollingInterval(null);
             localStorage.removeItem('application_payment_pending');
             localStorage.removeItem('application_checkout_id');
+            
+            // NOW save application data after payment confirmed
+            try {
+              const pendingSummary2 = sessionStorage.getItem('pendingApplicationSummary');
+              if (pendingSummary2) {
+                const trackingNumber = await saveApplicationData(createData.checkoutId);
+                localStorage.setItem('paymentTrackingNumber', trackingNumber);
+                console.log('✅ Application saved with tracking:', trackingNumber);
+              }
+            } catch (saveError) {
+              console.error('Application save error:', saveError);
+            }
+            
             localStorage.removeItem('selectedUniversityCourses');
             localStorage.removeItem('isTermSaleActive');
             setIsWaitingForPayment(false);
             
             if (onPaymentComplete) {
-              onPaymentComplete({ success: true, transactionId: trackingNumber });
+              onPaymentComplete({ success: true, transactionId: createData.checkoutId });
             }
             
             onClose();
@@ -663,13 +682,9 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
     }
   };
 
-  // Handle close button - show save for later popup
+  // Handle close button - always show save for later popup
   const handleCloseClick = () => {
-    if (!hasCompletedPaymentBefore) {
-      setShowSaveForLaterPopup(true);
-    } else {
-      onClose();
-    }
+    setShowSaveForLaterPopup(true);
   };
 
   if (!isOpen) return null;
@@ -694,19 +709,16 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
 
           <div className="money-header">
             <h2>Complete Your Payment</h2>
-            <p>
-              {hasCompletedPaymentBefore 
-                ? 'Welcome back! Your information is already saved. Complete your payment below.' 
-                : 'Please provide your details for the university applications'}
-            </p>
+            <p>Please provide your details for the university applications. You can edit any field below.</p>
           </div>
 
+          {/* Welcome back banner for returning users */}
           {hasCompletedPaymentBefore && (
             <div className="welcome-back-banner">
               <FaUser className="welcome-icon" />
               <div className="welcome-text">
                 <span className="welcome-greeting">Welcome back, {formData.firstName || 'Valued Customer'}!</span>
-                <span className="welcome-message">Your details are already saved. Just complete your payment below.</span>
+                <span className="welcome-message">Your details are pre-filled. You can edit anything below before paying.</span>
               </div>
             </div>
           )}
@@ -717,6 +729,7 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
             </div>
           )}
 
+          {/* General error for non-field issues (payment failures, etc.) */}
           {error && (
             <div className="money-error">
               {error}
@@ -736,595 +749,583 @@ const Money = ({ isOpen, onClose, totalAmount, selectedPackage, onPaymentComplet
           )}
 
           <form onSubmit={(e) => e.preventDefault()} className="money-form">
-            {/* Show FULL FORM for first-time applicants ONLY */}
-            {!hasCompletedPaymentBefore && (
-              <>
-                {/* Section 1: Personal Information */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">1</span>
-                    <h3>Personal Information</h3>
-                  </div>
-                  
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaUser /> First Name</label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label>Middle Name</label>
-                      <input
-                        type="text"
-                        name="middleName"
-                        placeholder="Michael (optional)"
-                        value={formData.middleName}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="money-group">
-                    <label><FaUser /> Last Name</label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Doe"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="money-group">
-                    <label><FaIdCard /> ID / Passport Number</label>
-                    <input
-                      type="text"
-                      name="idNumber"
-                      placeholder="000101 5084 089"
-                      value={formData.idNumber}
-                      onChange={handleInputChange}
-                    />
-                    <small className="field-note">This will be used for verification and payment reference</small>
-                  </div>
-
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label>Date of Birth</label>
-                      <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label>Gender</label>
-                      <select
-                        name="gender"
-                        value={formData.gender}
-                        onChange={handleInputChange}
-                        className="money-select"
-                      >
-                        <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label>Nationality</label>
-                      <input
-                        type="text"
-                        name="nationality"
-                        placeholder="South African"
-                        value={formData.nationality}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label>Home Language</label>
-                      <input
-                        type="text"
-                        name="homeLanguage"
-                        placeholder="English / IsiZulu etc."
-                        value={formData.homeLanguage}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
+            {/* SHOW FORM FOR ALL USERS - new and returning */}
+            <>
+              {/* Section 1: Personal Information */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">1</span>
+                  <h3>Personal Information</h3>
                 </div>
-
-                {/* Section 2: Contact Information */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">2</span>
-                    <h3>Contact Information</h3>
-                  </div>
-                  
+                
+                <div className="money-row">
                   <div className="money-group">
-                    <label><FaEnvelope /> Email Address *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="john.doe@example.com"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <small className="field-note">We'll send application updates here</small>
-                  </div>
-
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaPhone /> Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phoneNumber"
-                        placeholder="+27 11 123 4567"
-                        value={formData.phoneNumber}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label><FaWhatsapp /> WhatsApp Number *</label>
-                      <input
-                        type="tel"
-                        name="whatsappNumber"
-                        placeholder="+27 11 123 4567"
-                        value={formData.whatsappNumber}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Residential Address */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">3</span>
-                    <h3>Residential Address</h3>
-                  </div>
-                  
-                  <div className="money-group">
-                    <label><FaHome /> Street Address</label>
+                    <label><FaUser /> First Name</label>
                     <input
                       type="text"
-                      name="address"
-                      placeholder="123 Main Street, Unit 4B"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                    />
-                    <small className="field-note">Include house/unit number and street name</small>
-                  </div>
-
-                  <div className="money-group">
-                    <label><FaBuilding /> Suburb / Area</label>
-                    <input
-                      type="text"
-                      name="suburb"
-                      placeholder="Sandton"
-                      value={formData.suburb}
+                      name="firstName"
+                      placeholder="John"
+                      value={formData.firstName}
                       onChange={handleInputChange}
                     />
                   </div>
 
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaCity /> City / Town</label>
-                      <input
-                        type="text"
-                        name="city"
-                        placeholder="Johannesburg"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label><FaMapMarkerAlt /> Province</label>
-                      <select
-                        name="province"
-                        value={formData.province}
-                        onChange={handleInputChange}
-                        className="money-select"
-                      >
-                        <option value="">Select Province</option>
-                        <option value="Gauteng">Gauteng</option>
-                        <option value="Western Cape">Western Cape</option>
-                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                        <option value="Eastern Cape">Eastern Cape</option>
-                        <option value="Free State">Free State</option>
-                        <option value="Limpopo">Limpopo</option>
-                        <option value="Mpumalanga">Mpumalanga</option>
-                        <option value="North West">North West</option>
-                        <option value="Northern Cape">Northern Cape</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="money-group">
-                    <label>Postal Code</label>
+                    <label>Middle Name</label>
                     <input
                       type="text"
-                      name="postalCode"
-                      placeholder="2000"
-                      value={formData.postalCode}
+                      name="middleName"
+                      placeholder="Michael (optional)"
+                      value={formData.middleName}
                       onChange={handleInputChange}
                     />
                   </div>
                 </div>
 
-                {/* Section 4: Previous School Attended + SmartClass Lead Capture */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">4</span>
-                    <h3>Previous School Attended</h3>
-                  </div>
-                  
-                  <div className="money-group">
-                    <label><FaSchool /> School Name</label>
-                    <input
-                      type="text"
-                      name="previousSchool"
-                      placeholder="e.g. Parktown High School"
-                      value={formData.previousSchool}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaMapMarkerAlt /> School Province</label>
-                      <select
-                        name="previousSchoolProvince"
-                        value={formData.previousSchoolProvince}
-                        onChange={handleInputChange}
-                        className="money-select"
-                      >
-                        <option value="">Select Province</option>
-                        <option value="Gauteng">Gauteng</option>
-                        <option value="Western Cape">Western Cape</option>
-                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                        <option value="Eastern Cape">Eastern Cape</option>
-                        <option value="Free State">Free State</option>
-                        <option value="Limpopo">Limpopo</option>
-                        <option value="Mpumalanga">Mpumalanga</option>
-                        <option value="North West">North West</option>
-                        <option value="Northern Cape">Northern Cape</option>
-                      </select>
-                    </div>
-
-                    <div className="money-group">
-                      <label><FaCalendarAlt /> Year Completed/Attended</label>
-                      <input
-                        type="text"
-                        name="previousSchoolYear"
-                        placeholder="2023"
-                        value={formData.previousSchoolYear}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  {/* SmartClass Lead Capture */}
-                  <div className="smartclass-lead-section">
-                    <div className="smartclass-checkbox-row">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={isUpgrading}
-                          onChange={(e) => setIsUpgrading(e.target.checked)}
-                        />
-                        <span>Are you currently upgrading your marks?</span>
-                      </label>
-                    </div>
-                    
-                    <div className="smartclass-checkbox-row">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={needsHelp}
-                          onChange={(e) => setNeedsHelp(e.target.checked)}
-                        />
-                        <span>Do you need help with your studies?</span>
-                      </label>
-                    </div>
-
-                    <div className="smartclass-checkbox-row">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={hasLaptop}
-                          onChange={(e) => setHasLaptop(e.target.checked)}
-                        />
-                        <span><FaLaptop style={{ marginRight: '4px' }} />Do you have access to a laptop/computer?</span>
-                      </label>
-                    </div>
-
-                    <div className="smartclass-checkbox-row">
-                      <label className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={requiresNsfas}
-                          onChange={(e) => setRequiresNsfas(e.target.checked)}
-                        />
-                        <span><FaMoneyBillWave style={{ marginRight: '4px' }} />Do you require NSFAS funding?</span>
-                      </label>
-                    </div>
-                  </div>
+                <div className="money-group">
+                  <label><FaUser /> Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    placeholder="Doe"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                  />
                 </div>
 
-                {/* Section 5: Next of Kin / Emergency Contact */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">5</span>
-                    <h3>Next of Kin / Emergency Contact</h3>
-                  </div>
-                  
+                <div className="money-group">
+                  <label><FaIdCard /> ID / Passport Number</label>
+                  <input
+                    type="text"
+                    name="idNumber"
+                    placeholder="000101 5084 089"
+                    value={formData.idNumber}
+                    onChange={handleInputChange}
+                  />
+                  <small className="field-note">This will be used for verification and payment reference</small>
+                </div>
+
+                <div className="money-row">
                   <div className="money-group">
-                    <label><FaUserTie /> Full Name</label>
+                    <label>Date of Birth</label>
                     <input
-                      type="text"
-                      name="kinName"
-                      placeholder="Jane Doe"
-                      value={formData.kinName}
+                      type="date"
+                      name="dateOfBirth"
+                      value={formData.dateOfBirth}
                       onChange={handleInputChange}
                     />
                   </div>
 
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaIdCard /> ID Number</label>
-                      <input
-                        type="text"
-                        name="kinIdNumber"
-                        placeholder="800505 0187 085"
-                        value={formData.kinIdNumber}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label>Gender</label>
-                      <select
-                        name="kinGender"
-                        value={formData.kinGender}
-                        onChange={handleInputChange}
-                        className="money-select"
-                      >
-                        <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="money-group">
-                    <label>Relationship</label>
+                    <label>Gender</label>
                     <select
-                      name="kinRelationship"
-                      value={formData.kinRelationship}
+                      name="gender"
+                      value={formData.gender}
                       onChange={handleInputChange}
                       className="money-select"
                     >
-                      <option value="">Select Relationship</option>
-                      <option value="Mother">Mother</option>
-                      <option value="Father">Father</option>
-                      <option value="Guardian">Guardian</option>
-                      <option value="Spouse">Spouse</option>
-                      <option value="Sibling">Sibling</option>
-                      <option value="Other Relative">Other Relative</option>
-                      <option value="Friend">Friend</option>
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label>Nationality</label>
+                    <input
+                      type="text"
+                      name="nationality"
+                      placeholder="South African"
+                      value={formData.nationality}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label>Home Language</label>
+                    <input
+                      type="text"
+                      name="homeLanguage"
+                      placeholder="English / IsiZulu etc."
+                      value={formData.homeLanguage}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Contact Information */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">2</span>
+                  <h3>Contact Information</h3>
+                </div>
+                
+                <div className="money-group">
+                  <label><FaEnvelope /> Email Address *</label>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="john.doe@example.com"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    style={fieldErrors.email ? { borderColor: '#dc3545', borderWidth: '2px' } : {}}
+                  />
+                  {fieldErrors.email && <small className="field-error-inline">{fieldErrors.email}</small>}
+                  {!fieldErrors.email && <small className="field-note">We'll send application updates here</small>}
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label><FaPhone /> Phone Number *</label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      placeholder="+27 11 123 4567"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      required
+                      style={fieldErrors.phoneNumber ? { borderColor: '#dc3545', borderWidth: '2px' } : {}}
+                    />
+                    {fieldErrors.phoneNumber && <small className="field-error-inline">{fieldErrors.phoneNumber}</small>}
+                  </div>
+
+                  <div className="money-group">
+                    <label><FaWhatsapp /> WhatsApp Number *</label>
+                    <input
+                      type="tel"
+                      name="whatsappNumber"
+                      placeholder="+27 11 123 4567"
+                      value={formData.whatsappNumber}
+                      onChange={handleInputChange}
+                      required
+                      style={fieldErrors.whatsappNumber ? { borderColor: '#dc3545', borderWidth: '2px' } : {}}
+                    />
+                    {fieldErrors.whatsappNumber && <small className="field-error-inline">{fieldErrors.whatsappNumber}</small>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Residential Address */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">3</span>
+                  <h3>Residential Address</h3>
+                </div>
+                
+                <div className="money-group">
+                  <label><FaHome /> Street Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    placeholder="123 Main Street, Unit 4B"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                  />
+                  <small className="field-note">Include house/unit number and street name</small>
+                </div>
+
+                <div className="money-group">
+                  <label><FaBuilding /> Suburb / Area</label>
+                  <input
+                    type="text"
+                    name="suburb"
+                    placeholder="Sandton"
+                    value={formData.suburb}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label><FaCity /> City / Town</label>
+                    <input
+                      type="text"
+                      name="city"
+                      placeholder="Johannesburg"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label><FaMapMarkerAlt /> Province</label>
+                    <select
+                      name="province"
+                      value={formData.province}
+                      onChange={handleInputChange}
+                      className="money-select"
+                    >
+                      <option value="">Select Province</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="Western Cape">Western Cape</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="North West">North West</option>
+                      <option value="Northern Cape">Northern Cape</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="money-group">
+                  <label>Postal Code</label>
+                  <input
+                    type="text"
+                    name="postalCode"
+                    placeholder="2000"
+                    value={formData.postalCode}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              {/* Section 4: Previous School Attended + SmartClass Lead Capture */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">4</span>
+                  <h3>Previous School Attended</h3>
+                </div>
+                
+                <div className="money-group">
+                  <label><FaSchool /> School Name</label>
+                  <input
+                    type="text"
+                    name="previousSchool"
+                    placeholder="e.g. Parktown High School"
+                    value={formData.previousSchool}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label><FaMapMarkerAlt /> School Province</label>
+                    <select
+                      name="previousSchoolProvince"
+                      value={formData.previousSchoolProvince}
+                      onChange={handleInputChange}
+                      className="money-select"
+                    >
+                      <option value="">Select Province</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="Western Cape">Western Cape</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="North West">North West</option>
+                      <option value="Northern Cape">Northern Cape</option>
                     </select>
                   </div>
 
-                  <div className="money-row">
-                    <div className="money-group">
-                      <label><FaPhoneAlt /> Phone Number</label>
-                      <input
-                        type="tel"
-                        name="kinPhone"
-                        placeholder="+27 11 123 4567"
-                        value={formData.kinPhone}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="money-group">
-                      <label><FaEnvelope /> Email</label>
-                      <input
-                        type="email"
-                        name="kinEmail"
-                        placeholder="jane.doe@example.com (optional)"
-                        value={formData.kinEmail}
-                        onChange={handleInputChange}
-                      />
-                    </div>
+                  <div className="money-group">
+                    <label><FaCalendarAlt /> Year Completed/Attended</label>
+                    <input
+                      type="text"
+                      name="previousSchoolYear"
+                      placeholder="2023"
+                      value={formData.previousSchoolYear}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
 
-                {/* Section 6: Documents */}
-                <div className="money-section-card">
-                  <div className="section-title">
-                    <span className="section-number">6</span>
-                    <h3>Documents</h3>
-                    <small className="section-hint">Max 5MB per file. PDF or images only.</small>
+                {/* SmartClass Lead Capture */}
+                <div className="smartclass-lead-section">
+                  <div className="smartclass-checkbox-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={isUpgrading}
+                        onChange={(e) => setIsUpgrading(e.target.checked)}
+                      />
+                      <span>Are you currently upgrading your marks?</span>
+                    </label>
                   </div>
                   
-                  <div className="document-upload-item">
-                    <div className="document-info">
-                      <FaIdCard className="document-icon" />
-                      <div>
-                        <span className="document-name">ID Document / Passport</span>
-                        <small className="document-hint">Certified copy (PDF or Image)</small>
-                      </div>
-                    </div>
-                    <div className="document-actions">
-                      {!documents.id.uploaded ? (
-                        <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                          <FaUpload />
-                          <input 
-                            type="file" 
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileUpload('id', e)}
-                            disabled={isUploading}
-                            hidden
-                          />
-                        </label>
-                      ) : (
-                        <div className="uploaded-file">
-                          <FaCheck className="uploaded-icon" />
-                          <span>{documents.id.name}</span>
-                          <button 
-                            type="button"
-                            className="change-file-btn"
-                            onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null, path: null }})}
-                          >
-                            Change
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {fieldErrors.id && (
-                      <div className="field-error">
-                        {fieldErrors.id}
-                      </div>
-                    )}
+                  <div className="smartclass-checkbox-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={needsHelp}
+                        onChange={(e) => setNeedsHelp(e.target.checked)}
+                      />
+                      <span>Do you need help with your studies?</span>
+                    </label>
                   </div>
 
-                  <div className="document-upload-item">
-                    <div className="document-info">
-                      <FaGraduationCap className="document-icon" />
-                      <div>
-                        <span className="document-name">Matric / Grade 11 Results</span>
-                        <small className="document-hint">Latest academic results</small>
-                      </div>
-                    </div>
-                    <div className="document-actions">
-                      {!documents.results.uploaded ? (
-                        <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
-                          <FaUpload />
-                          <input 
-                            type="file" 
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileUpload('results', e)}
-                            disabled={isUploading}
-                            hidden
-                          />
-                        </label>
-                      ) : (
-                        <div className="uploaded-file">
-                          <FaCheck className="uploaded-icon" />
-                          <span>{documents.results.name}</span>
-                          <button 
-                            type="button"
-                            className="change-file-btn"
-                            onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null, path: null }})}
-                          >
-                            Change
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {fieldErrors.results && (
-                      <div className="field-error">
-                        {fieldErrors.results}
-                      </div>
-                    )}
+                  <div className="smartclass-checkbox-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={hasLaptop}
+                        onChange={(e) => setHasLaptop(e.target.checked)}
+                      />
+                      <span><FaLaptop style={{ marginRight: '4px' }} />Do you have access to a laptop/computer?</span>
+                    </label>
                   </div>
-                </div>
-              </>
-            )}
 
-            {/* Show saved info summary for returning users */}
-            {hasCompletedPaymentBefore && (
-              <div className="saved-info-summary">
-                <div className="summary-header">
-                  <FaCheck className="summary-check-icon" />
-                  <h3>Your information is saved</h3>
-                </div>
-                <div className="summary-grid">
-                  <div className="summary-item">
-                    <span className="summary-label">Name:</span>
-                    <span className="summary-value">{formData.firstName} {formData.lastName}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">Email:</span>
-                    <span className="summary-value">{formData.email}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">Phone:</span>
-                    <span className="summary-value">{formData.phoneNumber}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">ID:</span>
-                    <span className="summary-value">••••{formData.idNumber?.slice(-4)}</span>
+                  <div className="smartclass-checkbox-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={requiresNsfas}
+                        onChange={(e) => setRequiresNsfas(e.target.checked)}
+                      />
+                      <span><FaMoneyBillWave style={{ marginRight: '4px' }} />Do you require NSFAS funding?</span>
+                    </label>
                   </div>
                 </div>
-                <p className="summary-note">
-                  <FaInfoCircle /> Your personal details are already in our system. 
-                  You can update them later in your profile.
-                </p>
               </div>
-            )}
+
+              {/* Section 5: Next of Kin / Emergency Contact */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">5</span>
+                  <h3>Next of Kin / Emergency Contact</h3>
+                </div>
+                
+                <div className="money-group">
+                  <label><FaUserTie /> Full Name</label>
+                  <input
+                    type="text"
+                    name="kinName"
+                    placeholder="Jane Doe"
+                    value={formData.kinName}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label><FaIdCard /> ID Number</label>
+                    <input
+                      type="text"
+                      name="kinIdNumber"
+                      placeholder="800505 0187 085"
+                      value={formData.kinIdNumber}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label>Gender</label>
+                    <select
+                      name="kinGender"
+                      value={formData.kinGender}
+                      onChange={handleInputChange}
+                      className="money-select"
+                    >
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="money-group">
+                  <label>Relationship</label>
+                  <select
+                    name="kinRelationship"
+                    value={formData.kinRelationship}
+                    onChange={handleInputChange}
+                    className="money-select"
+                  >
+                    <option value="">Select Relationship</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Father">Father</option>
+                    <option value="Guardian">Guardian</option>
+                    <option value="Spouse">Spouse</option>
+                    <option value="Sibling">Sibling</option>
+                    <option value="Other Relative">Other Relative</option>
+                    <option value="Friend">Friend</option>
+                  </select>
+                </div>
+
+                <div className="money-row">
+                  <div className="money-group">
+                    <label><FaPhoneAlt /> Phone Number</label>
+                    <input
+                      type="tel"
+                      name="kinPhone"
+                      placeholder="+27 11 123 4567"
+                      value={formData.kinPhone}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="money-group">
+                    <label><FaEnvelope /> Email</label>
+                    <input
+                      type="email"
+                      name="kinEmail"
+                      placeholder="jane.doe@example.com (optional)"
+                      value={formData.kinEmail}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 6: Documents */}
+              <div className="money-section-card">
+                <div className="section-title">
+                  <span className="section-number">6</span>
+                  <h3>Documents</h3>
+                  <small className="section-hint">Max 5MB per file. PDF or images only.</small>
+                </div>
+                
+                <div className="document-upload-item">
+                  <div className="document-info">
+                    <FaIdCard className="document-icon" />
+                    <div>
+                      <span className="document-name">ID Document / Passport</span>
+                      <small className="document-hint">Certified copy (PDF or Image)</small>
+                    </div>
+                  </div>
+                  <div className="document-actions">
+                    {!documents.id.uploaded ? (
+                      <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                        <FaUpload />
+                        <input 
+                          type="file" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload('id', e)}
+                          disabled={isUploading}
+                          hidden
+                        />
+                      </label>
+                    ) : (
+                      <div className="uploaded-file">
+                        <FaCheck className="uploaded-icon" />
+                        <span>{documents.id.name}</span>
+                        <button 
+                          type="button"
+                          className="change-file-btn"
+                          onClick={() => setDocuments({...documents, id: { name: null, uploaded: false, file: null, path: null }})}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {documentErrors.id && (
+                    <div className="field-error-inline" style={{ marginTop: '8px' }}>
+                      {documentErrors.id}
+                    </div>
+                  )}
+                </div>
+
+                <div className="document-upload-item">
+                  <div className="document-info">
+                    <FaGraduationCap className="document-icon" />
+                    <div>
+                      <span className="document-name">Matric / Grade 11 Results</span>
+                      <small className="document-hint">Latest academic results</small>
+                    </div>
+                  </div>
+                  <div className="document-actions">
+                    {!documents.results.uploaded ? (
+                      <label className={`upload-btn ${isUploading ? 'disabled' : ''}`}>
+                        <FaUpload />
+                        <input 
+                          type="file" 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => handleFileUpload('results', e)}
+                          disabled={isUploading}
+                          hidden
+                        />
+                      </label>
+                    ) : (
+                      <div className="uploaded-file">
+                        <FaCheck className="uploaded-icon" />
+                        <span>{documents.results.name}</span>
+                        <button 
+                          type="button"
+                          className="change-file-btn"
+                          onClick={() => setDocuments({...documents, results: { name: null, uploaded: false, file: null, path: null }})}
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {documentErrors.results && (
+                    <div className="field-error-inline" style={{ marginTop: '8px' }}>
+                      {documentErrors.results}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
                     
             <div className="payment-info-note">
               <FaSpinner className="info-spinner" />
               <span>Payment may take up to 60 seconds to load. Please wait and don't refresh.</span>
             </div>
 
-            {/* Pay Button */}
-            <button 
-              type="button"
-              onClick={handleProceedToPayment}
-              disabled={isProcessing || isWaitingForPayment}
-              style={{
-                width: '100%',
-                padding: '18px',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                borderRadius: '30px',
-                fontSize: '18px',
-                fontWeight: '700',
-                cursor: (isProcessing || isWaitingForPayment) ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                transition: 'all 0.3s ease',
-                fontFamily: 'inherit',
-                opacity: (isProcessing || isWaitingForPayment) ? 0.7 : 1,
-                letterSpacing: '0.5px'
-              }}
-            >
-              {isProcessing ? (
-                <>
-                  <FaSpinner className="spinner-icon" /> Processing...
-                </>
-              ) : isWaitingForPayment ? (
-                <>
-                  <FaSpinner className="spinner-icon" /> Waiting for payment...
-                </>
-              ) : (
-                `Pay R${totalAmount}`
-              )}
-            </button>
+            {/* Pay Button - DISABLED */}
+            <div style={{ width: '100%' }}>
+              <button 
+                type="button"
+                onClick={handleProceedToPayment}
+                disabled={true}
+                style={{
+                  width: '100%',
+                  padding: '18px',
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '30px',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  transition: 'all 0.3s ease',
+                  fontFamily: 'inherit',
+                  opacity: 1,
+                  letterSpacing: '0.5px',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
+              >
+                {isProcessing ? (
+                  <>
+                    <FaSpinner className="spinner-icon" /> Processing...
+                  </>
+                ) : isWaitingForPayment ? (
+                  <>
+                    <FaSpinner className="spinner-icon" /> Waiting for payment...
+                  </>
+                ) : (
+                  `Pay R${totalAmount}`
+                )}
+              </button>
+              
+              {/* Disabled message below button */}
+              <p style={{
+                textAlign: 'center',
+                color: '#666',
+                fontSize: '13px',
+                marginTop: '8px',
+                marginBottom: '0',
+                fontStyle: 'italic'
+              }}>
+                Button disabled, please try again later
+              </p>
+            </div>
 
             <p className="secure-payment">
               🔒 Secure payment via Yoco
